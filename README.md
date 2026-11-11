@@ -78,7 +78,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
-| 2026-11-11 | Figures 1–3 drawn (TikZ). Methodology draft merged (`METODOLOGIA` branch). README simplified |
+| 2026-11-11 | Figures 1–3 drawn (TikZ); Fig. 1 redone as a layered diagram with a legend. Methodology draft merged (`METODOLOGIA` branch). README simplified |
 | 2026-11-04 | Repo published on GitHub (private) |
 | 2026-10-28 | Article set up; Introduction drafted with 15 verified references; authors added |
 | 2026-10-14 | System design finished (specification, plan, research) |

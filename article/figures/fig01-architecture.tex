@@ -1,73 +1,92 @@
-% Fig. 1: system architecture (single column). Source: plan.md, Component and
-% Deployment Design. Solid arrows: runtime data/control; dotted: offline
-% calibration evidence. Dashed frames: safety and network boundaries.
+% Fig. 1: layered system architecture, medium level (single column).
+% Source: plan.md, Component and Deployment Design. Shows WHAT exists and
+% WHERE it lives; step-by-step flow is Fig. 3 and wiring is Fig. 2.
+% Layer names match the terms used in 02-methodology.tex.
 \begin{tikzpicture}[
   font=\scriptsize,
   every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
-  blk/.style={draw, rounded corners=1pt, fill=gray!12, align=center,
+  hw/.style={draw, fill=gray!25, align=center, minimum height=7mm, inner sep=2pt},
+  sw/.style={draw, fill=white, rounded corners=3pt, align=center, minimum height=7mm, inner sep=2pt},
+  db/.style={draw, fill=white, align=center, shape=cylinder, shape border rotate=90,
+    aspect=0.12, minimum height=8mm, inner sep=1.5pt},
+  ex/.style={draw, dashed, fill=white, rounded corners=3pt, align=center,
     minimum height=7mm, inner sep=2pt},
-  ext/.style={blk, fill=white},
-  db/.style={draw, fill=gray!12, align=center, shape=cylinder,
-    shape border rotate=90, aspect=0.12, minimum height=8mm, inner sep=1.5pt},
-  zone/.style={draw, dashed, rounded corners=2pt, inner sep=2.2mm},
-  ztitle/.style={font=\scriptsize\bfseries, align=left},
-  arr/.style={-{Latex[length=1.5mm]}, semithick},
-  cal/.style={-{Latex[length=1.5mm]}, densely dotted, semithick},
-  lbl/.style={font=\tiny, align=center, inner sep=1pt},
+  band/.style={fill=gray!7, draw=none},
+  lay/.style={font=\scriptsize\bfseries, rotate=90, anchor=center},
+  sig/.style={-{Stealth[length=1.4mm]}, thin},
+  dat/.style={-{Latex[length=1.8mm]}, line width=0.9pt},
+  cal/.style={-{Stealth[length=1.4mm]}, densely dotted, semithick},
+  lbl/.style={font=\tiny, inner sep=1pt, align=center},
 ]
-% --- Electrical stage ---
-\node[blk] (load) at (0.9,0) {Carga\\monofásica\\protegida};
-\node[blk] (vs) at (2.9,0) {Sensado de\\tensión aislado};
-\node[blk] (cs) at (4.8,0) {Transformador\\de corriente};
-\node[ext] (ref) at (7.0,0) {Instrumento\\de referencia};
-\draw[arr] (load) -- (vs);
-\draw[arr] (load.north) |- ++(0,0.25) -| (cs.north);
-\draw[cal] (ref.south) |- (3.3,-0.72) -- (3.3,-0.35);
-\draw[cal] (5.1,-0.72) -- (5.1,-0.35);
-\node[lbl, fill=white] at (6.2,-0.72) {calibración};
-
-% --- Low-voltage node ---
-\node[blk] (adc) at (3.5,-2.15) {ADC simultáneo\\2 canales, 4 kS/s};
-\node[blk] (mcu) at (6.6,-2.15) {ESP32: $V_{\mathrm{RMS}}$, $I_{\mathrm{RMS}}$,\\$P$, $E$, calidad};
-\node[blk] (fram) at (1.2,-3.25) {FRAM: cola\\persistente};
-\node[blk] (warn) at (6.85,-3.25) {Umbral local (1 s):\\LED o zumbador};
-\draw[arr] (2.7,-0.35) -- (2.7,-1.8);
-\draw[arr] (4.5,-0.35) -- (4.5,-1.8);
-\draw[arr] (adc) -- (mcu);
-\draw[arr] (mcu.south -| warn.north) -- (warn.north);
-\draw[arr] (5.5,-2.5) |- (fram.east);
-\node[ztitle] at (1.1,-2.0) {Nodo de\\baja tensión};
-
-% --- Transport ---
-\draw[arr] (0.95,-3.6) -- (0.95,-4.65);
-\draw[arr] (1.45,-4.65) -- (1.45,-3.6);
-\node[lbl, align=left, anchor=west] at (1.55,-4.12) {$\downarrow$ mediciones, eventos y estado (MQTT 5, mTLS, QoS 1)\\$\uparrow$ ACK tras almacenar; configuración};
-
-% --- Laboratory server ---
-\node[blk] (broker) at (1.2,-5.0) {Corredor\\MQTT};
-\node[blk] (ingest) at (3.9,-5.0) {Ingesta: esquema,\\identidad, duplicados};
-\node[db] (sql) at (0.9,-6.3) {Registro\\y alertas};
-\node[db] (tsdb) at (2.6,-6.3) {Series\\temporales};
-\node[blk] (dash) at (4.6,-6.3) {Panel\\HTTPS};
-\draw[arr] (broker) -- (ingest);
-\draw[arr] (3.1,-5.35) -- (3.1,-5.88);
-\draw[arr] (2.85,-5.35) |- (2.0,-5.62) -| (sql.north);
-\draw[arr] (tsdb) -- (dash);
-
-% --- Outside the server ---
-\node[ext] (notif) at (7.1,-5.0) {Notificación\\remota};
-\node[ext] (op) at (7.1,-6.3) {Operador\\(red de confianza)};
-\draw[arr] (ingest) -- node[lbl, above] {HTTPS} (notif);
-\draw[arr] (notif) -- (op);
-\draw[arr] (dash) -- (op);
-
-% --- Boundaries ---
+% ---- Layer bands (background) ----
+\def\R{8.35}
 \begin{scope}[on background layer]
-  \coordinate (eTop) at (0.9,0.45);
-  \node[zone, fit=(load)(vs)(cs)(ref)(eTop)] (zE) {};
-  \node[zone, fit=(adc)(mcu)(fram)(warn)] (zN) {};
-  \node[zone, fit=(broker)(ingest)(sql)(tsdb)(dash)] (zL) {};
+  \fill[band] (0,0.55) rectangle (\R,-0.75);
+  \fill[band] (0,-1.05) rectangle (\R,-2.35);
+  \fill[band] (0,-2.65) rectangle (\R,-3.25);
+  \fill[band] (0,-3.55) rectangle (\R,-6.05);
+  \fill[band] (0,-6.35) rectangle (\R,-7.25);
 \end{scope}
-\node[ztitle, anchor=south west] at (zE.north west) {Etapa eléctrica (red protegida)};
-\node[ztitle, anchor=north west] at (zL.south west) {Servidor en la red del laboratorio};
+\node[lay] at (0.25,-0.1) {Eléctrica};
+\node[lay] at (0.25,-1.7) {Nodo};
+\node[lay, font=\tiny\bfseries] at (0.25,-2.95) {Red};
+\node[lay] at (0.25,-4.8) {Servidor};
+\node[lay] at (0.25,-6.8) {Usuario};
+
+% ---- Electrical layer ----
+\node[hw] (load) at (1.45,-0.1) {Carga\\monofásica};
+\node[hw] (vs) at (3.35,-0.1) {Sensor de\\tensión aislado};
+\node[hw] (cs) at (5.35,-0.1) {Sensor de\\corriente (TC)};
+\node[ex] (ref) at (7.35,-0.1) {Instrumento\\de referencia};
+\draw[thin] (load) -- (vs);
+\draw[thin] (load.north) |- ++(0,0.3) -| (cs.north);
+\draw[cal] (ref) -- (cs);
+
+% ---- Isolation boundary ----
+\draw[very thick, dash pattern=on 3pt off 2pt] (0.55,-0.9) -- (\R,-0.9);
+\node[lbl, fill=gray!7, anchor=east] at (\R-0.05,-0.9) {aislamiento galvánico};
+
+% ---- Node layer ----
+\node[hw, text width=43mm] (node) at (3.75,-1.7) {\textbf{Nodo de medición (ESP32)}\\[1pt]
+  {\tiny $V_{\mathrm{RMS}}$, $I_{\mathrm{RMS}}$, $P$, $E$ y calidad;\\ cola local y umbral local}};
+\node[hw] (led) at (7.35,-1.7) {Aviso local\\LED o zumbador};
+\draw[sig] (vs) -- (vs |- node.north);
+\draw[sig] (cs) -- (cs |- node.north);
+\draw[sig] (node) -- (led);
+
+% ---- Network layer ----
+\node[lbl, anchor=west] at (2.0,-2.95) {Wi-Fi del laboratorio $\cdot$ MQTT 5 con TLS mutuo};
+
+% ---- Server layer ----
+\node[sw] (broker) at (1.6,-4.1) {Corredor\\MQTT};
+\node[sw] (ingest) at (3.95,-4.1) {Servicio de\\ingesta};
+\node[db] (sql) at (3.3,-5.4) {Registro\\y alertas};
+\node[db] (tsdb) at (4.6,-5.4) {Series\\temporales};
+\node[sw] (dash) at (6.3,-5.4) {Panel web\\(HTTPS)};
+\draw[dat] (node.south -| broker) -- (broker.north);
+\draw[dat] (broker) -- (ingest);
+\draw[dat] (ingest.south -| sql.north) -- (sql.north);
+\draw[dat] (ingest.south -| tsdb.north) -- (tsdb.north);
+\draw[dat] (tsdb) -- (dash);
+\begin{scope}[on background layer]
+  \node[draw, dashed, rounded corners=2pt, inner sep=2mm, fit=(broker)(ingest)(sql)(tsdb)(dash)] (srv) {};
+\end{scope}
+
+% ---- User layer ----
+\node[ex] (op) at (4.3,-6.8) {Operador\\(red de confianza)};
+\node[ex] (notif) at (7.1,-6.8) {Servicio de\\notificación remota};
+\draw[dat] (dash.south) -- ++(0,-0.45) -| (op.north);
+\draw[dat] (notif) -- (op);
+\draw[dat] (ingest.east) -- node[lbl, above, pos=0.62] {HTTPS saliente} (7.95,-4.1) -- ($(notif.north)+(0.85,0)$);
+
+% ---- Legend ----
+\begin{scope}[shift={(0.3,-7.65)}, every node/.style={font=\tiny, anchor=west, inner sep=1pt}]
+  \draw[fill=gray!25] (0,-0.08) rectangle (0.3,0.08); \node at (0.33,0) {hardware};
+  \draw[rounded corners=1.5pt] (1.2,-0.08) rectangle (1.5,0.08); \node at (1.53,0) {software};
+  \draw[fill=white] (2.43,0.06) -- (2.43,-0.06) arc[start angle=180, end angle=360, x radius=0.12, y radius=0.035] -- (2.67,0.06); \draw[fill=white] (2.55,0.06) ellipse[x radius=0.12, y radius=0.035]; \node at (2.72,0) {almacén};
+  \draw[dashed, rounded corners=1.5pt] (3.55,-0.08) rectangle (3.85,0.08); \node at (3.88,0) {externo};
+  \draw[sig] (4.75,0) -- (5.1,0); \node at (5.12,0) {señal};
+  \draw[dat] (5.75,0) -- (6.1,0); \node at (6.12,0) {datos};
+  \draw[cal] (6.75,0) -- (7.1,0); \node at (7.12,0) {calibración};
+\end{scope}
 \end{tikzpicture}
