@@ -45,7 +45,7 @@ Skip the briefing only for trivial edits or when the user explicitly says to go 
 
 After completing, starting, or changing any phase, step, milestone, or decision:
 
-- Update `README.md`: §1 Current status, the relevant phase/milestone/article table, §5 open issues and decisions, and add a §7 progress-log row (absolute dates).
+- Update `README.md`: "Status at a glance" (and its last-updated date), the relevant Roadmap row, "Open decisions", and add a short "Recent updates" row. Keep the README short and non-technical; technical detail belongs in `specs/` or `article/README.md`.
 - For article work, also update the Status and Decisions tables in `article/README.md`.
 
 ## Article rules
