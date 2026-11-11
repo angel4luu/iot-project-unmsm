@@ -30,7 +30,7 @@ article/
 │   ├── 02-methodology.tex
 │   ├── 03-results-discussion.tex
 │   └── 04-conclusions.tex
-├── figures/                 figure sources (.svg/.drawio/.py) and exported PDF/PNG
+├── figures/                 TikZ figure sources (\input from the sections)
 ├── tables/                  tables written as .tex, generated or hand-written
 ├── references.bib           verified entries only
 ├── research/                literature evidence (candidates, comparison, stats)
@@ -70,7 +70,7 @@ Conventions:
 | A1 | Resolve the decisions that block writing (AD-2 to AD-5) | ✅ 2026-10-28 |
 | A2 | **Introduction**: literature search (10–15 papers, 2021–2026), `references.bib`, draft of Section I | ✅ draft 2026-10-28 |
 | A3 | Page budget and trimming (paper is 6 pages with Results empty) | ⏳ next |
-| A4 | Draft Methodology (no results needed) | ✅ draft 2026-11-11 (`METODOLOGIA` branch); figures 1–3 are placeholders |
+| A4 | Draft Methodology (no results needed) | ✅ draft 2026-11-11 (`METODOLOGIA` branch); Figures 1–3 drawn in TikZ |
 | A5 | Experiments, then Results/Discussion (depends on M4–M7) | ⬜ |
 | A6 | Conclusions and abstract | ⬜ |
 | A7 | Internal review and revision | ⬜ |
@@ -89,3 +89,4 @@ Conventions:
 | AD-6 | Venue not chosen. Keep the IEEE conference defaults (Letter, ~6 pages) and recheck when one is chosen | 2026-10-28 (deferred) |
 | AD-7 | Numbers use a decimal comma (`siunitx` `output-decimal-marker={,}`), following the Spanish/INEI convention. Write numbers with `\SI{}`/`\num{}` | 2026-10-28 |
 | AD-8 | Prior-work limitations are narrowed to what the evidence supports (`research/limitations-evidence.md`): heterogeneous validation, rarely measured latency, no controlled outage-recovery evaluation, and analytics evaluated apart from the hardware. The proposal's claims of "no power-factor analysis" and "always depends on connectivity" are contradicted by the literature and are not used | 2026-10-28 |
+| AD-9 | Figures are TikZ sources in `figures/`, `\input` into the sections, single-column, black-and-white friendly. Fig. 2 is a single-line wiring diagram without pin numbers until the PCB review; add a labelled photo once the prototype is built | 2026-11-11 |

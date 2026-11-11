@@ -1,0 +1,48 @@
+% Fig. 3: acquisition, delivery and analysis flowchart (single column).
+% Source: 02-methodology.tex, Algoritmo de monitoreo y análisis (steps 1-7).
+\begin{tikzpicture}[
+  font=\scriptsize,
+  every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
+  stp/.style={draw, rounded corners=1pt, fill=gray!12, align=center,
+    text width=33mm, minimum height=7mm, inner sep=2pt},
+  side/.style={draw, rounded corners=1pt, fill=white, align=center,
+    text width=23mm, minimum height=7mm, inner sep=2pt},
+  lane/.style={draw, dashed, rounded corners=2pt, inner sep=2mm},
+  ltitle/.style={font=\scriptsize\bfseries, anchor=south west, inner sep=1pt},
+  arr/.style={-{Latex[length=1.5mm]}, semithick},
+  ack/.style={-{Latex[length=1.5mm]}, densely dashed, semithick},
+  lbl/.style={font=\tiny, inner sep=1pt},
+]
+% --- Node ---
+\node[stp] (s1) at (0,0) {1. Adquisición continua de pares $v$, $i$ simultáneos};
+\node[stp] (s2) at (0,-1.1) {2. Bloque de 1 s: calibración, $V_{\mathrm{RMS}}$, $I_{\mathrm{RMS}}$, $P$ y calidad};
+\node[stp] (s3) at (0,-2.2) {3. Resumen de 5 s: actualizar $E_k$ y punto de control};
+\node[stp] (s4) at (0,-3.3) {4. Encolar en FRAM y publicar por MQTT};
+\node[side] (n1) at (4.1,0) {Ventana marcada inválida};
+\node[side] (n2) at (4.1,-1.1) {Umbral local confirmado: LED o zumbador y evento};
+\node[side] (n4) at (4.1,-3.3) {Conservar en cola y drenar al reconectar};
+\draw[arr] (s1) -- (s2);
+\draw[arr] (s2) -- (s3);
+\draw[arr] (s3) -- (s4);
+\draw[arr] (s1) -- node[lbl, above] {CRC inválido} (n1);
+\draw[arr] (s2) -- (n2);
+\draw[arr] (s4) -- node[lbl, above] {sin ACK} (n4);
+
+% --- Server ---
+\node[stp] (s5) at (0,-4.85) {5. Ingesta: validar esquema e identidad, almacenar y emitir ACK};
+\node[stp] (s6) at (0,-5.95) {6. Análisis: $E_h$ por hora, día y semana; hora pico $h^{*}$};
+\node[stp] (s7) at (0,-7.05) {7. Alertas: abierta, reconocida, resuelta; notificación remota};
+\node[side] (n5) at (4.1,-4.85) {ACK sin volver a almacenar};
+\draw[arr] (s4) -- (s5);
+\draw[arr] (s5) -- (s6);
+\draw[arr] (s6) -- (s7);
+\draw[arr] (s5) -- node[lbl, above] {duplicado} (n5);
+\draw[ack] (s5.west) -- ++(-0.45,0) |- node[lbl, pos=0.25, left] {ACK} (s4.west);
+
+\begin{scope}[on background layer]
+  \node[lane, fit=(s1)(s4)(n1)(n4)] (zN) {};
+  \node[lane, fit=(s5)(s7)(n5)] (zS) {};
+\end{scope}
+\node[ltitle] at (zN.north west) {Nodo};
+\node[ltitle] at (zS.north west) {Servidor};
+\end{tikzpicture}

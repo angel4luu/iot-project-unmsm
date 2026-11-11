@@ -24,7 +24,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Track | Where we are | Next |
 |---|---|---|
 | System | Design finished. Nothing built yet | Break the plan into tasks (`/speckit.tasks`) |
-| Article | Introduction and Methodology drafted (6 pages; Results still empty) | Trim to fit the page limit; draw Figures 1–3 |
+| Article | Introduction, Methodology and Figures 1–3 done (6 pages; Results still empty) | Trim to fit the page limit |
 
 *Last updated: 2026-11-11*
 
@@ -51,7 +51,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Introduction (with literature review) | ✅ draft Oct 28 |
 | Methodology | ✅ draft Nov 11 |
 | Page budget and trimming | ⏳ |
-| Figures 1–3 (architecture, prototype, flowchart) | ⬜ |
+| Figures 1–3 (architecture, wiring, flowchart) | ✅ Nov 11 (add a prototype photo once built) |
 | Results and Discussion | ⬜ needs the experiments |
 | Conclusions and abstract | ⬜ |
 | Review and submission | ⬜ |
@@ -78,7 +78,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
-| 2026-11-11 | Methodology draft merged (`METODOLOGIA` branch). README simplified |
+| 2026-11-11 | Figures 1–3 drawn (TikZ). Methodology draft merged (`METODOLOGIA` branch). README simplified |
 | 2026-11-04 | Repo published on GitHub (private) |
 | 2026-10-28 | Article set up; Introduction drafted with 15 verified references; authors added |
 | 2026-10-14 | System design finished (specification, plan, research) |
