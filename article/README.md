@@ -68,9 +68,9 @@ Conventions:
 |---|---|---|
 | A0 | Requirements received; repo setup | ✅ 2026-10-28 |
 | A1 | Resolve the decisions that block writing (AD-2 to AD-5) | ✅ 2026-10-28 |
-| A2 | **Introduction**: literature search (10–15 papers, 2021–2026), `references.bib`, draft of Section I | ✅ draft 2026-10-28 (awaiting review) |
-| A3 | Outline with page budget and figure/table selection | ⬜ |
-| A4 | Draft Methodology (no results needed) | ⬜ |
+| A2 | **Introduction**: literature search (10–15 papers, 2021–2026), `references.bib`, draft of Section I | ✅ draft 2026-10-28 |
+| A3 | Page budget and trimming (paper is 6 pages with Results empty) | ⏳ next |
+| A4 | Draft Methodology (no results needed) | ✅ draft 2026-11-11 (`METODOLOGIA` branch); figures 1–3 are placeholders |
 | A5 | Experiments, then Results/Discussion (depends on M4–M7) | ⬜ |
 | A6 | Conclusions and abstract | ⬜ |
 | A7 | Internal review and revision | ⬜ |

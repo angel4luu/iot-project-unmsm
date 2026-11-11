@@ -25,7 +25,7 @@ Las variables dependientes son las cuatro magnitudes eléctricas, su error respe
 
 \subsection{Arquitectura del sistema IoT}
 \label{sec:architecture}
-% Fig. 1 (figure*): conceptual architecture. Content: see the reply / SPEC.md.
+% Fig. 1 (figure*): conceptual architecture.
 \begin{figure*}[t]
   \centering
   \figplaceholder{5.2cm}{Fig.~1: arquitectura general (carga y sensado aislado $\rightarrow$ nodo ESP32 $\rightarrow$ MQTT mTLS $\rightarrow$ servidor en LAN $\rightarrow$ operador)}
@@ -49,7 +49,7 @@ El tiempo sigue UTC mediante SNTP, con un reloj de tiempo real respaldado por ba
 
 \subsection{Diseño e implementación del prototipo}
 \label{sec:prototype}
-% Fig. 2: physical prototype and connections. Content: see the reply / SPEC.md.
+% Fig. 2: physical prototype and connections.
 \begin{figure}[t]
   \centering
   \figplaceholder{4.6cm}{Fig.~2: prototipo físico y conexiones (sensores, ADC, ESP32, FRAM, RTC, alerta local, protecciones)}
@@ -111,7 +111,7 @@ La marca de tiempo de cada resumen es el fin de la ventana, en UTC con milisegun
 
 \subsection{Algoritmo de monitoreo y análisis}
 \label{sec:algorithm}
-% Fig. 3: processing flowchart. Content: see the reply / SPEC.md.
+% Fig. 3: processing flowchart.
 \begin{figure}[t]
   \centering
   \figplaceholder{6.4cm}{Fig.~3: diagrama de flujo (adquisición $\rightarrow$ validación $\rightarrow$ resumen $\rightarrow$ cola $\rightarrow$ ingesta $\rightarrow$ agregación y alertas)}
