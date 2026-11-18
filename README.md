@@ -24,7 +24,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Track | Where we are | Next |
 |---|---|---|
-| System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Confirm the multimeter model, then break the plan into tasks (`/speckit.tasks`) |
+| System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Break the plan into tasks (`/speckit.tasks`) |
 | Article | Introduction and Methodology done and trimmed (5 pages; about 1–1.3 pages left for Results and Conclusions in a 6-page paper) | Results, once the experiments run |
 
 *Last updated: 2026-11-18*
@@ -39,7 +39,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Task list | Turn the design into an ordered to-do list | ⏳ |
 | Simulated version | Server, database and dashboard working with fake data | ⬜ |
 | Device software | Measuring and calculating on the ESP32 | ⬜ |
-| Safety review and calibration | Qualified review **before** connecting to mains; compare against a reference meter | ⬜ |
+| Safety review and calibration | Qualified review **before** connecting to mains; nominal calibration and plausibility check (no reference meter) | ⬜ |
 | Full system tests | Real device end to end, network-outage recovery, security | ⬜ |
 | Alerts | Local LED/buzzer and remote notifications | ⬜ |
 | Final acceptance | Check all success criteria | ⬜ |
@@ -62,8 +62,8 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | # | Question | Blocks |
 |---|---|---|
 | 0 | Who is the qualified person (licensed electrician or electrical-engineering teacher) who reviews the setup and signs the safety review? | Any 220 V test |
-| 1 | Reference meter: which true-RMS multimeter to buy (must say True RMS and CAT III, with fused current inputs, AC accuracy ≤ 2% at about 0.45 A and 4.5 A, and a 10 A input rated for 5 A continuous) | Calibration, accuracy results |
-| 2 | How to calculate measurement uncertainty, and how many repetitions per test | Methodology text, experiments |
+| 1 | ~~Reference meter~~ Resolved 2026-11-18: none; readings are shown as "not validated" (constitution 2.0.0). A True RMS meter lent by the electrician could be added later | — |
+| 2 | How many repetitions per test | Methodology text, experiments |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |
 | 5 | Faculty name and contact emails for the author block | Submission |
@@ -72,7 +72,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 ## Key decisions made
 
 - Wi-Fi, not LoRa. No automatic power cut-off (safety).
-- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer. All low-voltage wiring on a breadboard (no soldering). Minimal purchases: certified AC adapter with a female barrel jack with screw terminals, resistors and capacitors, a transistor for the buzzer, a small test box for the ACS712 only (a measuring extension cord with sockets for the multimeter), a true-RMS multimeter, and a portable 30 mA RCD only if the home panel has none. The ACS712 always goes in a closed box, never on the breadboard.
+- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer. All low-voltage wiring on a breadboard (no soldering). Minimal purchases: certified AC adapter with a female barrel jack with screw terminals, resistors and capacitors, a transistor for the buzzer, a small test box for the ACS712 only (plug, ACS712 and a socket for the appliance), and a portable 30 mA RCD only if the home panel has none. The ACS712 always goes in a closed box, never on the breadboard. No reference multimeter: the dashboard labels every reading "not validated" and the article makes no accuracy claim.
 - The specs win over the article proposal; differences are listed in [article/README.md](article/README.md#decisions).
 - Article in Spanish, IEEE conference format, decimal comma.
 - No power-factor claims; anomaly detection and forecasting are future work.
@@ -81,6 +81,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | No reference multimeter (we can't afford a True RMS one): constitution 2.0.0 now allows a demo build whose readings are labelled "not validated". Tests E1–E4 check readings against appliance labels (±15 %) instead of claiming accuracy; the test box is now just plug, ACS712 and socket. Article, specs and build guide updated |
 | 2026-11-18 | Article: new test-setup figure (Fig. 4), step-by-step test session, and the load or action for each test in Table II. The enclosure is now a test box for the ACS712 only; the multimeter (not a clamp meter) reads current in series through its sockets |
 | 2026-11-18 | Low-voltage circuit goes on a breadboard (no soldering); the AC adapter plugs into a female barrel jack with screw terminals instead of cutting its cable (jack drawn in Fig. 2 and listed in Table I) |
 | 2026-11-18 | Minimal MVP: temperature sensor (DHT22), barrel socket, 12 V polarity bulb and dedicated test panel dropped; LEDs, buzzer and OLED kept. Protection is the 30 mA RCD from the home panel (or a portable one) plus the outlet's existing breaker, if the reviewer accepts it |

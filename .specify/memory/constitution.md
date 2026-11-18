@@ -1,22 +1,3 @@
-<!--
-Sync Impact Report
-- Version change: unratified template -> 1.0.0
-- Modified principles:
-  - Placeholder Principle 1 -> I. Electrical Safety Before Convenience
-  - Placeholder Principle 2 -> II. Measurement Integrity and Evidence
-  - Placeholder Principle 3 -> III. Monitoring MVP Before Optional Complexity
-  - Placeholder Principle 4 -> IV. Security and Secret Hygiene
-  - Placeholder Principle 5 -> V. Contract-Tested Boundaries
-- Added principles:
-  - VI. Reproducible Experiments and Models
-  - VII. Resilience and Observability
-- Added sections:
-  - Engineering and Operational Constraints
-  - Development Workflow and Quality Gates
-- Removed sections: none
-- Follow-up TODOs: none
--->
-
 # Intelligent Electrical Energy Monitoring System Constitution
 
 ## Core Principles
@@ -38,9 +19,12 @@ valuable if it exposes people or property to avoidable risk.
 ### II. Measurement Integrity and Evidence
 
 Every reported electrical quantity MUST have a documented definition, unit, measurement range,
-sampling or aggregation method, timestamp basis, and quality state. Each supported sensor and
-device configuration MUST be calibrated against a trusted reference meter across representative
-loads, with the procedure, raw results, error calculation, and acceptance decision preserved.
+sampling or aggregation method, timestamp basis, and quality state. Accuracy claims MUST be backed by
+calibration against a trusted reference meter across representative loads, with the procedure,
+raw results, error calculation, and acceptance decision preserved. A demonstration build without
+a reference meter MAY use nominal (datasheet) coefficients only if every displayed and published
+value is labeled as not validated, no accuracy figure is claimed, and any comparison with load
+nameplates is reported as a plausibility check.
 Invalid, stale, saturated, or uncertain readings MUST be labeled and MUST NOT be presented as
 trustworthy measurements. The project MUST NOT claim active power, reactive power, power factor,
 energy accuracy, or billing-grade behavior unless the instrumentation and reference evidence
@@ -129,7 +113,8 @@ normal consumption, invalid data, and a broken monitoring path.
 - Data retention, network exposure, notification destinations, and destructive operations MUST be
   explicit configuration rather than hidden defaults.
 - Real hardware tests MUST document the equipment, wiring revision, calibration revision, load
-  conditions, operator, date, and reference instrument used.
+  conditions, operator, date, and reference instrument used (or the statement that none was
+  used).
 
 ## Development Workflow and Quality Gates
 
@@ -143,7 +128,7 @@ normal consumption, invalid data, and a broken monitoring path.
    hardware where practical.
 4. **Verify**: Changes MUST include the lowest-cost effective evidence: unit tests for calculations
    and validation, contract tests for boundaries, integration tests for services and failure
-   recovery, reference-meter tests for measurement claims, and acceptance tests for user outcomes.
+   recovery, reference-meter tests for measurement-accuracy claims (plausibility checks otherwise), and acceptance tests for user outcomes.
 5. **Review**: Reviews MUST verify constitution compliance, requirement traceability, secrets
    hygiene, documentation changes, and the evidence supporting affected safety, measurement, and
    analytics claims.
@@ -175,4 +160,11 @@ name an owner, scope, rationale, compensating control, approval, and expiry date
 exceptions block release. The Sync Impact Report at the top of this file is review scratch
 material and MUST be removed before committing the ratified constitution.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-10-14
+**Version**: 2.0.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-11-18
+
+Amendment 2.0.0 (2026-11-18): Principle II redefined so that reference-meter calibration is
+required for accuracy claims, not for every build; a demonstration build may run on nominal
+coefficients with every value labeled as not validated. Rationale: the team cannot afford a
+true-RMS reference meter; the change lowers the claim instead of the evidence standard. Safety
+(Principle I) is unchanged. Affected: spec 001 (SC-001, scenarios, assumptions), plan, research
+R-004, data model, quickstart, build guide, and the article.

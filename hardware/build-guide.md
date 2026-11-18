@@ -89,8 +89,7 @@ estado, no una autorización para sustituir componentes sin revisión.
 | Pantalla local | OLED de 0,96", se asume SSD1306 I²C de 4 pines | `pantalla OLED 0.96 I2C SSD1306` | 1 | Kit; confirmar interfaz |
 | Excitación del zumbador | Transistor NPN 2N2222 o PN2222A y resistencia de base de 1 kΩ | `transistor 2N2222`; `resistencia 1k 1/4 W` | 1 c/u | Comprar; bajo costo |
 | Alimentación del nodo | Cargador USB-C certificado de 5 V, 2 A, y cable | `cargador USB-C 5V 2A certificado` | 1 | Kit; disponible |
-| Instrumento de referencia | Multímetro de verdadero valor eficaz (True RMS), CAT III ≥ 300 V, exactitud en CA ≤ 2 % a unos 0,45 A y 4,5 A, entradas de corriente **con fusible** (HRC) y entrada de 10 A apta para ≥ 5 A continuos | `multímetro True RMS CAT III con fusible 10A` | 1 | Comprar; modelo por elegir con estos criterios |
-| Caja de ensayo del ACS712 | Caja plástica cerrada, retardante de llama, **solo para el ACS712**, armada como una extensión de medición: enchufe y cable con prensaestopa, ACS712 en la fase, tomacorriente para la carga, dos bornes de 4 mm de seguridad en serie con la fase para la corriente de referencia (cerrados con un puente de seguridad cuando el multímetro no está en serie) y dos bornes de 4 mm para la tensión de referencia. La arma o revisa la persona calificada | `caja de paso plástica`; `prensaestopa`; `enchufe y tomacorriente`; `borne banana hembra 4 mm de seguridad`; `puente banana de seguridad 4 mm` | 1 juego | Comprar |
+| Caja de ensayo del ACS712 | Caja plástica cerrada, retardante de llama, **solo para el ACS712**, armada como una extensión de medición: enchufe y cable con prensaestopa, ACS712 en la fase y un tomacorriente para la carga. La arma o revisa la persona calificada | `caja de paso plástica`; `prensaestopa`; `enchufe y tomacorriente` | 1 juego | Comprar |
 | Protección diferencial | Interruptor diferencial de 30 mA que proteja el tomacorriente de prueba: el del tablero del edificio si existe; si no, un protector diferencial portátil certificado | `protector diferencial portátil 30 mA para enchufe` (solo si el tablero no tiene uno) | 0–1 | Edificio o comprar; revisar el tablero |
 | Cargas de prueba | Cargas resistivas domésticas: foco incandescente o halógeno de 100 W; reflector halógeno de unos 500 W; plancha o calefactor de unos 1000 W (placa ≤ 1,1 kW). Además, una carga inductiva (ventilador pequeño) o no lineal (lámpara LED o cargador) estable | `foco halógeno 100 W`; `reflector halógeno 500 W`; `plancha 1000 W` | 3–4 | Del equipo o comprar; revisar la placa de cada carga |
 
@@ -119,16 +118,17 @@ de medición conectada directamente a la red.
 - Entorno ESP-IDF 5.4 LTS y las instrucciones de compilación y grabación del
   *firmware* del proyecto.
 - Herramientas de mano aisladas, adecuadas para el montaje en baja tensión.
-- El multímetro True RMS CAT III comprado, que sirve tanto para las
-  verificaciones en CC del banco (tensión de polarización y *offset*) como de
-  referencia en la calibración supervisada.
+- No se usa multímetro de referencia (constitución 2.0.0): las tensiones del
+  banco (polarización y *offset*) se leen con el propio ADC del ESP32-S3, y las
+  lecturas del prototipo se rotulan como «no validadas». Un multímetro básico
+  es opcional y solo ayuda a revisar continuidad y valores de resistencias.
 - No se asume un osciloscopio: las formas de onda se capturan con el propio ADC
   del ESP32-S3 (registro de muestras crudas por USB en el banco, antes de
   cualquier etapa con red).
 - Protoboard y cables jumper para todo el circuito de baja tensión; no se
   requiere soldar.
 - Destornillador pequeño (bornera del jack) y herramientas para perforar la
-  caja de ensayo (prensaestopa y bornes); nada de cableado de red en protoboard ni con
+  caja de ensayo (prensaestopa); nada de cableado de red en protoboard ni con
   cables expuestos.
 - Bitácora de montaje: fecha, operador, identidad de la placa y los sensores,
   revisión del cableado y del *firmware*, identidad del instrumento, mediciones,
@@ -241,8 +241,8 @@ conductor de carga ni de red por el ACS712 en esta etapa.
 ### Verificaciones
 
 1. Con el adaptador desenchufado y la placa alimentada por su cargador USB-C
-   certificado, mida con el multímetro la tensión de Vb. Debe estar cerca de
-   1,65 V. Anote el valor real; si no lo está, revise el divisor, una conexión
+   certificado, lea con el ADC del ESP32-S3 la tensión en GPIO4: sin señal del
+   adaptador, GPIO4 queda en Vb a través de R2. Debe estar cerca de 1,65 V. Anote el valor real; si no lo está, revise el divisor, una conexión
    invertida de tierra o 3V3, o el cableado del condensador antes de seguir.
 2. Con el adaptador desenchufado, confirme que GPIO4 está dentro del rango
    seguro del ADC y centrado cerca de la polarización medida. No conecte la red
@@ -303,9 +303,6 @@ La persona revisora verifica y registra como mínimo:
   polaridad y aptitud para el camino propuesto.
 - Que el ACS712 es el único componente con red y está solo dentro de la caja
   de ensayo cerrada, que impide el contacto y es retardante de llama.
-- Que los bornes de referencia son de 4 mm de seguridad (protegidos), que el
-  puente de seguridad cierra los bornes de corriente y que el multímetro tiene
-  entradas de corriente con fusible.
 - Que solo el conector de baja tensión del ACS712 sale de esa caja y
   que los terminales de red están cubiertos e inaccesibles en uso normal.
 - Que la entrada de cables, la sección de los conductores, las terminaciones,
@@ -361,66 +358,47 @@ antes de trabajar.
 
 ```
 Tomacorriente 220 V (diferencial 30 mA)
-  ├─► Adaptador CA-CA ─► jack ─► protoboard ─► GPIO4
-  └─► Caja de ensayo: enchufe ─► ACS712 (fase) ─► bornes A ─► tomacorriente ─► carga
-            │                     (puente o multímetro en serie)
-            ├─► bornes V ─► multímetro (tensión)
-            └─► 5 V, GND, OUT ─► protoboard ─► GPIO5
+  ├─► Adaptador CA-CA ─► jack ─► protoboard ─► GPIO4   (tensión de la carga)
+  └─► Caja de ensayo: enchufe ─► ACS712 (fase) ─► tomacorriente ─► carga
+                                   └─► 5 V, GND, OUT ─► protoboard ─► GPIO5
 ESP32-S3 (cargador USB-C) ─► Wi-Fi ─► servidor ─► panel
 ```
 
-El multímetro se conecta a los bornes A (corriente, en serie) o a los bornes V
-(tensión), nunca a ambos a la vez, y siempre con el circuito desenergizado.
+No se usa multímetro de referencia: el prototipo funciona con coeficientes
+nominales y sus lecturas se rotulan como «no validadas» (constitución 2.0.0).
 
 1. Registre la revisión del montaje, el *commit* del *firmware*, la
    configuración del ADC, el adaptador de tensión, el modelo y versión del
    ACS712, el cableado, el operador, las condiciones ambientales, la
-   identidad de las cargas y la identidad e incertidumbre en CA del multímetro
+   identidad y la potencia de placa de cada carga, y que no se usó instrumento
    de referencia.
 2. Pulse el botón de prueba del interruptor diferencial de 30 mA y confirme que
    dispara; rearme. Confirme que se usan la caja de ensayo cerrada y revisada y las
    conexiones de prueba controladas.
-3. Caliente el sistema al menos 10 minutos según el procedimiento aprobado.
-4. Sin carga, capture 60 segundos de datos de corriente cero y guarde el
-   *offset* del ACS712. Repita el autocero antes de cada sesión de calibración.
-5. Con el multímetro True RMS de referencia identificado, calcule las ganancias
-   de tensión y corriente con cargas resistivas estables. Con un solo
-   multímetro, tome lecturas de tensión y corriente alternadamente mientras la
-   carga permanece estable: la corriente con el multímetro en serie en los
-   bornes de corriente (en lugar del puente) y la tensión en los bornes de
-   tensión. Desenergice cada vez que mueva las puntas o el puente.
-6. Con una carga resistiva estable, ajuste la corrección de fase fraccionaria
-   hasta que la potencia activa medida coincida con `P = V_RMS * I_RMS` (factor
-   de potencia unitario). La potencia debe salir positiva: eso confirma la
-   polaridad del ACS712. Si sale negativa, corrija el signo en los coeficientes
-   de calibración; no recablee. Esta relación vale solo para el punto resistivo de
-   calibración; en operación, la potencia activa se calcula con los productos
-   instantáneos `v*i`.
-7. Guarde los coeficientes como un nuevo artefacto de calibración inmutable o
-   una nueva revisión en NVS, y congélelos antes de la validación. No ajuste
-   coeficientes con los datos de validación.
-8. Valide con al menos tres cargas resistivas estables distintas, repartidas en
-   el rango calibrado: unos 100 W, 500 W y 1 kW en esta configuración. Registre
-   al menos 5 minutos por punto de potencia y al menos 15 minutos para la
-   energía. Compare la potencia con `P_ref = V_ref * I_ref` y la energía con
-   `Wh_ref = P_ref * t`.
-9. Registre una carga inductiva o no lineal estable para validar tensión y
-   corriente. Sus W y Wh son solo observaciones, sin afirmación de exactitud,
-   salvo que se disponga de una referencia de potencia con incertidumbre
-   documentada.
-10. Exija que cada punto requerido de V, A, W y Wh cumpla `|error| ≤ 5%` cuando
-    la incertidumbre del multímetro sea como máximo 1 %. Si es mayor que 1 % y
-    como máximo 2 %, aplique el límite con margen de guarda
-    `|error| ≤ 5% − u_ref`. Un multímetro con más de 2 % de incertidumbre o sin
-    True RMS no puede sustentar la afirmación. Sin carga o por debajo del rango,
-    la corriente usa un límite absoluto de ruido, no un error porcentual.
-11. Conserve extractos de la forma de onda cruda, resúmenes, lecturas de
-    referencia, *scripts*, entorno, coeficientes, revisiones de
-    *firmware* y cableado, *hashes* y resultados de aprobación. Marque los datos
-    fuera de rango; no sustentan la afirmación.
+3. Cargue los coeficientes nominales: ganancia de tensión según la relación del
+   adaptador y R1/R2, ganancia de corriente según 100 mV/A y R3/R4, y corrección
+   de fase según el desfase conocido de una conversión entre canales.
+4. Caliente el sistema al menos 10 minutos. Sin carga, capture 60 segundos de
+   datos de corriente cero y guarde el *offset* del ACS712. Repita el autocero
+   antes de cada sesión.
+5. Encienda una carga resistiva estable. La potencia debe salir positiva: eso
+   confirma la polaridad del ACS712. Si sale negativa, corrija el signo en los
+   coeficientes; no recablee. Guarde el resultado como revisión de calibración
+   `nominal` y congélela.
+6. Prueba de plausibilidad con al menos tres cargas resistivas estables (unos
+   100 W, 500 W y 1 kW): la tensión debe estar entre 180 y 250 V, la potencia
+   debe ser positiva y quedar dentro de ±15 % de la potencia de placa. Registre
+   al menos 5 minutos por carga.
+7. Registre un ventilador pequeño solo para observar su comportamiento de V, I y
+   P, sin criterio numérico.
+8. Sin carga o por debajo del rango, la corriente usa un límite absoluto de
+   ruido, no un porcentaje.
+9. Conserve extractos de la forma de onda cruda, resúmenes, *scripts*, entorno,
+   coeficientes, revisiones de *firmware* y cableado, *hashes* y la tabla de
+   plausibilidad. Marque los datos fuera de rango.
 
-La aceptación respalda solo la configuración probada del prototipo educativo y
-los rangos calibrados declarados. No aprueba una instalación permanente, la
+La prueba de plausibilidad describe solo la configuración probada del prototipo
+educativo; no es una afirmación de exactitud. No aprueba una instalación permanente, la
 facturación ni el uso como dispositivo de seguridad.
 
 ## 10. Solución de problemas
@@ -438,7 +416,7 @@ facturación ni el uso como dispositivo de seguridad.
 | El *offset* en GPIO5 está lejos de ~1,70 V | Alimentación del ACS712, divisor, tierra o versión del sensor | Verifique 5 V, tierra común, R3 = 4,7 kΩ, R4 = 10 kΩ y que el módulo sea el de 20 A |
 | La potencia activa sale negativa | Sentido del conductor en IP+/IP− | Si la potencia sale negativa en la carga resistiva, corrija el signo en los coeficientes de calibración; no recablee con tensión |
 | Los valores del ADC saltan o se pierden muestras | Ruido de cableado, configuración del ADC, desbordamiento de DMA o conversión faltante | Revise tierras y filtros de baja tensión y el diagnóstico del *firmware*; las ventanas afectadas son inválidas |
-| La calibración deriva | Calentamiento, variación de la alimentación, temperatura, carga inestable o incertidumbre de la referencia | Repita el calentamiento y el cero registrados y use cargas estables y el multímetro identificado |
+| La calibración deriva | Calentamiento, variación de la alimentación, temperatura, carga inestable o coeficientes nominales | Repita el calentamiento y el cero registrados y use cargas estables y el multímetro identificado |
 | La persona revisora encuentra un tema de seguridad pendiente | Capacidad, caja de ensayo, protección o cableado no establecidos | Deténgase; resuélvalo y obtenga la firma antes de cualquier conexión a la red |
 
 ## 11. Temas pendientes y supuestos
@@ -448,9 +426,9 @@ facturación ni el uso como dispositivo de seguridad.
   actualización revisada.
 - Se asume que el LED RGB es de cátodo común. Confirme su tipo y orden de pines
   antes de conectar GPIO17/18/21.
-- El multímetro True RMS CAT III de referencia se va a comprar. Elija un modelo
-  cuyo manual indique la exactitud en CA, y registre su identidad e
-  incertidumbre antes de calibrar.
+- No hay multímetro de referencia (constitución 2.0.0). Si más adelante el
+  equipo consigue uno True RMS (por ejemplo, prestado por la persona revisora),
+  puede añadirse una calibración `reference` sin cambiar el circuito.
 - El adaptador CA-CA certificado está por comprar. Verifique en el banco su
   certificación, su salida y su aptitud antes de usarlo.
 - El circuito de baja tensión va en protoboard, fuera de la caja de ensayo del
@@ -466,5 +444,6 @@ facturación ni el uso como dispositivo de seguridad.
   parámetros exactos de calibración del *firmware* se confirman en la revisión
   del esquema y en el banco.
 - La identidad de la persona revisora, el registro de seguridad firmado, la
-  identidad de las cargas, los resultados de calibración y el informe de
-  aceptación deben completarse antes de afirmar cualquier medición.
+  identidad de las cargas, la calibración nominal y la tabla de plausibilidad
+  deben completarse antes de mostrar cualquier medición, siempre rotulada como
+  «no validada».

@@ -32,7 +32,7 @@ and `operations` buckets with 30-day retention; SQLite WAL ingestion ledger,
 configuration, alert audit, and notification outbox; named container volumes  
 **Testing**: ESP-IDF Unity with captured waveforms; pytest/unit/property/contract
 tests; JSON Schema fixtures; Docker Compose integration and fault injection;
-supervised reference-meter calibration/acceptance; secret scanning and network
+supervised nominal calibration and plausibility check (no reference meter); secret scanning and network
 reachability tests  
 **Target Platform**: ESP32-S3 DevKitC-1 monitoring node; one x86-64/ARM64 Linux host on the
 trusted laboratory LAN; modern browser on the same trusted LAN  
@@ -62,7 +62,7 @@ because its default/latest image line is not a stable v2 contract.
 | Principle or gate | Status | Planned evidence/control |
 |---|---|---|
 | I. Electrical Safety Before Convenience | PASS | Certified isolated adapter for voltage; ACS712 alone in a closed test box, never on a breadboard; protected range, no relay, de-energized assembly, qualified schematic/PCB/enclosure review, signed safety checklist before hardware test |
-| II. Measurement Integrity and Evidence | PASS | Exact quantities/ranges/units and algorithms; true-RMS reference meter with recorded uncertainty and guard band (research R-004); separate calibration and validation datasets; per-point <=5% acceptance |
+| II. Measurement Integrity and Evidence | PASS | Constitution 2.0.0: exact quantities/ranges/units and algorithms; no reference meter, so nominal coefficients with offset zeroing and polarity check, every value labeled "not validated", no accuracy figure claimed, plausibility check against nameplates (research R-004) |
 | III. Monitoring MVP Before Optional Complexity | PASS | One-node vertical slice only; LoRa, cutoff, environmental sensing, anomalies, forecasts, and recommendations deferred |
 | IV. Security and Secret Hygiene | PASS | Per-principal mTLS/ACLs, encrypted NVS, ignored runtime secrets, private endpoints absent from tracked examples, secret scan gate |
 | V. Contract-Tested Boundaries | PASS | ADC fixtures, five JSON Schemas, valid/invalid fixtures, idempotent storage/query and dashboard contract tests |
@@ -216,11 +216,8 @@ flowchart LR
         LOAD[Single-phase protected test load]
         VS[Certified AC-AC adapter<br/>isolated voltage sensing]
         CS[ACS712 Hall current sensor<br/>closed test box]
-        REF[Trusted reference meter]
         LOAD --> VS
         LOAD --> CS
-        REF -. calibration and acceptance evidence .-> VS
-        REF -. calibration and acceptance evidence .-> CS
     end
 
     subgraph NODE[Low-voltage monitoring node]
@@ -302,8 +299,7 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Local display | OLED 0.96" module, assumed 4-pin SSD1306 on I²C (**to confirm**; a 7-pin SPI module changes the pin table) | "pantalla OLED 0.96 I2C SSD1306" | 1 | Kit | Available |
 | Buzzer driver | NPN transistor 2N2222 (or PN2222A) + 1 kΩ base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 | Buy | To buy (low cost) |
 | Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
-| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy ≤ 2% at about 0.45 A and 4.5 A, **fused** current inputs (HRC fuse) with the 10 A input rated for ≥ 5 A continuous. Reference current is read in series through the test box's current sockets, connected only with the circuit de-energized | "multímetro True RMS CAT III con fusible 10A" | 1 | Buy | To buy (model to choose against these criteria) |
-| ACS712 test box | Closed flame-retardant plastic box for the ACS712 **only**, built as a measuring extension cord: plug and cable with gland, ACS712 on the live wire, test socket for the load, two shrouded 4 mm sockets in series with the live wire for the reference current (closed by a safety shorting link when the meter is not in series) and two shrouded 4 mm sockets for the reference voltage. Built or checked by the qualified person | "caja de paso plástica"; "prensaestopa"; "enchufe y tomacorriente"; "borne banana hembra 4 mm de seguridad"; "puente banana de seguridad 4 mm" | 1 set | Buy | To buy |
+| ACS712 test box | Closed flame-retardant plastic box for the ACS712 **only**, built as a measuring extension cord: plug and cable with gland, ACS712 on the live wire, and a socket for the load. Built or checked by the qualified person | "caja de paso plástica"; "prensaestopa"; "enchufe y tomacorriente" | 1 set | Buy | To buy |
 | Mains protection | 30 mA RCD protecting the test outlet: the device already in the building's panel (marked 30 mA, with a "T" test button) if present, otherwise a certified plug-in portable RCD. Overcurrent: the outlet's existing breaker, if the reviewer accepts it | "protector diferencial portátil 30 mA para enchufe" (only if the panel has none) | 0–1 | Building or buy | To check the building's panel |
 | Test loads | Household resistive loads: 100 W incandescent or halogen bulb; about 500 W halogen work lamp; about 1 kW iron or heater (nameplate ≤ 1.1 kW). Plus one stable inductive (small fan) or nonlinear load (LED lamp or charger) | "foco halógeno 100 W"; "reflector halógeno 500 W"; "plancha 1000 W" | 3–4 | Team or buy | To select (check nameplates) |
 
@@ -321,7 +317,8 @@ ACS712 mains side never goes on the breadboard: only its low-voltage header
 (5 V, GND, OUT) is jumpered out of its closed test box; the breadboard and the
 ESP32-S3 stay outside the box. Not used in the
 minimal build: DHT22 (temperature logging), bench DC polarity source, and a
-dedicated DIN protection panel.
+dedicated DIN protection panel, and a reference multimeter (none is affordable;
+constitution 2.0.0 allows a demonstration build labeled "not validated").
 
 Not used: ADS131M02, SCT-013-020, ZMPT101B, MB85RC256V FRAM, DS3231 RTC (kept
 as the documented upgrade path), and the kit's relay, Arduino Uno R4, motors,
@@ -407,37 +404,35 @@ maximum) are wire bounds; the node and `energyctl` reject thresholds above the
 calibrated maximum (1,100 W). No field claims apparent power, reactive power, power factor,
 or billing accuracy.
 
-### Calibration and acceptance procedure
+### Calibration and plausibility procedure
 
-1. Complete and sign a de-energized schematic/enclosure/protection review,
+No reference meter is used (constitution 2.0.0, research R-004).
+
+1. Complete and sign a de-energized schematic/test-box/protection review,
    including the ACS712 module's creepage and conductor rating.
-2. Bench stage without mains: verify the node with the AC-AC adapter output only
-   (voltage channel), recorded waveforms, and the ACS712 zero-current offset.
+2. Bench stage without mains: verify the voltage channel with the AC-AC adapter
+   output only, recorded waveforms, and the ACS712 zero-current offset, using the
+   ESP32-S3's own ADC logs.
 3. Record build revision, firmware commit, ADC settings, sensors and ACS712
-   variant, wiring, operator, ambient conditions, load identities, and
-   the true-RMS reference meter's identity and AC uncertainty.
-4. Warm up at least ten minutes; capture 60 seconds at zero current and store the
+   variant, wiring, operator, load identities and nameplate ratings, and the
+   statement that no reference instrument is used.
+4. Load nominal coefficients: voltage gain from the adapter ratio and R1/R2,
+   current gain from 100 mV/A and R3/R4, phase correction from the known
+   one-conversion offset between channels.
+5. Warm up at least ten minutes; capture 60 seconds at zero current and store the
    ACS712 offset.
-5. Calculate voltage and current gain on stable resistive loads; set the
-   fractional phase correction on a resistive load so that `P = V_RMS*I_RMS`.
-   Active power must be positive on the resistive load (current polarity); if it
-   is negative, correct the sign in the coefficients instead of rewiring.
-   Reference readings: current with the meter in series through the test box's
-   current sockets, voltage at its voltage sockets. With one meter, current and
-   voltage windows alternate on the same stable load; the circuit is
-   de-energized every time the leads or the shorting link are moved.
-6. Write coefficients to a new immutable calibration artifact/NVS revision and
-   freeze them before validation.
-7. Validate on at least three separate stable resistive loads across the
-   calibrated range (reference `P = V_ref*I_ref`, `Wh = P*t`). Capture >=5 minutes
-   per power point and >=15 minutes for Wh. Record one inductive/nonlinear load
-   for V and A validation; its W/Wh are observations without an accuracy claim.
-8. Require every V, A, W, and Wh point to meet `|error| <= 5%` (or the
-   guard-banded limit when the meter's uncertainty is above 1%, research R-004).
-   Below-range/no-load current uses an absolute noise limit, not percentage error.
-9. Hash and preserve raw waveform excerpts, summaries, reference readings,
-   scripts, environment, coefficients, and pass/fail output.
-   Outside-range data is flagged and cannot support the claim.
+6. Switch on a resistive load: active power must be positive (current polarity);
+   if it is negative, correct the sign in the coefficients instead of rewiring.
+   Freeze the result as a `nominal` calibration revision.
+7. Plausibility check (SC-001) on at least three stable resistive loads across
+   the range (about 100 W, 500 W, 1 kW): V_RMS in 180-250 V, P positive and
+   within ±15% of the nameplate rating. Capture >=5 minutes per point. Record one
+   fan for qualitative V/I/P behavior only.
+8. Every displayed and published value carries the "not validated" label derived
+   from the calibration kind. Below-range/no-load current uses an absolute noise
+   limit.
+9. Hash and preserve raw waveform excerpts, summaries, scripts, environment,
+   coefficients, and the plausibility table. Outside-range data is flagged.
 
 ## Telemetry, Delivery, and Clock Design
 
@@ -509,8 +504,9 @@ physical order. Unsynchronized observations remain diagnostic and cannot be
 
 ### Dashboard panels
 
-1. Identity/quality banner: node, circuit, online/stale/offline, calibration,
-   clock, last valid update and age.
+1. Identity/quality banner: node, circuit, online/stale/offline, calibration
+   (with a permanent "not validated" label for `nominal` calibration), clock,
+   last valid update and age.
 2. Current cards: V RMS, A RMS, active W, import Wh/kWh, each with unit,
    timestamp, and quality.
 3. Active-power time series with alert and data-gap annotations.

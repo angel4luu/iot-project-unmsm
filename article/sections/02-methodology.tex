@@ -9,17 +9,17 @@
 
 \subsection{Diseño de la investigación}
 \label{sec:design}
-Es una investigación aplicada de desarrollo tecnológico, cuantitativa y experimental, sin hipótesis formal: se construye el sistema y se caracteriza su desempeño frente a un instrumento de referencia.
-El escenario es una carga monofásica alimentada desde un tomacorriente común de \SI{220}{V} protegido por un interruptor diferencial de \SI{30}{mA}, con un rango calibrado de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz}, \SIrange{0,5}{5,0}{A} RMS y hasta unos \SI{1,1}{kW}.
+Es una investigación aplicada de desarrollo tecnológico, cuantitativa y experimental, sin hipótesis formal: se construye el sistema y se caracteriza su desempeño; al no disponerse de un instrumento de referencia, las mediciones se verifican solo por plausibilidad y no se afirma su exactitud.
+El escenario es una carga monofásica alimentada desde un tomacorriente común de \SI{220}{V} protegido por un interruptor diferencial de \SI{30}{mA}, con un rango de operación de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz}, \SIrange{0,5}{5,0}{A} RMS y hasta unos \SI{1,1}{kW}.
 Es un prototipo educativo construido sobre todo con componentes disponibles, no destinado a instalación permanente, facturación ni protección de equipos.
-La unidad de análisis es el resumen de \SI{5}{s} emparejado con la lectura de referencia del mismo intervalo; las variables independientes son la carga y el estado de la red, y las dependientes, las magnitudes eléctricas, su error, la latencia, la entrega y recuperación de registros y la activación de alertas.
+La unidad de análisis es el resumen de \SI{5}{s}; las variables independientes son la carga y el estado de la red, y las dependientes, las magnitudes eléctricas, su desviación respecto de la potencia de placa, la latencia, la entrega y recuperación de registros y la activación de alertas.
 
 \subsection{Arquitectura del sistema IoT}
 \label{sec:architecture}
 \begin{figure}[t]
   \centering
   \input{figures/fig01-architecture}
-  \caption{Arquitectura del sistema por capas. El instrumento de referencia solo interviene en la calibración y la aceptación. La línea discontinua gruesa marca el aislamiento galvánico entre la red eléctrica y el nodo.}
+  \caption{Arquitectura del sistema por capas. La línea discontinua gruesa marca el aislamiento galvánico entre la red eléctrica y el nodo.}
   \label{fig:architecture}
 \end{figure}
 
@@ -52,8 +52,7 @@ Acondi\-cio\-na\-mien\-to & Divisores, polarización y filtros RC en protoboard 
 Pantalla & OLED \SI{0,96}{''} SSD1306 (I\textsuperscript{2}C) & Valores y estado locales & K \\
 Indicación & LED RGB; zumbador con 2N2222 & Estado y aviso local & K/C \\
 Protección & Interruptor diferencial de \SI{30}{mA} (del tablero o portátil) & Seguridad del lado de red & K/C \\
-Caja de ensayo & Caja cerrada con ACS712, tomacorriente y bornes de referencia & Aislamiento de la red y conexión de la referencia & C \\
-Referencia & Multímetro de verdadero valor eficaz con entradas de corriente con fusible & Calibración y validación & C \\
+Caja de ensayo & Caja cerrada con ACS712 y tomacorriente & Aislamiento del camino de red & C \\
 Servidor & Computadora del equipo con Docker Compose & Corredor, ingesta, almacenamiento y panel & K \\
 \bottomrule
 \multicolumn{4}{@{}l}{\scriptsize Or.: origen; K, disponible (kit o equipo propio); C, compra.}
@@ -133,31 +132,30 @@ La implementación avanza por etapas, cada una condicionada a superar la anterio
   \item \emph{Simulación}: servidor, panel y alertas con un simulador que emite mensajes conformes con los esquemas JSON del contrato.
   \item \emph{Banco de baja tensión}: periféricos, canal de tensión con el adaptador y \textit{offset} del ACS712 sin corriente, sin red.
   \item \emph{Revisión de seguridad}: una persona calificada revisa y firma el esquema, el aislamiento del ACS712, la caja de ensayo y la protección diferencial.
-  \item \emph{Calibración supervisada}: tras \SI{10}{min} de calentamiento y \SI{60}{s} sin corriente, se fijan las ganancias con cargas resistivas y $\delta$ hasta que $P=V_{\mathrm{RMS}}I_{\mathrm{RMS}}$ en una carga resistiva, donde $P>0$ confirma la polaridad; los coeficientes se congelan.
-  \item \emph{Validación}: escenarios de la Tabla~\ref{tab:scenarios} con cargas distintas de las de calibración.
+  \item \emph{Calibración nominal supervisada}: se cargan los coeficientes de las hojas de datos y de los divisores, se mide durante \SI{60}{s} el \textit{offset} sin corriente tras \SI{10}{min} de calentamiento y se confirma la polaridad con $P>0$ en una carga resistiva; los coeficientes se congelan.
+  \item \emph{Evaluación}: escenarios de la Tabla~\ref{tab:scenarios}.
 \end{enumerate}
-La referencia es un multímetro de verdadero valor eficaz con incertidumbre documentada~\todo{definir el modelo del multímetro a adquirir y su exactitud en CA}; si esta supera el \SI{1}{\percent}, el límite de aceptación se reduce en ese valor.
-La corriente de referencia se lee con el multímetro en serie en los bornes A de la caja de ensayo y la tensión en sus bornes V (Fig.~\ref{fig:testsetup}); con un solo instrumento, ambas se leen de forma alternada sobre la misma carga estable.
+No se dispone de un instrumento de referencia, por lo que el prototipo opera con coeficientes nominales, cada valor se muestra rotulado como no validado y E1--E4 son una verificación de plausibilidad frente a la potencia de placa de cargas domésticas, no una medida de exactitud (Fig.~\ref{fig:testsetup}).
 
 \begin{figure}[t]
   \centering
   \input{figures/fig04-testsetup}
-  \caption{Montaje de ensayo. Las líneas gruesas llevan tensión de red; el ACS712 es el único elemento del nodo en ese camino y está dentro de la caja de ensayo. El multímetro de referencia se conecta en serie (A) o en paralelo (V), nunca a la vez.}
+  \caption{Montaje de ensayo. Las líneas gruesas llevan tensión de red; el ACS712 es el único elemento del nodo en ese camino y está dentro de la caja de ensayo. El adaptador, conectado al mismo circuito, recibe la misma tensión que la carga.}
   \label{fig:testsetup}
 \end{figure}
 
 Cada sesión de ensayo sigue el mismo flujo:
 \begin{enumerate}
   \item se comprueba el disparo del interruptor diferencial con su botón de prueba;
-  \item con el circuito desenergizado, se conectan la carga al tomacorriente de la caja y el multímetro a los bornes A;
+  \item con el circuito desenergizado, se conecta la carga al tomacorriente de la caja de ensayo y se anota su potencia de placa;
   \item se energiza, se esperan \SI{10}{min} de calentamiento y, con la carga apagada, se mide durante \SI{60}{s} el \textit{offset} del ACS712;
-  \item se enciende la carga y, ya estable, se registran a la vez la corriente del multímetro y los resúmenes del nodo durante la ventana del punto;
-  \item se desenergiza, se cierra A con el puente, se pasa el multímetro a los bornes V y se repite la ventana para la tensión;
-  \item se guardan las lecturas de referencia, los resúmenes y las versiones, y se calcula el error con~\eqref{eq:error}.
+  \item se enciende la carga y, ya estable, se registran los resúmenes del nodo durante al menos \SI{5}{min};
+  \item se guardan los resúmenes y las versiones, y se calcula la desviación con~\eqref{eq:error}.
 \end{enumerate}
-En E1--E3 la potencia de referencia es $V_rI_r$ y la energía, esa potencia por el tiempo; en E4 solo se validan $V$ e $I$, pues sin un medidor de potencia no puede afirmarse la exactitud de $P$ con factor de potencia distinto de la unidad, como en otros trabajos con cargas variadas~\cite{cardenas2026residential}.
-Cada punto se mide al menos \SI{5}{min} (\SI{15}{min} para la energía), y se registran las versiones y el cableado; el \textit{offset} del ACS712, que varía con la temperatura, se mide de nuevo antes de cada sesión.
-El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el método de incertidumbre (GUM, tipos A y B) y el número de repeticiones.}
+En E1--E3 la tensión debe estar entre \SI{180}{V} y \SI{250}{V} y la potencia debe ser positiva y quedar dentro de \SI{\pm 15}{\percent} de la de placa; esa banda cubre el error de los coeficientes nominales y la diferencia entre la placa y el consumo real, por lo que no es un límite de exactitud.
+En E4, un ventilador, $V$, $I$ y $P$ solo se observan, pues con factor de potencia distinto de la unidad no puede juzgarse $P$ sin un medidor de potencia, como en otros trabajos con cargas variadas~\cite{cardenas2026residential}.
+Se registran las versiones y el cableado, y el \textit{offset} del ACS712, que varía con la temperatura, se mide de nuevo antes de cada sesión.
+El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el número de repeticiones por escenario.}
 
 \begin{table}[t]
 \centering
@@ -168,8 +166,8 @@ El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el 
 \toprule
 ID & Carga o maniobra & Métrica y criterio \\
 \midrule
-E1--E3 & Resistivas: foco halógeno (\SI{100}{W}), reflector (\SI{500}{W}) y plancha (\SI{1}{kW}) & $\varepsilon_X\leq\SI{5}{\percent}$ en cada punto para $V$, $I$, $P$ y $E$ (SC-001) \\
-E4 & Ventilador o lámpara LED estable & $\varepsilon_X\leq\SI{5}{\percent}$ en $V$ e $I$; $P$ solo observada \\
+E1--E3 & Resistivas: foco halógeno (\SI{100}{W}), reflector (\SI{500}{W}) y plancha (\SI{1}{kW}) & $V$ en \SIrange{180}{250}{V}; $P>0$ y $|d_P|\leq\SI{15}{\percent}$ (SC-001, plausibilidad) \\
+E4 & Ventilador estable & $V$, $I$ y $P$ solo observadas \\
 E5 & Perfiles del simulador; carga real bajo y sobre el umbral; arranques breves & Alertas correctas; aviso local $\leq\SI{2}{s}$ y remoto $\leq\SI{10}{s}$ (SC-004) \\
 E6 & \SI{1}{h} con carga resistiva y red sana & $\geq\SI{95}{\percent}$ de $L_k\leq\SI{10}{s}$; cero duplicados (SC-002) \\
 E7 & Nodo sin enlace con el corredor durante \SI{10}{min} & $R\geq\SI{99}{\percent}$ en $\leq\SI{5}{min}$ (SC-003) \\
@@ -178,12 +176,12 @@ E8 & Conjunto de siete días de mediciones & Hallar $h^{*}$ en $<\SI{2}{min}$ (S
 \end{tabular}
 \end{table}
 
-El error relativo de cada magnitud $X\in\{V_{\mathrm{RMS}},I_{\mathrm{RMS}},P,E\}$ es
+La desviación de la potencia medida $P_m$ respecto de la potencia de placa $P_n$ es
 \begin{equation}
-\varepsilon_{X}\,(\%)=\frac{|X_m-X_r|}{|X_r|}\times100,
+d_{P}\,(\%)=\frac{P_m-P_n}{P_n}\times100,
 \label{eq:error}
 \end{equation}
-dentro del rango calibrado; sin carga se usa un límite absoluto de ruido.
+y sin carga se usa un límite absoluto de ruido.
 La latencia de cada resumen es $L_k=t_k^{\mathrm{vis}}-t_k^{\mathrm{obs}}$ (media y percentil~95), y la recuperación, $R=n_{\mathrm{rec}}/n_{\mathrm{ret}}\times100$ sobre los registros retenidos.
 E5 usa perfiles repetibles del simulador y maniobras manuales con cargas reales, y su exactitud es $(\mathrm{VP}+\mathrm{VN})/(\mathrm{VP}+\mathrm{VN}+\mathrm{FP}+\mathrm{FN})$.
 También se reportan la desviación estándar de las repeticiones, la disponibilidad del nodo, el tiempo de cálculo de un bloque y el porcentaje de lecturas con marca de tiempo, unidad y estado (SC-006).

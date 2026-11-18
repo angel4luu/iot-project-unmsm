@@ -15,7 +15,7 @@
 - Q: What deployment scope must the first working release support? → A: One controlled single-phase laboratory circuit or isolated test load; not for permanent installation.
 - Q: Which electrical quantities must the first release measure and validate? → A: RMS voltage, RMS current, active power in W, and active energy in Wh/kWh.
 - Q: Which analytics capabilities must be completed in the first release? → A: Threshold-based local and remote alerts only; anomaly detection, forecasting, and recommendations are later features.
-- Q: Which acceptance-threshold profile should the first release be required to pass? → A: Balanced profile: 5% measurement error, 95% of updates within 10 seconds, 99% outage recovery, and local/remote alerts within 2/10 seconds.
+- Q: Which acceptance-threshold profile should the first release be required to pass? → A: Balanced profile: 5% measurement error (superseded 2026-11-18: no reference meter, plausibility check only; see SC-001), 95% of updates within 10 seconds, 99% outage recovery, and local/remote alerts within 2/10 seconds.
 - Q: How should the operator be allowed to access the first-release dashboard? → A: Only from a trusted laboratory/local network; outbound remote threshold alerts are allowed.
 
 ### Session 2026-11-18
@@ -23,6 +23,7 @@
 - Q: Must the prototype be built from new metrology-grade parts? → A: No. It is an educational demonstration built mostly from the team's available kit with minimal purchases; the calibrated range is narrowed to what that hardware supports (see plan › Hardware).
 - Q: Should the node show readings locally? → A: Yes. The node shows its latest values and state on a local display and status light, and keeps doing so when the network is unavailable (FR-018).
 - Q: Which parts are in the minimal MVP build? → A: Only those needed for measurement, local indication (status LED, buzzer, display, which the team already owns), safety, and calibration; non-essential extras (temperature logging, bench polarity source, dedicated protection panel) are left out (see plan › Hardware list).
+- Q: Is a reference meter used? → A: No (constitution 2.0.0, Principle II). The team cannot afford a true-RMS reference meter, so the node runs on nominal (datasheet) coefficients plus offset zeroing and a polarity check; every displayed and published value is labeled as not validated, no accuracy figure is claimed, and readings are compared with load nameplates and the expected wall voltage only as a plausibility check.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -37,7 +38,7 @@ As a laboratory operator or evaluator, I want to see the current electrical beha
 **Acceptance Scenarios**:
 
 1. **Given** a calibrated node and an energized test load, **When** the load is switched on, **Then** the latest electrical measurements become visible to the user within 10 seconds.
-2. **Given** two different known loads, **When** the second load is added, **Then** the displayed RMS current and active power change consistently with the reference meter.
+2. **Given** two different known loads, **When** the second load is added, **Then** the displayed RMS current and active power change in the expected direction and roughly in proportion to the loads' nameplate ratings.
 3. **Given** an invalid or out-of-range sensor reading, **When** the system processes it, **Then** the reading is marked invalid and is not presented as trustworthy consumption data.
 
 ---
@@ -109,7 +110,7 @@ flowchart LR
 - Dashboard access restricted to the trusted laboratory/local network, with outbound remote threshold notifications permitted.
 - A local visible or audible warning for configured safety thresholds.
 - A local display and status light on the node showing its latest readings and state.
-- Evaluation against a reference meter and controlled load changes.
+- Plausibility evaluation against load nameplates and the expected wall voltage, with controlled load changes (no reference meter; no accuracy claim).
 
 **Deferred until the monitoring MVP is validated**:
 
@@ -156,7 +157,7 @@ flowchart LR
 
 ### Measurable Outcomes
 
-- **SC-001**: After calibration, RMS voltage, RMS current, active power, and accumulated active energy remain within 5% of a trusted reference meter across at least three representative stable loads in the prototype test range.
+- **SC-001**: With nominal calibration, on at least three representative stable resistive loads in the prototype test range, the displayed RMS voltage lies in the expected wall range (180–250 V), active power is positive, and active power lies within the plausibility band of each load's nameplate rating (±15%); every value is labeled as not validated and no accuracy figure is claimed.
 - **SC-002**: During a one-hour healthy-network test, at least 95% of scheduled summaries are visible to the user within 10 seconds of measurement and no accepted measurement is silently duplicated.
 - **SC-003**: After a recoverable 10-minute communications interruption, at least 99% of locally retained measurements become available in correct chronological order within 5 minutes of reconnection.
 - **SC-004**: Confirmed threshold violations produce a local warning within 2 seconds and a remote user-visible alert within 10 seconds when remote services are healthy.
@@ -167,11 +168,11 @@ flowchart LR
 
 - The initial deliverable is an academic prototype evaluated on one controlled single-phase laboratory circuit or isolated test load; it is not approved for permanent installation, utility billing, or use as a production safety device.
 - Any work involving mains voltage is assembled and reviewed by a qualified person using appropriate isolation, enclosure, overcurrent protection, and safe test procedures.
-- A trusted reference meter and several known loads are available for calibration and experimental evaluation.
+- Several household loads with known nameplate ratings are available for plausibility evaluation; no reference meter is available (constitution 2.0.0, Principle II).
 - The installation has stable local power, indoor network coverage, and internet access during normal operation.
 - The first release has one operator role and restricts dashboard access to the trusted laboratory/local network; public dashboard access, multi-user access, billing, and tenant isolation are outside scope, while outbound remote threshold notifications are permitted.
 - Thirty days is a practical initial retention period and may be adjusted after measuring storage usage.
 - Threshold detection is the only consumption-alert method in the first release; historical anomaly detection, forecasting, and recommendations require separate future specifications after sufficient validated history exists.
 - Environmental sensing and automatic load switching remain separate future features so that they do not block validation of the core monitoring path.
-- The prototype is an educational demonstration built mostly from hardware the team already owns; its accuracy claim applies only to the narrowed calibrated range stated in the plan.
+- The prototype is an educational demonstration built mostly from hardware the team already owns; it makes no accuracy claim, and its readings are labeled as not validated within the narrowed range stated in the plan.
 

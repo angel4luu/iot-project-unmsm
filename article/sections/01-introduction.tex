@@ -22,11 +22,10 @@ En el análisis de datos, Oprea \textit{et~al.}~\cite{oprea2021anomaly} detectar
 
 % C. Limitations and gap (narrowed to what the evidence supports, AD-8).
 Estos trabajos presentan limitaciones recurrentes.
-Primero, la validación metrológica es heterogénea: algunos no identifican el instrumento de referencia o evalúan pocas cargas~\cite{rohman2025esp32}, y otros reportan el error de una sola magnitud~\cite{desousa2026smartmeter}.
-Segundo, la latencia extremo a extremo rara vez se mide; entre los trabajos revisados, solo~\cite{desousa2026smartmeter} la reporta.
-Tercero, aunque hay sistemas que almacenan datos sin conexión~\cite{kizonde2023monitoringnode}, no se reporta una evaluación controlada de la recuperación tras una interrupción de la comunicación.
-Cuarto, los métodos de análisis se evalúan sobre conjuntos de datos ajenos al hardware de medición~\cite{oprea2021anomaly,zheng2023thresholds}.
-No se identificó un prototipo de bajo costo que evalúe conjuntamente la exactitud frente a una referencia, la latencia, la recuperación ante interrupciones y los patrones de consumo.
+Primero, la latencia extremo a extremo rara vez se mide; entre los trabajos revisados, solo~\cite{desousa2026smartmeter} la reporta.
+Segundo, aunque hay sistemas que almacenan datos sin conexión~\cite{kizonde2023monitoringnode}, no se reporta una evaluación controlada de la recuperación tras una interrupción de la comunicación.
+Tercero, los métodos de análisis se evalúan sobre conjuntos de datos ajenos al hardware de medición~\cite{oprea2021anomaly,zheng2023thresholds}.
+No se identificó un prototipo educativo de bajo costo que evalúe conjuntamente la latencia, la recuperación ante interrupciones y los patrones de consumo, declarando de forma explícita el alcance no validado de sus mediciones.
 
 % D. Objective and contributions (aligned with spec 001; no results stated).
 El objetivo de este trabajo es diseñar, implementar y evaluar experimentalmente un sistema IoT para el monitoreo y análisis en tiempo real flexible del consumo eléctrico de un circuito monofásico controlado.
@@ -35,6 +34,6 @@ Las contribuciones son:
   \item un nodo de bajo costo, construido con componentes disponibles, que mide tensión y corriente con corrección de desfase entre canales y calcula localmente la potencia activa y la energía;
   \item una cadena de entrega MQTT con confirmación, cola local y almacenamiento idempotente en una base de series temporales;
   \item un análisis del consumo por hora, día y semana, con alertas por umbral que descartan los transitorios de arranque;
-  \item una evaluación experimental de la exactitud frente a un instrumento de referencia, de la latencia y de la recuperación tras interrupciones controladas de la red.
+  \item una evaluación experimental de la latencia y de la recuperación tras interrupciones controladas de la red, junto con una verificación de plausibilidad de las mediciones frente a la potencia de placa de cargas domésticas, sin afirmar su exactitud.
 \end{enumerate}
 La Sección~\ref{sec:methodology} describe la metodología, la Sección~\ref{sec:results} los resultados y la Sección~\ref{sec:conclusions} las conclusiones.
