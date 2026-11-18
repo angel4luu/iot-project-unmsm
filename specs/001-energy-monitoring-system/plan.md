@@ -23,7 +23,7 @@ environmental sensing, and production anomaly/forecast models are not included.
 
 **Language/Version**: Firmware C/C++17 with ESP-IDF 5.4 LTS; server Python 3.14.8;
 Compose YAML; Flux; JSON Schema Draft 2020-12  
-**Primary Dependencies**: ESP-IDF ADC continuous/calibration drivers, OLED driver (controller to confirm), DHT22 driver (calibration logging only), ESP-MQTT/Mbed TLS, ESP-IDF NVS/SNTP/Unity;
+**Primary Dependencies**: ESP-IDF ADC continuous/calibration drivers, OLED driver (controller to confirm), ESP-MQTT/Mbed TLS, ESP-IDF NVS/SNTP/Unity;
 Paho MQTT, Pydantic and `jsonschema`, InfluxDB Python client, SQLAlchemy/Alembic,
 FastAPI health/management endpoint, pytest; Eclipse Mosquitto 2.1.2, InfluxDB OSS
 2.9.1, Grafana OSS 13.2.3, Caddy 2  
@@ -61,7 +61,7 @@ because its default/latest image line is not a stable v2 contract.
 
 | Principle or gate | Status | Planned evidence/control |
 |---|---|---|
-| I. Electrical Safety Before Convenience | PASS | Certified isolated adapter for voltage; ACS712 in its own closed enclosure compartment, never on a breadboard; protected range, no relay, de-energized assembly, qualified schematic/PCB/enclosure review, signed safety checklist before hardware test |
+| I. Electrical Safety Before Convenience | PASS | Certified isolated adapter for voltage; ACS712 alone in a closed test box, never on a breadboard; protected range, no relay, de-energized assembly, qualified schematic/PCB/enclosure review, signed safety checklist before hardware test |
 | II. Measurement Integrity and Evidence | PASS | Exact quantities/ranges/units and algorithms; true-RMS reference meter with recorded uncertainty and guard band (research R-004); separate calibration and validation datasets; per-point <=5% acceptance |
 | III. Monitoring MVP Before Optional Complexity | PASS | One-node vertical slice only; LoRa, cutoff, environmental sensing, anomalies, forecasts, and recommendations deferred |
 | IV. Security and Secret Hygiene | PASS | Per-principal mTLS/ACLs, encrypted NVS, ignored runtime secrets, private endpoints absent from tracked examples, secret scan gate |
@@ -215,7 +215,7 @@ flowchart LR
     subgraph ELEC[Hazardous controlled electrical setup]
         LOAD[Single-phase protected test load]
         VS[Certified AC-AC adapter<br/>isolated voltage sensing]
-        CS[ACS712 Hall current sensor<br/>closed enclosure compartment]
+        CS[ACS712 Hall current sensor<br/>closed test box]
         REF[Trusted reference meter]
         LOAD --> VS
         LOAD --> CS
@@ -294,17 +294,34 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | "ESP32-S3 DevKitC-1" | 1 | Kit | Available |
 | Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | "módulo sensor de corriente ACS712 20A" | 1 | Kit | Available |
 | Voltage sensor | Certified isolated 220 V AC to 9–15 V **AC** plug-in adapter | "adaptador transformador 220V a 12V AC (salida alterna ~)" | 1 | Buy | To buy |
-| Adapter connection | Female DC barrel socket 5.5 × 2.1 mm with screw terminals | "jack DC hembra 5.5x2.1 con bornera" | 1 | Buy | To buy (low cost) |
-| Signal conditioning | Resistors 1/4 W: 100 kΩ, 4.7 kΩ ×2, 10 kΩ ×4 (one is the DHT22 pull-up, unless the module has one); capacitors 10 µF ×1, 22 nF ×2 | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 1 set | Buy | To buy (low cost) |
+| Adapter connector | Female DC barrel jack with screw terminals, matching the adapter's plug (usually 5.5 × 2.1 mm; **check the plug**). Carries the adapter's AC output to the breadboard; label it "AC" | "jack DC hembra con bornera 5.5x2.1" | 1 | Buy | To buy (low cost) |
+| Low-voltage assembly | Solderless breadboard and male-to-male jumper wires (low-voltage circuitry only) | "protoboard 830 puntos"; "cables jumper macho-macho" | 1 set | Kit | Available |
+| Signal conditioning | Resistors 1/4 W: 100 kΩ, 4.7 kΩ ×2, 10 kΩ ×3; capacitors 10 µF ×1, 22 nF ×2 | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 1 set | Buy | To buy (low cost) |
 | Local alert | Buzzer | "buzzer activo 5V" | 1 | Kit | Available |
 | Status light | Kit RGB LED (assumed common cathode, **to confirm**) with 3 × 470 Ω | "LED RGB cátodo común 5 mm" | 1 | Kit | Available |
 | Local display | OLED 0.96" module, assumed 4-pin SSD1306 on I²C (**to confirm**; a 7-pin SPI module changes the pin table) | "pantalla OLED 0.96 I2C SSD1306" | 1 | Kit | Available |
 | Buzzer driver | NPN transistor 2N2222 (or PN2222A) + 1 kΩ base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 | Buy | To buy (low cost) |
-| Calibration temperature log | DHT22, inside the enclosure next to the ACS712 | "sensor DHT22 / AM2302" | 1 | Kit | Available |
 | Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
-| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | "multímetro True RMS CAT III" | 1 | Buy | To buy (model to choose: must state True RMS, CAT III ≥ 300 V, and AC accuracy in its manual) |
-| Enclosure and protection | Closed flame-retardant enclosure with ACS712 compartment, 30 mA RCD/GFCI, two-pole 10 A protection, rated terminals and cable | "caja de paso plástica / caja estanca"; "interruptor diferencial 30 mA"; "llave termomagnética bipolar 10 A" | 1 set | Lab | Provided or reviewed by the qualified person |
-| Test loads | Resistive loads of about 100 W, 500 W, and 1 kW, plus one stable inductive or nonlinear load | "foco incandescente/halógeno 100 W", "hervidor o calefactor" (resistive) | 3–4 | Lab | To select |
+| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy ≤ 2% at about 0.45 A and 4.5 A, **fused** current inputs (HRC fuse) with the 10 A input rated for ≥ 5 A continuous. Reference current is read in series through the test box's current sockets, connected only with the circuit de-energized | "multímetro True RMS CAT III con fusible 10A" | 1 | Buy | To buy (model to choose against these criteria) |
+| ACS712 test box | Closed flame-retardant plastic box for the ACS712 **only**, built as a measuring extension cord: plug and cable with gland, ACS712 on the live wire, test socket for the load, two shrouded 4 mm sockets in series with the live wire for the reference current (closed by a safety shorting link when the meter is not in series) and two shrouded 4 mm sockets for the reference voltage. Built or checked by the qualified person | "caja de paso plástica"; "prensaestopa"; "enchufe y tomacorriente"; "borne banana hembra 4 mm de seguridad"; "puente banana de seguridad 4 mm" | 1 set | Buy | To buy |
+| Mains protection | 30 mA RCD protecting the test outlet: the device already in the building's panel (marked 30 mA, with a "T" test button) if present, otherwise a certified plug-in portable RCD. Overcurrent: the outlet's existing breaker, if the reviewer accepts it | "protector diferencial portátil 30 mA para enchufe" (only if the panel has none) | 0–1 | Building or buy | To check the building's panel |
+| Test loads | Household resistive loads: 100 W incandescent or halogen bulb; about 500 W halogen work lamp; about 1 kW iron or heater (nameplate ≤ 1.1 kW). Plus one stable inductive (small fan) or nonlinear load (LED lamp or charger) | "foco halógeno 100 W"; "reflector halógeno 500 W"; "plancha 1000 W" | 3–4 | Team or buy | To select (check nameplates) |
+
+Minimal MVP build (2026-11-18): only parts needed for measurement, local
+indication, safety, and calibration are listed. No laboratory infrastructure is
+assumed: tests run from an ordinary 220 V wall outlet, always protected by a
+30 mA RCD. The qualified person is not provided by a lab either; the team must
+engage a licensed electrician (or an electrical-engineering professor) to review
+the ACS712 test box and test setup and sign the review before any mains
+connection. All low-voltage circuitry (bias and divider networks, filters, buzzer driver,
+RGB LED, OLED, ESP32-S3) is assembled on a solderless breadboard with jumper
+wires, so no soldering is required; the adapter plugs into a female barrel jack
+with screw terminals whose two jumpers go to the breadboard (2026-11-18). The
+ACS712 mains side never goes on the breadboard: only its low-voltage header
+(5 V, GND, OUT) is jumpered out of its closed test box; the breadboard and the
+ESP32-S3 stay outside the box. Not used in the
+minimal build: DHT22 (temperature logging), bench DC polarity source, and a
+dedicated DIN protection panel.
 
 Not used: ADS131M02, SCT-013-020, ZMPT101B, MB85RC256V FRAM, DS3231 RTC (kept
 as the documented upgrade path), and the kit's relay, Arduino Uno R4, motors,
@@ -346,16 +363,15 @@ instead of a relay bench.
   | GPIO5 (ADC1_CH4) | Current channel (R3/R4 junction) | 22 nF to GND |
   | GPIO8 | OLED SDA (I²C) | Module has its own pull-ups |
   | GPIO9 | OLED SCL (I²C) | |
-  | GPIO15 | DHT22 DATA | 10 kΩ pull-up to 3.3 V |
   | GPIO16 | Buzzer driver (1 kΩ to 2N2222 base) | Active 5 V buzzer between 5 V and collector |
   | GPIO17 / GPIO18 / GPIO21 | RGB LED red / green / blue | 470 Ω in series each; common cathode to GND |
-  | 3V3 | Bias divider, OLED VCC, DHT22 VCC, pull-up | |
+  | 3V3 | Bias divider, OLED VCC | |
   | 5V | ACS712 VCC (module has its own decoupling), buzzer | From the USB-C supply |
   | GND | Common ground of all low-voltage parts | |
   | USB-C | Certified 5 V charger | No PC connection while energized unless the reviewer approves |
 
-- **Mains safety**: the ACS712 is the only part carrying mains. It stays in its
-  own compartment of the closed enclosure, is never on a breadboard, and is not
+- **Mains safety**: the ACS712 is the only part carrying mains. It stays alone in
+  the closed ACS712 test box, is never on a breadboard, and is not
   handled while energized; its module creepage, conductor rating, and the whole
   setup require the qualified review before energization (research R-001).
 
@@ -396,15 +412,20 @@ or billing accuracy.
 1. Complete and sign a de-energized schematic/enclosure/protection review,
    including the ACS712 module's creepage and conductor rating.
 2. Bench stage without mains: verify the node with the AC-AC adapter output only
-   (voltage channel), recorded waveforms, and a low-voltage DC current check of the
-   ACS712 offset and polarity.
+   (voltage channel), recorded waveforms, and the ACS712 zero-current offset.
 3. Record build revision, firmware commit, ADC settings, sensors and ACS712
-   variant, wiring, operator, enclosure temperature (DHT22), load identities, and
+   variant, wiring, operator, ambient conditions, load identities, and
    the true-RMS reference meter's identity and AC uncertainty.
 4. Warm up at least ten minutes; capture 60 seconds at zero current and store the
    ACS712 offset.
 5. Calculate voltage and current gain on stable resistive loads; set the
    fractional phase correction on a resistive load so that `P = V_RMS*I_RMS`.
+   Active power must be positive on the resistive load (current polarity); if it
+   is negative, correct the sign in the coefficients instead of rewiring.
+   Reference readings: current with the meter in series through the test box's
+   current sockets, voltage at its voltage sockets. With one meter, current and
+   voltage windows alternate on the same stable load; the circuit is
+   de-energized every time the leads or the shorting link are moved.
 6. Write coefficients to a new immutable calibration artifact/NVS revision and
    freeze them before validation.
 7. Validate on at least three separate stable resistive loads across the
@@ -415,7 +436,7 @@ or billing accuracy.
    guard-banded limit when the meter's uncertainty is above 1%, research R-004).
    Below-range/no-load current uses an absolute noise limit, not percentage error.
 9. Hash and preserve raw waveform excerpts, summaries, reference readings,
-   temperatures, scripts, environment, coefficients, and pass/fail output.
+   scripts, environment, coefficients, and pass/fail output.
    Outside-range data is flagged and cannot support the claim.
 
 ## Telemetry, Delivery, and Clock Design
