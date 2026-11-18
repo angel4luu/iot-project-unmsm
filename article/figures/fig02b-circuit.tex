@@ -1,0 +1,106 @@
+% Fig. 3 (numbered by position): complete low-voltage circuit of the node with
+% pin-level connections (two-column figure*).
+% Source: plan.md › Front end and pin allocation (nominal values and proposed
+% pins, to confirm at the bench stage and schematic review). Mains is not drawn:
+% the AC-AC adapter and the ACS712 are the isolation barrier.
+% Supply nets use symbols: arrow up = 3,3 V or 5 V as labelled; ground = GND.
+\begin{circuitikz}[
+  font=\scriptsize,
+  every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
+  lbl/.style={font=\tiny, inner sep=1pt, align=center},
+  pin/.style={font=\tiny, inner sep=1pt},
+  ttl/.style={font=\scriptsize\bfseries, anchor=west},
+  grp/.style={draw, dashed, rounded corners=2pt, gray},
+  mod/.style={draw, thick, align=center, font=\scriptsize},
+]
+\ctikzset{bipoles/length=0.85cm, resistors/scale=0.75, capacitors/scale=0.65,
+  sources/scale=0.8, diodes/scale=0.6, tripoles/npn/height=0.7, tripoles/npn/width=0.5}
+
+% ================= ESP32-S3 DevKitC-1 =================
+\def\BL{7.6} \def\BR{10.2}
+\draw[thick, fill=gray!8] (\BL,-2.3) rectangle (\BR,7.15);
+\node[font=\scriptsize\bfseries, align=center] at (8.9,2.3) {ESP32-S3\\DevKitC-1};
+% left pins
+\foreach \y/\t in {6.6/3V3, 6.0/5V, 5.4/GND, 3.8/GPIO4 (ADC1), -1.7/GPIO5 (ADC1)}
+  \node[pin, anchor=west] at (\BL,\y) {\t};
+% right pins
+\foreach \y/\t in {6.6/GPIO8 (SDA), 6.0/GPIO9 (SCL), 4.4/GPIO15, 2.0/GPIO16, 1.0/GPIO17, 0.2/GPIO18, -0.6/GPIO21}
+  \node[pin, anchor=east] at (\BR,\y) {\t};
+% supply pins as net symbols
+\draw (\BL,6.6) -- (7.2,6.6) node[vcc] {}; \node[lbl, anchor=east] at (7.15,6.85) {3,3 V};
+\draw (\BL,6.0) -- (6.6,6.0) node[vcc] {}; \node[lbl, anchor=east] at (6.55,6.25) {5 V};
+\draw (\BL,5.4) -- (7.2,5.4) node[ground] {};
+% USB-C power
+\draw[-{Latex[length=1.5mm]}] (8.9,7.75) -- (8.9,7.15);
+\node[lbl, above] at (8.9,7.75) {USB-C: cargador certificado de 5 V};
+
+% ================= Voltage channel =================
+\begin{scope}[yshift=1.6cm]
+\node[ttl] at (-1.3,2.85) {Canal de tensión};
+\draw (0,0) to[sV, l_={\tiny\shortstack{Adaptador\\CA-CA\\9--15 V$\sim$}}] (0,2.2)
+      to[R, l=$R_1$, a=\tiny 100 k$\Omega$] (2.4,2.2) coordinate (A);
+\draw (A) to[R, l_=$R_2$, a^={\tiny 4,7 k$\Omega$}] (2.4,0) coordinate (vb1);
+\draw (0,0) -- (vb1) -- (5.0,0) coordinate (vb2);
+\draw (A) -- (3.6,2.2) coordinate (c1t) -- (\BL,2.2);
+\draw (c1t) to[C, l_=\tiny 22 nF] (3.6,0.75) node[ground] {};
+\draw (vb2) to[R, l=\tiny 10 k$\Omega$] (5.0,1.25) node[vcc] {}; \node[lbl, right] at (5.05,1.5) {3,3 V};
+\draw (vb2) to[R, l_=\tiny 10 k$\Omega$] (5.0,-1.2) node[ground] {};
+\draw (vb2) -- (6.1,0) to[C, l=\tiny 10 $\mu$F] (6.1,-1.2) node[ground] {};
+\fill (vb1) circle (1.2pt) (vb2) circle (1.2pt) (A) circle (1.2pt) (c1t) circle (1.2pt);
+\node[lbl, above] at (3.7,0) {$V_b=1{,}65$ V};
+\end{scope}
+
+% ================= Current channel =================
+\begin{scope}[yshift=-1.7cm]
+\node[ttl] at (2.0,1.25) {Canal de corriente};
+\draw[thick] (-0.1,-0.55) rectangle (1.3,0.55);
+\node[align=center] at (0.6,0) {ACS712\\20 A};
+\draw[line width=1pt] (-0.1,0.3) -- (-0.6,0.3) node[lbl, left] {IP+};
+\draw[line width=1pt] (-0.1,-0.3) -- (-0.6,-0.3) node[lbl, left] {IP$-$};
+\node[lbl] at (-0.8,-0.85) {conductor de\\la carga (red)};
+\draw (0.6,0.55) -- (0.6,1.0) node[vcc] {}; \node[lbl, right] at (0.65,1.2) {5 V};
+\draw (0.6,-0.55) -- (0.6,-0.9) node[ground] {};
+\node[lbl, anchor=south west] at (1.3,0.02) {OUT};
+\draw (1.3,0) to[R, l=$R_3$, a={\tiny 4,7 k$\Omega$}] (3.3,0) coordinate (B);
+\draw (B) to[R, l_=$R_4$, a^={\tiny 10 k$\Omega$}] (3.3,-1.4) node[ground] {};
+\draw (B) -- (4.5,0) coordinate (c2t) -- (\BL,0);
+\draw (c2t) to[C, l=\tiny 22 nF] (4.5,-1.4) node[ground] {};
+\fill (B) circle (1.2pt) (c2t) circle (1.2pt);
+\end{scope}
+\draw[grp] (-1.35,-0.1) rectangle (7.0,4.75);
+\draw[grp] (-1.35,-3.55) rectangle (7.0,-0.3);
+
+% ================= OLED (I2C) =================
+\draw[mod] (12.4,5.75) rectangle (13.9,6.85);
+\node[mod, draw=none] at (13.15,6.3) {OLED 0,96''\\SSD1306};
+\draw (\BR,6.6) -- (12.4,6.6) node[pin, anchor=south east] {SDA};
+\draw (\BR,6.0) -- (12.4,6.0) node[pin, anchor=south east] {SCL};
+\draw (13.9,6.6) -- (14.4,6.6) node[vcc] {}; \node[lbl, right] at (14.45,6.85) {3,3 V};
+\draw (13.9,6.0) -- (14.4,6.0) node[ground] {};
+\node[pin, anchor=south west] at (13.9,6.6) {VCC};
+\node[pin, anchor=south west] at (13.9,6.0) {GND};
+
+% ================= DHT22 =================
+\draw[mod] (12.4,3.95) rectangle (13.9,4.85);
+\node[mod, draw=none] at (13.15,4.4) {DHT22};
+\draw (\BR,4.4) -- (12.4,4.4) node[pin, anchor=south east] {DATA};
+\draw (11.3,4.4) to[R, l_=\tiny 10 k$\Omega$] (11.3,5.3) node[vcc] {};
+\node[lbl, right] at (11.35,5.5) {3,3 V};
+\fill (11.3,4.4) circle (1.2pt);
+\draw (13.9,4.65) -- (14.4,4.65) node[vcc] {}; \node[lbl, right] at (14.45,4.9) {3,3 V};
+\draw (13.9,4.15) -- (14.4,4.15) node[ground] {};
+
+% ================= Buzzer driver =================
+\draw (\BR,2.0) to[R, l=\tiny 1 k$\Omega$] (11.9,2.0) node[npn, anchor=B] (Q) {};
+\node[lbl, right] at (Q.east) {2N2222};
+\draw (Q.E) node[ground] {};
+\draw (Q.C) to[buzzer, l_=\tiny zumbador] ++(0,0.8) node[vcc] {};
+\node[lbl, right] at ($(Q.C)+(0.05,1.0)$) {5 V};
+
+% ================= RGB LED (common cathode) =================
+\foreach \y/\c in {1.0/R, 0.2/G, -0.6/B} {
+  \draw (\BR,\y) to[R, l=\tiny 470 $\Omega$] (11.9,\y) to[led, l=\tiny \c] (13.3,\y) -- (13.7,\y);
+}
+\draw (13.7,1.0) -- (13.7,-1.0) node[ground] {};
+\node[lbl, right] at (13.75,0.2) {LED RGB\\cátodo\\común};
+\end{circuitikz}

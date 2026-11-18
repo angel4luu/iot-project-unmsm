@@ -50,7 +50,7 @@ After completing, starting, or changing any phase, step, milestone, or decision:
 
 ## Article rules
 
-- Write the paper in **Spanish**; repo docs and code comments stay in English.
+- Write the paper in **Spanish**; repo docs and code comments stay in English, except `hardware/build-guide.md`, which is in Spanish because the team uses it at the bench.
 - Class `IEEEtran` (conference). Build with `make -C article` (latexmk to `article/build/main.pdf`); confirm it compiles after each edit.
 - The bibliography is active; add only DOI-verified entries (or official statistics checked at source).
 - Cite only real, DOI-verified sources in `article/references.bib`; never invent references, statistics, or results.

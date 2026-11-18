@@ -81,9 +81,9 @@ keep both signals inside the ADC's linear mid-range at the chosen attenuation.
 
 Conditioning (final values set at the bench and in the schematic review):
 
-- **Voltage**: adapter output → resistor divider to about 1/30 → AC-coupled onto
-  a mid-supply bias (two equal resistors of about 10 kΩ plus a 10 µF capacitor)
-  → small RC anti-alias filter → ADC1.
+- **Voltage**: the floating adapter output is referenced to a mid-supply bias
+  (two equal resistors of about 10 kΩ plus a 10 µF capacitor) and divided by
+  about 1/22 (100 kΩ / 4.7 kΩ) → small RC anti-alias filter → ADC1.
 - **Current**: ACS712 output (centred at VCC/2, powered from 5 V) → resistor
   divider into the 3.3 V-safe range with total load of at least 4.7 kΩ (ACS712
   minimum load) → RC filter → ADC1.

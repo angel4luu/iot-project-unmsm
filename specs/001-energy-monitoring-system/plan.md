@@ -289,21 +289,22 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 
 ### Hardware list
 
-| Function | Part (model) | Qty | Source | Status |
-|---|---|---|---|---|
-| Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | 1 | Kit | Available |
-| Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | 1 | Kit | Available |
-| Voltage sensor | Certified isolated 220 V AC to 9–12 V **AC** plug-in adapter | 1 | Buy | To buy |
-| Adapter connection | Female DC barrel socket 5.5 × 2.1 mm with screw terminals (matches the adapter plug) | 1 | Buy | To buy (low cost) |
-| Signal conditioning | Resistor assortment 10 kΩ–100 kΩ, 1/4 W; 10 µF and 100 nF capacitors | 1 set | Buy | To buy (low cost) |
-| Local alert | Buzzer | 1 | Kit | Available |
-| Status light | On-board addressable RGB LED of the DevKitC-1, or kit RGB LED with 3 × 470 Ω | 1 | Kit | Available |
-| Local display | OLED 0.96" module (controller SSD1306 I²C or SSD1331 SPI **to confirm**) | 1 | Kit | Available |
-| Calibration temperature log | DHT22, inside the enclosure next to the ACS712 | 1 | Kit | Available |
-| Node power | Certified USB-C charger and cable | 1 | Kit | Available |
-| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | 1 | Borrow (university lab, preferred) or buy | Not owned; to obtain |
-| Enclosure and protection | Closed flame-retardant enclosure with ACS712 compartment, 30 mA RCD/GFCI, two-pole 10 A protection, rated terminals and cable | 1 set | Lab | Provided or reviewed by the qualified person |
-| Test loads | Resistive loads spread across the calibrated range, plus one stable inductive or nonlinear load | 3–4 | Lab | To select |
+| Function | Part (model) | Cómo pedirlo (Spanish search term, Peru) | Qty | Source | Status |
+|---|---|---|---|---|---|
+| Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | "ESP32-S3 DevKitC-1" | 1 | Kit | Available |
+| Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | "módulo sensor de corriente ACS712 20A" | 1 | Kit | Available |
+| Voltage sensor | Certified isolated 220 V AC to 9–15 V **AC** plug-in adapter | "adaptador transformador 220V a 12V AC (salida alterna ~)" | 1 | Buy | To buy |
+| Adapter connection | Female DC barrel socket 5.5 × 2.1 mm with screw terminals | "jack DC hembra 5.5x2.1 con bornera" | 1 | Buy | To buy (low cost) |
+| Signal conditioning | Resistors 1/4 W: 100 kΩ, 4.7 kΩ ×2, 10 kΩ ×4 (one is the DHT22 pull-up, unless the module has one); capacitors 10 µF ×1, 22 nF ×2 | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 1 set | Buy | To buy (low cost) |
+| Local alert | Buzzer | "buzzer activo 5V" | 1 | Kit | Available |
+| Status light | Kit RGB LED (assumed common cathode, **to confirm**) with 3 × 470 Ω | "LED RGB cátodo común 5 mm" | 1 | Kit | Available |
+| Local display | OLED 0.96" module, assumed 4-pin SSD1306 on I²C (**to confirm**; a 7-pin SPI module changes the pin table) | "pantalla OLED 0.96 I2C SSD1306" | 1 | Kit | Available |
+| Buzzer driver | NPN transistor 2N2222 (or PN2222A) + 1 kΩ base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 | Buy | To buy (low cost) |
+| Calibration temperature log | DHT22, inside the enclosure next to the ACS712 | "sensor DHT22 / AM2302" | 1 | Kit | Available |
+| Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
+| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | "multímetro True RMS CAT III" | 1 | Buy | To buy (model to choose: must state True RMS, CAT III ≥ 300 V, and AC accuracy in its manual) |
+| Enclosure and protection | Closed flame-retardant enclosure with ACS712 compartment, 30 mA RCD/GFCI, two-pole 10 A protection, rated terminals and cable | "caja de paso plástica / caja estanca"; "interruptor diferencial 30 mA"; "llave termomagnética bipolar 10 A" | 1 set | Lab | Provided or reviewed by the qualified person |
+| Test loads | Resistive loads of about 100 W, 500 W, and 1 kW, plus one stable inductive or nonlinear load | "foco incandescente/halógeno 100 W", "hervidor o calefactor" (resistive) | 3–4 | Lab | To select |
 
 Not used: ADS131M02, SCT-013-020, ZMPT101B, MB85RC256V FRAM, DS3231 RTC (kept
 as the documented upgrade path), and the kit's relay, Arduino Uno R4, motors,
@@ -312,23 +313,47 @@ instead of a relay bench.
 
 ### Front end and pin allocation
 
-- **Voltage**: the certified AC-AC adapter output feeds a divider of about 1/30,
-  AC-coupled onto a mid-supply bias (two equal resistors of about 10 kΩ and a
-  10 µF capacitor), then an RC anti-alias filter into an ADC1 input.
+- **Voltage**: one wire of the floating AC-AC adapter output is tied to a
+  mid-supply bias (two equal resistors of about 10 kΩ and a 10 µF capacitor);
+  the other goes through a divider of about 1/22 back to that bias, then an RC
+  anti-alias filter into an ADC1 input. No series coupling capacitor is used.
 - **Current**: the ACS712 is powered from 5 V; its output (VCC/2 at zero current)
   goes through a divider with at least 4.7 kΩ total load into the 3.3 V-safe
   range, then an RC filter into an ADC1 input. The output is ratiometric to its
   5 V supply, so supply variation is part of the uncertainty budget and the node
   uses a stable certified charger.
+- **Nominal design values (to verify at the bench stage)**: voltage divider
+  R1 = 100 kΩ, R2 = 4.7 kΩ referenced to a 1.65 V bias (2 × 10 kΩ from 3.3 V,
+  10 µF), giving about ±1.1 V peak for an unloaded 15 V adapter (about 18 V RMS);
+  current divider R3 = 4.7 kΩ, R4 = 10 kΩ (14.7 kΩ load, above the ACS712's
+  4.7 kΩ minimum), mapping 2.5 V ± 0.71 V at 5 A RMS to about 1.70 V ± 0.48 V;
+  22 nF from each ADC input to ground (anti-alias corner about 1.6–2.3 kHz;
+  the small phase shift is absorbed by the phase correction); the ACS712 module
+  already carries its supply decoupling capacitor. Proposed ADC pins: GPIO4 (ADC1_CH3) voltage, GPIO5
+  (ADC1_CH4) current.
 - **Sampling**: ESP-IDF ADC continuous (DMA) mode, alternating V/I pattern at
   8,000 conversions/s, Espressif calibration scheme, then per-device offset, gain,
   and fractional phase correction. DMA overrun or a missing conversion marks a
   sample gap and invalidates the affected window.
-- **Pins (to assign at the schematic review)**: two ADC1 channels (GPIO1–GPIO10;
-  ADC2 is unusable with Wi-Fi); OLED on I²C or SPI depending on its controller;
-  DHT22 one GPIO; buzzer one GPIO (through a transistor if it draws more than the
-  pin allows); RGB LED on the on-board LED pin of the board revision or three
-  GPIOs. Avoid strapping pins (GPIO0, GPIO3, GPIO45, GPIO46) and the USB pins.
+- **Pin allocation** (proposed; confirmed at the schematic review). Only ADC1
+  is used for analog inputs (ADC2 is unusable with Wi-Fi); strapping pins
+  (GPIO0, 3, 45, 46), USB pins (GPIO19, 20), and the octal-PSRAM pins of some
+  modules (GPIO35–37) are avoided.
+
+  | ESP32-S3 pin | Connected to | Notes |
+  |---|---|---|
+  | GPIO4 (ADC1_CH3) | Voltage channel (R1/R2 junction) | 22 nF to GND |
+  | GPIO5 (ADC1_CH4) | Current channel (R3/R4 junction) | 22 nF to GND |
+  | GPIO8 | OLED SDA (I²C) | Module has its own pull-ups |
+  | GPIO9 | OLED SCL (I²C) | |
+  | GPIO15 | DHT22 DATA | 10 kΩ pull-up to 3.3 V |
+  | GPIO16 | Buzzer driver (1 kΩ to 2N2222 base) | Active 5 V buzzer between 5 V and collector |
+  | GPIO17 / GPIO18 / GPIO21 | RGB LED red / green / blue | 470 Ω in series each; common cathode to GND |
+  | 3V3 | Bias divider, OLED VCC, DHT22 VCC, pull-up | |
+  | 5V | ACS712 VCC (module has its own decoupling), buzzer | From the USB-C supply |
+  | GND | Common ground of all low-voltage parts | |
+  | USB-C | Certified 5 V charger | No PC connection while energized unless the reviewer approves |
+
 - **Mains safety**: the ACS712 is the only part carrying mains. It stays in its
   own compartment of the closed enclosure, is never on a breadboard, and is not
   handled while energized; its module creepage, conductor rating, and the whole
