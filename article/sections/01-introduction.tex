@@ -49,7 +49,7 @@ En la literatura revisada no se identificó un prototipo de bajo costo que eval�
 El objetivo de este trabajo es diseñar, implementar y evaluar experimentalmente un sistema IoT para el monitoreo y análisis del consumo de energía eléctrica en tiempo real flexible, aplicado a un circuito monofásico de laboratorio, y evaluar su desempeño frente a un instrumento de referencia.
 Las principales contribuciones son:
 \begin{enumerate}
-  \item una arquitectura IoT que integra adquisición simultánea de tensión y corriente, cálculo local de potencia activa y energía, transmisión MQTT con confirmación de entrega y cola persistente, y almacenamiento en una base de datos de series temporales;
+  \item una arquitectura IoT que integra adquisición de tensión y corriente con corrección de desfase entre canales, cálculo local de potencia activa y energía, transmisión MQTT con confirmación de entrega y cola local, y almacenamiento en una base de datos de series temporales;
   \item un módulo de análisis que agrega el consumo por hora, día y semana, identifica los periodos de máxima demanda y genera alertas por umbral con confirmación temporal para descartar transitorios de arranque;
   \item una evaluación experimental de la exactitud de tensión, corriente, potencia activa y energía frente a un instrumento de referencia, con cargas resistivas de distinta potencia y una carga inductiva o no lineal;
   \item una evaluación de la latencia de actualización, la confiabilidad de entrega y la recuperación de datos tras interrupciones controladas de la red; y

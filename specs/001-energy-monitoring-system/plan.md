@@ -1,17 +1,19 @@
 # Implementation Plan: Intelligent Electrical Energy Monitoring System
 
-**Branch**: `001-energy-monitoring-system` | **Date**: 2026-10-14 | **Spec**: [spec.md](spec.md)
+**Branch**: `001-energy-monitoring-system` | **Date**: 2026-10-14 (hardware amended 2026-11-18) | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-energy-monitoring-system/spec.md`
 
 ## Summary
 
-Build one safe, calibrated ESP32 monitoring node for a protected single-phase
-laboratory load and one reproducible LAN server deployment. The node samples
-isolated voltage/current channels simultaneously at 4 kS/s, calculates RMS
+Build one safe, calibrated ESP32-S3 monitoring node for a protected single-phase
+laboratory load and one reproducible LAN server deployment. The node is built
+mostly from the team's existing kit (ACS712 current sensor, ESP32-S3 internal ADC)
+plus one certified AC-AC adapter for voltage. It samples the voltage/current
+channels alternately at 4,000 pairs/s with a corrected inter-channel delay, calculates RMS
 voltage/current and phase-corrected active power, integrates import energy with a
-monotonic clock, evaluates local thresholds, and durably queues five-second
-summaries. MQTT 5 with mutual TLS and per-node ACLs carries versioned payloads to
+monotonic clock, evaluates local thresholds, shows status on an RGB LED and a
+local OLED display, and queues five-second summaries for offline replay. MQTT 5 with mutual TLS and per-node ACLs carries versioned payloads to
 an idempotent Python ingestion service. The service persists 30 days of raw time
 series in InfluxDB, discrete delivery/alert state in SQLite, and serves a
 provisioned Grafana dashboard through LAN-only HTTPS. Automatic cutoff, LoRa,
@@ -21,29 +23,30 @@ environmental sensing, and production anomaly/forecast models are not included.
 
 **Language/Version**: Firmware C/C++17 with ESP-IDF 5.4 LTS; server Python 3.14.8;
 Compose YAML; Flux; JSON Schema Draft 2020-12  
-**Primary Dependencies**: ADS131M02 driver, ESP-MQTT/Mbed TLS, ESP-IDF NVS/SNTP/Unity;
+**Primary Dependencies**: ESP-IDF ADC continuous/calibration drivers, OLED driver (controller to confirm), DHT22 driver (calibration logging only), ESP-MQTT/Mbed TLS, ESP-IDF NVS/SNTP/Unity;
 Paho MQTT, Pydantic and `jsonschema`, InfluxDB Python client, SQLAlchemy/Alembic,
 FastAPI health/management endpoint, pytest; Eclipse Mosquitto 2.1.2, InfluxDB OSS
 2.9.1, Grafana OSS 13.2.3, Caddy 2  
-**Storage**: Device MB85RC256V FRAM plus encrypted NVS; server InfluxDB `energy_raw`
+**Storage**: Device RAM offline queue plus NVS energy checkpoints and encrypted NVS credentials; server InfluxDB `energy_raw`
 and `operations` buckets with 30-day retention; SQLite WAL ingestion ledger,
 configuration, alert audit, and notification outbox; named container volumes  
 **Testing**: ESP-IDF Unity with captured waveforms; pytest/unit/property/contract
 tests; JSON Schema fixtures; Docker Compose integration and fault injection;
 supervised reference-meter calibration/acceptance; secret scanning and network
 reachability tests  
-**Target Platform**: ESP32 monitoring node; one x86-64/ARM64 Linux host on the
+**Target Platform**: ESP32-S3 DevKitC-1 monitoring node; one x86-64/ARM64 Linux host on the
 trusted laboratory LAN; modern browser on the same trusted LAN  
 **Project Type**: Embedded firmware plus local services/infrastructure and a
 provisioned web dashboard  
-**Performance Goals**: 4,000 paired samples/channel/s; 1-second local decision
+**Performance Goals**: 4,000 voltage/current pairs/s (8,000 alternating conversions/s); 1-second local decision
 blocks; one summary/5 seconds; 95% dashboard visibility <=10 seconds; local alert
 <=2 seconds and healthy-server alert <=10 seconds; drain recovery queue >=2
 records/s; recover >=99% of a 10-minute outage within five minutes  
-**Constraints**: Controlled prototype only; calibrated claim limited to 180–250 V
-RMS, 0.25–10 A RMS, 0–2.5 kW and tested loads; no relay; qualified safety review
+**Constraints**: Controlled educational prototype only; calibrated claim limited to
+180–250 V RMS, the ACS712-variant current range (at most 5 A RMS, about 1.1 kW; see
+Hardware) and tested loads; no relay; qualified safety review
 before mains energization; dashboard LAN-only; outbound notifications HTTPS only;
-no committed secrets; 16 KiB maximum MQTT payload; at least 256 offline records  
+no committed secrets; 16 KiB maximum MQTT payload; at least 256 offline records in RAM  
 **Scale/Scope**: One node, one circuit, one operator, about 518,400 five-second
 records per 30 days, one Compose host, and one outbound notification destination
 
@@ -58,13 +61,13 @@ because its default/latest image line is not a stable v2 contract.
 
 | Principle or gate | Status | Planned evidence/control |
 |---|---|---|
-| I. Electrical Safety Before Convenience | PASS | Isolated sensors, protected range, no relay, de-energized assembly, qualified schematic/PCB/enclosure review, signed safety checklist before hardware test |
-| II. Measurement Integrity and Evidence | PASS | Exact quantities/ranges/units and algorithms; <=1% reference meter; separate calibration and validation datasets; per-point <=5% acceptance |
+| I. Electrical Safety Before Convenience | PASS | Certified isolated adapter for voltage; ACS712 in its own closed enclosure compartment, never on a breadboard; protected range, no relay, de-energized assembly, qualified schematic/PCB/enclosure review, signed safety checklist before hardware test |
+| II. Measurement Integrity and Evidence | PASS | Exact quantities/ranges/units and algorithms; true-RMS reference meter with recorded uncertainty and guard band (research R-004); separate calibration and validation datasets; per-point <=5% acceptance |
 | III. Monitoring MVP Before Optional Complexity | PASS | One-node vertical slice only; LoRa, cutoff, environmental sensing, anomalies, forecasts, and recommendations deferred |
 | IV. Security and Secret Hygiene | PASS | Per-principal mTLS/ACLs, encrypted NVS, ignored runtime secrets, private endpoints absent from tracked examples, secret scan gate |
 | V. Contract-Tested Boundaries | PASS | ADC fixtures, five JSON Schemas, valid/invalid fixtures, idempotent storage/query and dashboard contract tests |
 | VI. Reproducible Experiments and Models | PASS | Versioned calibration evidence and future dataset/experiment manifests; no model influences MVP alerts |
-| VII. Resilience and Observability | PASS | FRAM queue, application ACK, deduplication, clock state, restart/outage tests, stage-specific health metrics |
+| VII. Resilience and Observability | PASS | RAM offline queue, NVS energy checkpoint with uncertain-interval flag, application ACK, deduplication, clock state, restart/outage tests, stage-specific health metrics |
 | Dependencies/config/versioning | PASS | Locked firmware/Python/container dependencies; provisioned dashboards, schemas, infrastructure, and calibration/config revisions |
 
 No constitution exception is requested. Unreviewed mains hardware is a release
@@ -211,8 +214,8 @@ are explicit.
 flowchart LR
     subgraph ELEC[Hazardous controlled electrical setup]
         LOAD[Single-phase protected test load]
-        VS[Isolated voltage sensing]
-        CS[Clamp current transformer]
+        VS[Certified AC-AC adapter<br/>isolated voltage sensing]
+        CS[ACS712 Hall current sensor<br/>closed enclosure compartment]
         REF[Trusted reference meter]
         LOAD --> VS
         LOAD --> CS
@@ -221,13 +224,15 @@ flowchart LR
     end
 
     subgraph NODE[Low-voltage monitoring node]
-        AFE[Conditioning and ADS131M02<br/>2 simultaneous channels at 4 kS/s]
-        MCU[ESP32<br/>RMS, active W, import Wh, quality]
-        BUF[FRAM checkpoints and offline queue]
+        AFE[Dividers, bias, RC filters<br/>ESP32-S3 ADC1, alternating 4,000 pairs/s]
+        MCU[ESP32-S3<br/>RMS, active W, import Wh, quality]
+        BUF[RAM offline queue<br/>NVS energy checkpoints]
         RULE[1 s local threshold state]
-        WARN[LED or buzzer only<br/>no relay]
+        WARN[Buzzer only<br/>no relay]
+        UI[RGB status LED<br/>OLED local display]
         AFE --> MCU --> BUF
         MCU --> RULE --> WARN
+        MCU --> UI
     end
 
     VS --> AFE
@@ -258,8 +263,9 @@ flowchart LR
 
 ### Deployment boundaries
 
-- **Electrical boundary**: sensing and protection terminate at isolated
-  transducers. Mains never reaches ESP32, USB, network, or server wiring. The
+- **Electrical boundary**: sensing and protection terminate at the certified
+  AC-AC adapter and the ACS712's isolated Hall path. Mains never reaches ESP32,
+  USB, network, or server wiring. The
   assembled board/enclosure still requires qualified review.
 - **Node boundary**: acquisition, calibration, five-second aggregation, energy
   continuity, quality state, local threshold evaluation, clock management, and
@@ -277,56 +283,115 @@ flowchart LR
 
 ## Hardware and Measurement Design
 
+*Amended 2026-11-18: adapted to the team's available kit for an educational
+demonstration, with minimal purchases. Rationale and safety conditions are in
+[research.md](research.md) R-001, R-002, R-004, and R-005.*
+
+### Hardware list
+
+| Function | Part (model) | Qty | Source | Status |
+|---|---|---|---|---|
+| Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | 1 | Kit | Available |
+| Spare / second simulated node | ESP32-S3 DevKitC-1 | 1 | Kit | Available (spare) |
+| Current sensor | Allegro ACS712 module (variant 05B/20A/30A **to confirm**) | 1 | Kit | Available |
+| Voltage sensor | Certified isolated 220 V AC to 9–12 V **AC** plug-in adapter | 1 | Buy | To buy |
+| Signal conditioning | Resistor assortment 10 kΩ–100 kΩ, 1/4 W; 10 µF and 100 nF capacitors | 1 set | Buy | To buy (low cost) |
+| Local alert | Buzzer | 1 | Kit | Available |
+| Status light | On-board addressable RGB LED of the DevKitC-1, or kit RGB LED with 3 × 470 Ω | 1 | Kit | Available |
+| Local display | OLED 0.96" module (controller SSD1306 I²C or SSD1331 SPI **to confirm**) | 1 | Kit | Available |
+| Calibration temperature log | DHT22, inside the enclosure next to the ACS712 | 1 | Kit | Available |
+| Node power | Certified USB-C charger and cable | 1 | Kit | Available |
+| Reference instrument | True-RMS multimeter (model and AC accuracy **to confirm**) | 1 | Kit | To confirm |
+| Enclosure and protection | Closed flame-retardant enclosure with ACS712 compartment, 30 mA RCD/GFCI, two-pole 10 A protection, rated terminals and cable | 1 set | Lab | Provided or reviewed by the qualified person |
+| Test loads | Resistive loads spread across the calibrated range, plus one stable inductive or nonlinear load | 3–4 | Lab | To select |
+
+Not used: ADS131M02, SCT-013-020, ZMPT101B, MB85RC256V FRAM, DS3231 RTC (kept
+as the documented upgrade path), and the kit's relay, Arduino Uno R4, motors,
+servos, and unrelated sensors. Alert-accuracy step tests use the simulated node
+instead of a relay bench.
+
 ### Front end and pin allocation
 
-- Prefer a certified isolated 220 V-to-low-voltage AC adapter for voltage. If the
-  ZMPT101B path is used, its four approximately 27.4 kohm/0.5 W flameproof,
-  voltage-rated primary resistors are split across both conductors; the secondary
-  uses a 100 ohm burden. Final values and voltage/power derating require schematic
-  review and measurement.
-- Use SCT-013-020 (20 A/1 V internal burden) around exactly one insulated
-  conductor and record its direction.
-- ADS131M02 voltage channel PGA 2, current channel PGA 1; 50 ohms per input leg,
-  4.7 nF differential anti-alias capacitor, and the manufacturer-recommended
-  clamps. SPI CRC failure invalidates the affected window.
-- Candidate ESP32 pins: SPI SCLK 18, MISO 19, MOSI 23, CS 27, DRDY input 34; I2C
-  SDA 21/SCL 22 for DS3231 and FRAM. The PCB review must confirm the exact module's
-  boot straps and electrical limits before layout release.
+- **Voltage**: the certified AC-AC adapter output feeds a divider of about 1/30,
+  AC-coupled onto a mid-supply bias (two equal resistors of about 10 kΩ and a
+  10 µF capacitor), then an RC anti-alias filter into an ADC1 input.
+- **Current**: the ACS712 is powered from 5 V; its output (VCC/2 at zero current)
+  goes through a divider with at least 4.7 kΩ total load into the 3.3 V-safe
+  range, then an RC filter into an ADC1 input. The output is ratiometric to its
+  5 V supply, so supply variation is part of the uncertainty budget and the node
+  uses a stable certified charger.
+- **Sampling**: ESP-IDF ADC continuous (DMA) mode, alternating V/I pattern at
+  8,000 conversions/s, Espressif calibration scheme, then per-device offset, gain,
+  and fractional phase correction. DMA overrun or a missing conversion marks a
+  sample gap and invalidates the affected window.
+- **Pins (to assign at the schematic review)**: two ADC1 channels (GPIO1–GPIO10;
+  ADC2 is unusable with Wi-Fi); OLED on I²C or SPI depending on its controller;
+  DHT22 one GPIO; buzzer one GPIO (through a transistor if it draws more than the
+  pin allows); RGB LED on the on-board LED pin of the board revision or three
+  GPIOs. Avoid strapping pins (GPIO0, GPIO3, GPIO45, GPIO46) and the USB pins.
+- **Mains safety**: the ACS712 is the only part carrying mains. It stays in its
+  own compartment of the closed enclosure, is never on a breadboard, and is not
+  handled while energized; its module creepage, conductor rating, and the whole
+  setup require the qualified review before energization (research R-001).
+
+### Local indication
+
+| Node state (FR-015) | RGB status LED | OLED |
+|---|---|---|
+| Normal | Green | V, A, W, Wh with units, quality, clock and link state |
+| Warning (threshold pending/firing/clearing) | Red (buzzer while firing/clearing) | Alert banner with value and limit |
+| Invalid measurement or unsynchronized clock | Yellow | Value fields replaced by the quality reason |
+| Offline (queueing for replay) | Blue | Link state and number of queued records |
+| Insufficient data (warm-up, no accepted calibration) | White | Reason |
+
+The OLED shows only node-local values with their units and quality; a value that
+is not `valid` is never shown as a plain reading (SC-006). The display and LED
+keep working with the network down.
 
 ### Quantities and aggregation
 
 | Field | Exact meaning | Wire unit | Valid calibrated range |
 |---|---|---|---|
 | `voltage_rms` | Square root of mean squared calibrated instantaneous voltage across a 5 s window | V | 180–250 V RMS |
-| `current_rms` | Square root of mean squared calibrated instantaneous current across the same paired window | A | 0.25–10.0 A RMS |
-| `active_power` | Mean instantaneous `v*i` after offset, gain, and phase correction; not `Vrms*Irms` | W | 0–2,500 W consumption claim; signed diagnostic value |
+| `current_rms` | Square root of mean squared calibrated instantaneous current across the same paired window | A | ACS712-variant range (05B: 0.25–3.0 A; 20A/30A: 0.5–5.0 A RMS) |
+| `active_power` | Mean instantaneous `v*i` after offset, gain, and phase correction; not `Vrms*Irms` | W | 0 W to the variant maximum (about 650 W or 1,100 W) consumption claim; signed diagnostic value |
 | `active_energy_import_total` | Monotonic sum of `max(active_power,0)*monotonic_dt/3600` for one counter continuity ID | Wh | Accuracy claimed only across accepted test intervals |
 
 The firmware maintains 1-second calculation/quality blocks and combines five
 blocks into one summary. A nominal summary has 20,000 paired samples. It reports
 min/max and internal diagnostic counts locally, but the v1 wire contract carries
 the contractually required values, sample count, valid ratio, calibration
-revision, and flags. No field claims apparent power, reactive power, power factor,
+revision, and flags. Schema 1.0.0 limits (for example the 2,500 W threshold
+maximum) are wire bounds; the node and `energyctl` reject thresholds above the
+calibrated maximum for the confirmed ACS712 variant. No field claims apparent power, reactive power, power factor,
 or billing accuracy.
 
 ### Calibration and acceptance procedure
 
-1. Complete and sign a de-energized schematic/layout/enclosure/protection review.
-2. Record build revision, firmware commit, ADC settings, sensors, wiring, operator,
-   conditions, load identities, and <=1%-uncertainty reference-meter evidence.
-3. Warm up at least ten minutes; capture 60 seconds at zero current.
-4. Calculate voltage and current gain at stable points and fractional phase
-   correction using a stable non-unity-PF load.
-5. Write coefficients to a new immutable calibration artifact/NVS revision and
+1. Complete and sign a de-energized schematic/enclosure/protection review,
+   including the ACS712 module's creepage and conductor rating.
+2. Bench stage without mains: verify the node with the AC-AC adapter output only
+   (voltage channel), recorded waveforms, and a low-voltage DC current check of the
+   ACS712 offset and polarity.
+3. Record build revision, firmware commit, ADC settings, sensors and ACS712
+   variant, wiring, operator, enclosure temperature (DHT22), load identities, and
+   the true-RMS reference meter's identity and AC uncertainty.
+4. Warm up at least ten minutes; capture 60 seconds at zero current and store the
+   ACS712 offset.
+5. Calculate voltage and current gain on stable resistive loads; set the
+   fractional phase correction on a resistive load so that `P = V_RMS*I_RMS`.
+6. Write coefficients to a new immutable calibration artifact/NVS revision and
    freeze them before validation.
-6. Validate on separate low (50–100 W), medium (400–800 W), high (1.5–2.0 kW)
-   resistive loads and one inductive/nonlinear load. Capture >=5 minutes per power
-   point and >=15 minutes for Wh.
-7. Require every V, A, W, and Wh point to have absolute percentage error <=5%.
+7. Validate on at least three separate stable resistive loads across the
+   calibrated range (reference `P = V_ref*I_ref`, `Wh = P*t`). Capture >=5 minutes
+   per power point and >=15 minutes for Wh. Record one inductive/nonlinear load
+   for V and A validation; its W/Wh are observations without an accuracy claim.
+8. Require every V, A, W, and Wh point to meet `|error| <= 5%` (or the
+   guard-banded limit when the meter's uncertainty is above 1%, research R-004).
    Below-range/no-load current uses an absolute noise limit, not percentage error.
-8. Hash and preserve raw waveform excerpts, summaries, reference readings,
-   scripts, environment, coefficients, and pass/fail output. Outside-range data is
-   flagged and cannot support the claim.
+9. Hash and preserve raw waveform excerpts, summaries, reference readings,
+   temperatures, scripts, environment, coefficients, and pass/fail output.
+   Outside-range data is flagged and cannot support the claim.
 
 ## Telemetry, Delivery, and Clock Design
 
@@ -337,8 +402,10 @@ retained offline last will, and stable client ID equal to node identity. The
 ingestor uses a stable persistent session. Measurements/events/ACKs have a 24-hour
 message expiry; status/config are retained.
 
-The node writes a compact record to FRAM before publication and removes it only
-after application `accepted` or `duplicate`. The server records payload hash and
+The node writes a compact record to its RAM queue before publication and removes
+it only after application `accepted` or `duplicate`. The queue survives network
+and server outages, not node power loss; a reboot during an outage appears on the
+server as a new `boot_id` and a reported data gap. The server records payload hash and
 identity in SQLite, performs an idempotent Influx point write using observation
 time, marks the ledger stored, then publishes the application ACK. Thus MQTT is
 explicitly at least once while the accepted data has an exactly-once storage
@@ -346,7 +413,9 @@ effect. A reused ID with different bytes is rejected/quarantined as a conflict.
 After reconnect, drain oldest first at >=2 records/s with <=10 in flight while
 continuing to enqueue current observations.
 
-SNTP UTC is authoritative; DS3231 supplies holdover after restart. Window `end`
+SNTP UTC is authoritative; there is no RTC. `holdover` covers SNTP loss after a
+sync in the same boot; after a cold restart, observations are `unsynchronized`
+until the first sync. Window `end`
 is the observation timestamp. Server adds receive/store times and calculates lag.
 Energy uses monotonic time, so SNTP adjustment cannot add/subtract Wh. Queries sort
 on observation time, then boot/sequence; they do not mistake arrival order for
@@ -435,7 +504,7 @@ disagreement becomes a health alert rather than silently changing the result.
 
 ### Health observability
 
-- Node: ADC/CRC/sample status, calibration, clock, energy continuity, Wi-Fi/MQTT,
+- Node: ADC/DMA/sample-gap status, calibration, clock, energy continuity, Wi-Fi/MQTT,
   queue depth/oldest record, last ACK, firmware/build, restart reason.
 - Broker: authenticated connections, queued/dropped messages, persistence state.
 - Ingestion: received/accepted/rejected/duplicate/conflict, ledger states,
@@ -470,11 +539,11 @@ horizons and promotion thresholds before any result affects users.
 
 | Requirement/outcome | Design element | Minimum verification evidence |
 |---|---|---|
-| FR-001–005, SC-001 | Simultaneous ADC, formulas, quality, FRAM, calibration | Waveform unit tests; CRC/gap/restart injection; signed reference-meter report |
+| FR-001–005, SC-001 | Alternating ADC with delay correction, formulas, quality, NVS checkpoint, calibration | Waveform unit tests (including delay correction); sample-gap/restart injection; signed reference-meter report |
 | FR-006, SC-002–003 | MQTT QoS 1, durable queue, ledger, app ACK | Duplicate/conflict tests; broker/ingestion/storage stops; timed 10-minute recovery report |
 | FR-007 | mTLS, ACL, encrypted provisioning, LAN-only ingress | Anonymous/untrusted/wrong-topic negatives, secret scan, LAN port scan |
 | FR-008 | Influx 30-day bucket | Provisioning assertion and retention API test |
-| FR-009–010, SC-005–006 | Eight dashboard groups and query rules | Provisioning smoke test, golden queries, timed operator acceptance |
+| FR-009–010, FR-018, SC-005–006 | Eight dashboard groups and query rules; node OLED and status LED | Provisioning smoke test, golden queries, timed operator acceptance |
 | FR-011–016, SC-004 | Versioned config, local state engine, event/alert/outbox | State transition tests, brief/sustained load tests, server-down local-warning test |
 | FR-017 | Stage-specific status/logs/metrics | Fault injected at each stage and correctly identified on health view |
 | Future analytics readiness | Immutable exports/manifests/splits/baselines | Reproduction test from manifest; no runtime model in MVP |
