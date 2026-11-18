@@ -24,7 +24,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Track | Where we are | Next |
 |---|---|---|
 | System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Confirm the multimeter model, then break the plan into tasks (`/speckit.tasks`) |
-| Article | Introduction, Methodology and Figures 1–4 done and updated to the new hardware (6 pages; Results still empty) | Trim to fit the page limit |
+| Article | Introduction, Methodology and Figures 1–4 done and updated to the new hardware (7 pages; Results still empty) | Trim to fit the page limit |
 
 *Last updated: 2026-11-18*
 
@@ -79,7 +79,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
-| 2026-11-18 | Circuit schematic added to the article (Fig. 3). Parts list now has Spanish search terms for buying in Peru. We don't own a multimeter: borrow one from a lab |
+| 2026-11-18 | Fig. 3 is now the complete circuit with every ESP32-S3 pin (OLED assumed 4-pin I²C); pin table added to the plan; transistor for the buzzer added to the parts list. Circuit schematic added to the article (Fig. 3). Parts list now has Spanish search terms for buying in Peru. We don't own a multimeter: borrow one from a lab |
 | 2026-11-18 | Hardware adapted to the parts we own (ACS712, ESP32-S3, OLED). Specs, Methodology and Figures 1–2 updated. Relay bench idea dropped. ACS712 confirmed as the 20 A version |
 | 2026-11-11 | Figures 1–3 drawn (TikZ); Fig. 1 redone as a layered diagram with a legend. Methodology draft merged (`METODOLOGIA` branch). README simplified |
 | 2026-11-04 | Repo published on GitHub (private) |

@@ -55,14 +55,14 @@ La corriente se mide con un sensor de efecto Hall ACS712 en su versión de \SI{2
 Un sensor equivalente se ha usado con errores RMS inferiores al \SI{5}{\percent} en condiciones controladas~\cite{marin2026rmsbenchmark}.
 La tensión se mide con un adaptador de CA a CA (\SIrange{9}{15}{V}) aislado y certificado, de modo que todo el acondicionamiento de tensión queda en el lado de baja tensión.
 
-\begin{figure}[t]
+\begin{figure*}[t]
   \centering
-  \input{figures/fig02b-conditioning}
-  \caption{Esquema del acondicionamiento analógico con valores nominales de diseño, a verificar en el banco de pruebas. Solo se dibuja el lado de baja tensión; el adaptador y el ACS712 constituyen la barrera de aislamiento.}
-  \label{fig:conditioning}
-\end{figure}
+  \input{figures/fig02b-circuit}
+  \caption{Circuito completo de baja tensión del nodo, con las conexiones a cada pin del ESP32-S3 DevKitC-1. Los valores son nominales de diseño y la asignación de pines es la propuesta, ambos a verificar en el banco de pruebas. Los pines se agrupan por función, no por su posición física en la placa. La red eléctrica no se dibuja: el adaptador y el ACS712 constituyen la barrera de aislamiento.}
+  \label{fig:circuit}
+\end{figure*}
 
-Ambas señales se acondicionan como muestra la Fig.~\ref{fig:conditioning}.
+La Fig.~\ref{fig:circuit} muestra el circuito completo del nodo y la conexión de cada componente a los pines del ESP32-S3.
 La tensión del adaptador se reduce con un divisor de \SI{100}{k\ohm} y \SI{4,7}{k\ohm} referido a una polarización de \SI{1,65}{V}, lo que da unos \SI{\pm 1,1}{V} de pico en la entrada.
 La salida del ACS712, centrada en \SI{2,5}{V}, se escala con un divisor de \SI{4,7}{k\ohm} y \SI{10}{k\ohm}, cuya carga total supera el mínimo de \SI{4,7}{k\ohm} del sensor.
 Un condensador de \SI{22}{nF} en cada entrada forma el filtro antialias, y su pequeño desfase lo absorbe la corrección de fase.
@@ -75,6 +75,7 @@ Una cola en RAM retiene al menos \num{256} resúmenes, más de \SI{21}{min}, suf
 La energía acumulada se guarda cada \SI{60}{s} en la memoria no volátil del microcontrolador; tras un reinicio inesperado, el intervalo desde el último punto de control se marca como incierto.
 No hay reloj de respaldo: la hora proviene de SNTP y las mediciones previas a la primera sincronización quedan marcadas como no sincronizadas.
 El nodo muestra sus valores y su estado en una pantalla OLED y un LED RGB, también sin red, y el aviso local usa un zumbador; el prototipo \emph{no} incluye relé ni corte automático de carga.
+La pantalla usa el bus I\textsuperscript{2}C (GPIO8 y GPIO9), el DHT22 el GPIO15, el zumbador se activa mediante un transistor desde el GPIO16 y el LED RGB usa los GPIO17, GPIO18 y GPIO21 con resistencias de \SI{470}{\ohm}.
 El servidor emplea InfluxDB OSS~2.9.1 para las series temporales, SQLite para el libro de registro idempotente y el estado de las alertas, Mosquitto~2.1.2, Grafana OSS~13.2.3 aprovisionado por archivos y Caddy~2 como único acceso HTTPS, todo con Docker Compose.
 La segunda base de datos no es redundante: la base de series temporales no modela bien las transiciones de alertas ni la unicidad de mensajes.
 

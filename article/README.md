@@ -69,7 +69,7 @@ Conventions:
 | A0 | Requirements received; repo setup | ✅ 2026-10-28 |
 | A1 | Resolve the decisions that block writing (AD-2 to AD-5) | ✅ 2026-10-28 |
 | A2 | **Introduction**: literature search (10–15 papers, 2021–2026), `references.bib`, draft of Section I | ✅ draft 2026-10-28 |
-| A3 | Page budget and trimming (paper is 6 pages with Results empty) | ⏳ next |
+| A3 | Page budget and trimming (paper is 7 pages with Results empty) | ⏳ next |
 | A4 | Draft Methodology (no results needed) | ✅ draft 2026-11-11 (`METODOLOGIA` branch); Figures 1–3 drawn in TikZ; hardware text and Figs. 1–2 updated 2026-11-18 (AD-10) |
 | A5 | Experiments, then Results/Discussion (depends on M4–M7) | ⬜ |
 | A6 | Conclusions and abstract | ⬜ |
@@ -90,5 +90,5 @@ Conventions:
 | AD-7 | Numbers use a decimal comma (`siunitx` `output-decimal-marker={,}`), following the Spanish/INEI convention. Write numbers with `\SI{}`/`\num{}` | 2026-10-28 |
 | AD-8 | Prior-work limitations are narrowed to what the evidence supports (`research/limitations-evidence.md`): heterogeneous validation, rarely measured latency, no controlled outage-recovery evaluation, and analytics evaluated apart from the hardware. The proposal's claims of "no power-factor analysis" and "always depends on connectivity" are contradicted by the literature and are not used | 2026-10-28 |
 | AD-9 | Figures are TikZ sources in `figures/`, `\input` into the sections, single-column, black-and-white friendly. Fig. 2 is a single-line wiring diagram without pin numbers until the PCB review; add a labelled photo once the prototype is built | 2026-11-11 |
-| AD-11 | Fig. 3 is a circuitikz schematic of the analog conditioning (`figures/fig02b-conditioning.tex`) with the nominal values from plan › Front end; the caption says they are to be verified at the bench. If the bench changes a value, update plan.md first, then the figure and text | 2026-11-18 |
+| AD-11 | Fig. 3 is a full-width circuitikz schematic of the complete low-voltage circuit with every ESP32-S3 pin (`figures/fig02b-circuit.tex`), using the nominal values and pin table from plan › Front end and pin allocation; the caption says they are to be verified at the bench. Pins are grouped by function, not physical position. OLED assumed 4-pin SSD1306 on I²C until checked. If the bench changes a value, update plan.md first, then the figure and text | 2026-11-18 |
 | AD-10 | Hardware follows the 2026-11-18 spec amendment (research R-001–R-005, plan › Hardware list): ESP32-S3 internal ADC with alternating sampling and delay correction, ACS712, certified AC-AC adapter, RAM queue + NVS checkpoint, SNTP without RTC, OLED/RGB LED. The paper presents it as an educational prototype, cites marin2026rmsbenchmark for a comparable ACS712 design, validates W/Wh only on resistive loads (V·I reference from a true-RMS multimeter), and reports the inductive/nonlinear load for V and I only. ACS712 confirmed as the 20 A version (0,5–5 A, about 1,1 kW). One `\todo` remains: multimeter model | 2026-11-18 |
