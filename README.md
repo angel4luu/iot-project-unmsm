@@ -14,7 +14,7 @@ about it.
 | What | Where |
 |---|---|
 | System specification (the source of truth) | [specs/001-energy-monitoring-system/](specs/001-energy-monitoring-system/) |
-| Prototype build guide (wiring, checks, safety) | [hardware/build-guide.md](hardware/build-guide.md) |
+| Prototype build guide, in Spanish (wiring, checks, safety) | [hardware/build-guide.md](hardware/build-guide.md) |
 | Article (LaTeX) and its tracker | [article/](article/) · [article/README.md](article/README.md) |
 | Rules for AI assistants | [CLAUDE.md](CLAUDE.md), [AGENTS.md](AGENTS.md) |
 
@@ -61,7 +61,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | # | Question | Blocks |
 |---|---|---|
-| 1 | Reference meter: we don't own one. Borrow a true-RMS multimeter from a university lab, or buy one? | Calibration, accuracy results |
+| 1 | Reference meter: which true-RMS multimeter to buy (must say True RMS and CAT III, with AC accuracy in its manual) | Calibration, accuracy results |
 | 2 | How to calculate measurement uncertainty, and how many repetitions per test | Methodology text, experiments |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |
@@ -80,6 +80,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Build guide translated to Spanish. Reference multimeter will be bought (not borrowed) |
 | 2026-11-18 | Article trimmed from 7 to 5 pages: shorter Introduction, components table, step-by-step signal flow through the circuit, implementation stages, one merged test table. Build guide for the team added (`hardware/build-guide.md`) |
 | 2026-11-18 | Fig. 3 is now the complete circuit with every ESP32-S3 pin (OLED assumed 4-pin I²C); pin table added to the plan; transistor for the buzzer added to the parts list. Circuit schematic added to the article (Fig. 3). Parts list now has Spanish search terms for buying in Peru. We don't own a multimeter: borrow one from a lab |
 | 2026-11-18 | Hardware adapted to the parts we own (ACS712, ESP32-S3, OLED). Specs, Methodology and Figures 1–2 updated. Relay bench idea dropped. ACS712 confirmed as the 20 A version |

@@ -53,7 +53,7 @@ Pantalla & OLED \SI{0,96}{''} SSD1306 (I\textsuperscript{2}C) & Valores y estado
 Indicación & LED RGB; zumbador con 2N2222 & Estado y aviso local & K/C \\
 Temperatura & DHT22 & Temperatura de la envolvente en la calibración & K \\
 Protección & Diferencial \SI{30}{mA}; bipolar \SI{10}{A} & Seguridad del lado de red & L \\
-Referencia & Multímetro de verdadero valor eficaz & Calibración y validación & L \\
+Referencia & Multímetro de verdadero valor eficaz & Calibración y validación & C \\
 Servidor & Anfitrión Linux con Docker Compose & Corredor, ingesta, almacenamiento y panel & L \\
 \bottomrule
 \multicolumn{4}{@{}l}{\scriptsize Or.: origen; K, kit disponible; C, compra; L, laboratorio.}
@@ -136,7 +136,7 @@ La implementación avanza por etapas, cada una condicionada a superar la anterio
   \item \emph{Calibración supervisada}: tras \SI{10}{min} de calentamiento y \SI{60}{s} sin corriente, se fijan las ganancias con cargas resistivas y $\delta$ hasta que $P=V_{\mathrm{RMS}}I_{\mathrm{RMS}}$ en una carga resistiva; los coeficientes se congelan.
   \item \emph{Validación}: escenarios de la Tabla~\ref{tab:scenarios} con cargas distintas de las de calibración.
 \end{enumerate}
-La referencia es un multímetro de verdadero valor eficaz con incertidumbre documentada~\todo{confirmar el modelo del multímetro prestado y su exactitud en CA}; si esta supera el \SI{1}{\percent}, el límite de aceptación se reduce en ese valor.
+La referencia es un multímetro de verdadero valor eficaz con incertidumbre documentada~\todo{definir el modelo del multímetro a adquirir y su exactitud en CA}; si esta supera el \SI{1}{\percent}, el límite de aceptación se reduce en ese valor.
 En E1--E3 la potencia de referencia es $V_rI_r$ y la energía, esa potencia por el tiempo; en E4 solo se validan $V$ e $I$, pues sin un medidor de potencia no puede afirmarse la exactitud de $P$ con factor de potencia distinto de la unidad, como en otros trabajos con cargas variadas~\cite{cardenas2026residential}.
 Cada punto se mide al menos \SI{5}{min} (\SI{15}{min} para la energía), y se registran las versiones, el cableado y la temperatura de la envolvente, pues el \textit{offset} del ACS712 varía con ella.
 El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el método de incertidumbre (GUM, tipos A y B) y el número de repeticiones.}

@@ -302,7 +302,7 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Buzzer driver | NPN transistor 2N2222 (or PN2222A) + 1 kΩ base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 | Buy | To buy (low cost) |
 | Calibration temperature log | DHT22, inside the enclosure next to the ACS712 | "sensor DHT22 / AM2302" | 1 | Kit | Available |
 | Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
-| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | "multímetro True RMS CAT III" (or borrow from a lab) | 1 | Borrow (university lab, preferred) or buy | Not owned; to obtain |
+| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | "multímetro True RMS CAT III" | 1 | Buy | To buy (model to choose: must state True RMS, CAT III ≥ 300 V, and AC accuracy in its manual) |
 | Enclosure and protection | Closed flame-retardant enclosure with ACS712 compartment, 30 mA RCD/GFCI, two-pole 10 A protection, rated terminals and cable | "caja de paso plástica / caja estanca"; "interruptor diferencial 30 mA"; "llave termomagnética bipolar 10 A" | 1 set | Lab | Provided or reviewed by the qualified person |
 | Test loads | Resistive loads of about 100 W, 500 W, and 1 kW, plus one stable inductive or nonlinear load | "foco incandescente/halógeno 100 W", "hervidor o calefactor" (resistive) | 3–4 | Lab | To select |
 
