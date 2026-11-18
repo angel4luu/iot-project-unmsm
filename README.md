@@ -60,7 +60,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | # | Question | Blocks |
 |---|---|---|
-| 1 | Multimeter model: is it true-RMS, and how accurate on AC? It is our reference | Calibration, Methodology text |
+| 1 | Reference meter: we don't own one. Borrow a true-RMS multimeter from a university lab, or buy one? | Calibration, accuracy results |
 | 2 | How to calculate measurement uncertainty, and how many repetitions per test | Methodology text, experiments |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |

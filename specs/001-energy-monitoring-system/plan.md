@@ -294,13 +294,14 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | 1 | Kit | Available |
 | Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | 1 | Kit | Available |
 | Voltage sensor | Certified isolated 220 V AC to 9–12 V **AC** plug-in adapter | 1 | Buy | To buy |
+| Adapter connection | Female DC barrel socket 5.5 × 2.1 mm with screw terminals (matches the adapter plug) | 1 | Buy | To buy (low cost) |
 | Signal conditioning | Resistor assortment 10 kΩ–100 kΩ, 1/4 W; 10 µF and 100 nF capacitors | 1 set | Buy | To buy (low cost) |
 | Local alert | Buzzer | 1 | Kit | Available |
 | Status light | On-board addressable RGB LED of the DevKitC-1, or kit RGB LED with 3 × 470 Ω | 1 | Kit | Available |
 | Local display | OLED 0.96" module (controller SSD1306 I²C or SSD1331 SPI **to confirm**) | 1 | Kit | Available |
 | Calibration temperature log | DHT22, inside the enclosure next to the ACS712 | 1 | Kit | Available |
 | Node power | Certified USB-C charger and cable | 1 | Kit | Available |
-| Reference instrument | True-RMS multimeter (model and AC accuracy **to confirm**) | 1 | Kit | To confirm |
+| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | 1 | Borrow (university lab, preferred) or buy | Not owned; to obtain |
 | Enclosure and protection | Closed flame-retardant enclosure with ACS712 compartment, 30 mA RCD/GFCI, two-pole 10 A protection, rated terminals and cable | 1 set | Lab | Provided or reviewed by the qualified person |
 | Test loads | Resistive loads spread across the calibrated range, plus one stable inductive or nonlinear load | 3–4 | Lab | To select |
 
