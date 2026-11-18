@@ -53,9 +53,20 @@ El tiempo sigue UTC mediante SNTP y cada medición declara el estado de su reloj
 El nodo se basa en una placa ESP32-S3 DevKitC-1 programada en C/C++ con ESP-IDF~5.4 LTS (Fig.~\ref{fig:prototype}).
 La corriente se mide con un sensor de efecto Hall ACS712 en su versión de \SI{20}{A} (\SI{100}{mV/A}), por cuyo circuito interno pasa el conductor de la carga; es el único componente con terminales a tensión de red y se instala en un compartimento cerrado propio, nunca sobre protoboard.
 Un sensor equivalente se ha usado con errores RMS inferiores al \SI{5}{\percent} en condiciones controladas~\cite{marin2026rmsbenchmark}.
-La tensión se mide con un adaptador de CA a CA (\SIrange{9}{12}{V}) aislado y certificado, de modo que todo el acondicionamiento de tensión queda en el lado de baja tensión.
+La tensión se mide con un adaptador de CA a CA (\SIrange{9}{15}{V}) aislado y certificado, de modo que todo el acondicionamiento de tensión queda en el lado de baja tensión.
 
-Ambas señales se acondicionan con divisores resistivos, una polarización a media escala y filtros RC, y se digitalizan con el convertidor interno del ESP32-S3 en modo continuo, alternando los canales a \num{8000} conversiones por segundo, es decir, \num{4000} pares por segundo.
+\begin{figure}[t]
+  \centering
+  \input{figures/fig02b-conditioning}
+  \caption{Esquema del acondicionamiento analógico con valores nominales de diseño, a verificar en el banco de pruebas. Solo se dibuja el lado de baja tensión; el adaptador y el ACS712 constituyen la barrera de aislamiento.}
+  \label{fig:conditioning}
+\end{figure}
+
+Ambas señales se acondicionan como muestra la Fig.~\ref{fig:conditioning}.
+La tensión del adaptador se reduce con un divisor de \SI{100}{k\ohm} y \SI{4,7}{k\ohm} referido a una polarización de \SI{1,65}{V}, lo que da unos \SI{\pm 1,1}{V} de pico en la entrada.
+La salida del ACS712, centrada en \SI{2,5}{V}, se escala con un divisor de \SI{4,7}{k\ohm} y \SI{10}{k\ohm}, cuya carga total supera el mínimo de \SI{4,7}{k\ohm} del sensor.
+Un condensador de \SI{22}{nF} en cada entrada forma el filtro antialias, y su pequeño desfase lo absorbe la corrección de fase.
+Las señales se digitalizan con el convertidor interno del ESP32-S3 en modo continuo, alternando los canales a \num{8000} conversiones por segundo, es decir, \num{4000} pares por segundo.
 Como el convertidor no muestrea ambos canales a la vez, el desfase fijo entre ellos y el propio del adaptador y del sensor se compensan con la corrección de fase de la ecuación~(\ref{eq:calib}).
 La no linealidad del convertidor se reduce con el esquema de calibración del fabricante y una calibración de \textit{offset} y ganancia por dispositivo.
 Un hueco o desbordamiento en la adquisición invalida la ventana afectada.

@@ -1,0 +1,52 @@
+% Fig. 3 (numbered by position): analog conditioning schematic (single column).
+% Source: plan.md › Front end and pin allocation (nominal design values,
+% to verify at the bench stage). Only the low-voltage side is drawn: the
+% adapter and the ACS712 are the isolation barrier; mains is not shown.
+\begin{circuitikz}[
+  font=\scriptsize,
+  every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
+  lbl/.style={font=\tiny, inner sep=1pt, align=center},
+  ttl/.style={font=\scriptsize\bfseries, anchor=west},
+  grp/.style={draw, dashed, rounded corners=2pt, gray},
+  bigR/.style={/tikz/circuitikz/bipoles/length=1.0cm},
+]
+\ctikzset{bipoles/length=0.9cm, resistors/scale=0.8, capacitors/scale=0.7, sources/scale=0.8}
+% ---------------- Voltage channel ----------------
+\node[ttl] at (-1.0,3.0) {Canal de tensión};
+\draw (0,0) to[sV, l_={\tiny\shortstack{Adaptador\\CA-CA\\9--15 V$\sim$}}] (0,2.2)
+      to[R, l=$R_1$, a=\tiny 100 k$\Omega$] (2.4,2.2) coordinate (A);
+\draw (A) to[R, l_=$R_2$, a^={\tiny 4,7 k$\Omega$}] (2.4,0) coordinate (vb1);
+\draw (0,0) -- (vb1) -- (5.0,0) coordinate (vb2);
+\draw (A) -- (3.6,2.2) coordinate (c1t) -- (6.3,2.2) node[ocirc] {};
+\node[lbl, anchor=west] at (6.35,2.2) {GPIO4\\(ADC1)};
+\draw (c1t) to[C, l_=\tiny 22 nF] (3.6,0.75) node[ground] {};
+% Bias network: Vb = 3.3 V / 2
+\draw (vb2) to[R, l=\tiny 10 k$\Omega$] (5.0,1.25) node[vcc] {}; \node[lbl, right] at (5.05,1.5) {3,3 V};
+\draw (vb2) to[R, l_=\tiny 10 k$\Omega$] (5.0,-1.3) node[ground] {};
+\draw (vb2) -- (6.1,0) to[C, l=\tiny 10 $\mu$F] (6.1,-1.3) node[ground] {};
+\fill (vb1) circle (1.2pt) (vb2) circle (1.2pt) (A) circle (1.2pt) (c1t) circle (1.2pt);
+\node[lbl, above] at (3.7,0) {$V_b=1{,}65$ V};
+\draw[grp] (-1.05,-1.75) rectangle (7.3,2.85);
+
+% ---------------- Current channel ----------------
+\begin{scope}[yshift=-4.25cm]
+\node[ttl] at (-1.0,2.05) {Canal de corriente};
+\draw[thick] (-0.1,-0.55) rectangle (1.3,0.55);
+\node[align=center] at (0.6,0) {ACS712\\20 A};
+% Mains side of the sensor (isolated inside the IC)
+\draw[line width=1pt] (-0.1,0.3) -- (-0.6,0.3) node[lbl, left] {IP+};
+\draw[line width=1pt] (-0.1,-0.3) -- (-0.6,-0.3) node[lbl, left] {IP$-$};
+\node[lbl, align=center] at (-0.75,-0.95) {conductor\\de la carga};
+\draw (0.6,0.55) -- (0.6,1.1) node[vcc] {}; \node[lbl, right] at (0.65,1.35) {5 V};
+\node[lbl, right] at (0.6,0.75) {VCC};
+\draw (0.6,-0.55) -- (0.6,-1.0) node[ground] {};
+\node[lbl, anchor=south west] at (1.3,0.02) {OUT};
+\draw (1.3,0) to[R, l=$R_3$, a={\tiny 4,7 k$\Omega$}] (3.2,0) coordinate (B);
+\draw (B) to[R, l_=$R_4$, a^=\tiny 10 k$\Omega$] (3.2,-1.4) node[ground] {};
+\draw (B) -- (4.4,0) coordinate (c2t) -- (6.3,0) node[ocirc] {};
+\node[lbl, anchor=west] at (6.35,0) {GPIO5\\(ADC1)};
+\draw (c2t) to[C, l=\tiny 22 nF] (4.4,-1.4) node[ground] {};
+\fill (B) circle (1.2pt) (c2t) circle (1.2pt);
+\draw[grp] (-1.05,-1.85) rectangle (7.3,1.85);
+\end{scope}
+\end{circuitikz}
