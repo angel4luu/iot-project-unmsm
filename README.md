@@ -1,6 +1,6 @@
 # Intelligent Energy Monitoring System — UNMSM IoT, Grupo 5
 
-A small device measures the electricity used by one appliance plugged into a protected wall outlet, sends the data
+A small device measures the electricity used by a 12 V bulb powered by a safe plug-in adapter (no 220 V wiring by the team), sends the data
 over Wi-Fi to a local server, and shows it on a dashboard with alerts when
 consumption goes over a limit. We are also writing an IEEE article (in Spanish)
 about it.
@@ -24,7 +24,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Track | Where we are | Next |
 |---|---|---|
-| System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Consistency check (`/speckit.analyze`), then start building: repo setup, then the server with fake data and the breadboard tests in parallel |
+| System | Design finished; demo switched to a 12 V AC bulb loop (no electrician needed). Nothing built yet | Buy the 12 V adapter (thermally protected), bulb and small parts; start building: repo setup, then the server with fake data and the breadboard tests in parallel |
 | Article | Introduction and Methodology done and trimmed (5 pages; about 1–1.3 pages left for Results and Conclusions in a 6-page paper) | Results, once the experiments run |
 
 *Last updated: 2026-11-18*
@@ -36,10 +36,10 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Step | What it means | Status |
 |---|---|---|
 | Design | Requirements, architecture, research, data formats | ✅ Oct 14 (hardware adapted Nov 18) |
-| Task list | Turn the design into an ordered to-do list (93 tasks, hardware and software tracks in parallel) | ✅ Nov 18 |
+| Task list | Turn the design into an ordered to-do list (95 tasks, hardware and software tracks in parallel) | ✅ Nov 18 |
 | Simulated version | Server, database and dashboard working with fake data | ⏳ |
 | Device software | Measuring and calculating on the ESP32 | ⬜ |
-| Safety review and calibration | Qualified review **before** connecting to mains; nominal calibration and plausibility check (no reference meter) | ⬜ |
+| Loop check and calibration | Team checks the 12 V bulb loop (adapter unplugged); nominal calibration and plausibility check against the bulb's label (no reference meter) | ⬜ |
 | Full system tests | Real device end to end, network-outage recovery, security | ⬜ |
 | Alerts | Local LED/buzzer and remote notifications | ⬜ |
 | Final acceptance | Check all success criteria | ⬜ |
@@ -61,10 +61,10 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | # | Question | Blocks |
 |---|---|---|
-| 0 | Who is the qualified person (licensed electrician or electrical-engineering teacher) who reviews the setup and signs the safety review? | Any 220 V test |
+| 0 | ~~Qualified person~~ Not needed for the 12 V demo (2026-11-18). Only needed if we ever test a 220 V appliance (future work) | — |
 | 1 | ~~Reference meter~~ Resolved 2026-11-18: none; readings are shown as "not validated" (constitution 2.0.0). A True RMS meter lent by the electrician could be added later | — |
 | 2 | How many repetitions per test | Methodology text, experiments |
-| 7 | Seven-day dataset for the "busiest hour" test (E8): short supervised sessions over a week, or the simulator? | Task T074, Results |
+| 7 | ~~Seven-day dataset~~ Resolved 2026-11-18: the simulator produces it (test E5) | — |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |
 | 5 | Faculty name and contact emails for the author block | Submission |
@@ -73,7 +73,8 @@ Build the article: `make -C article` → `article/build/main.pdf`
 ## Key decisions made
 
 - Wi-Fi, not LoRa. No automatic power cut-off (safety).
-- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer. All low-voltage wiring on a breadboard (no soldering). Minimal purchases: certified AC adapter with a female barrel jack with screw terminals, resistors and capacitors, a transistor for the buzzer, a small test box for the ACS712 only (plug, ACS712 and a socket for the appliance), and a portable 30 mA RCD only if the home panel has none. The ACS712 always goes in a closed box, never on the breadboard. No reference multimeter: the dashboard labels every reading "not validated" and the article makes no accuracy claim.
+- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version), OLED, RGB LED, buzzer. All low-voltage wiring on a breadboard (no soldering). No reference multimeter: the dashboard labels every reading "not validated" and the article makes no accuracy claim.
+- Demo on a 12 V AC loop (plan B): a certified, thermally protected 220 V → 12 V AC adapter (2 A) powers one 12 V 20 W halogen bulb through the ACS712. Only the adapter plugs into the wall, so no RCD, test box, fuse or electrician is needed. Purchases: the adapter, a barrel jack with screw terminals, resistors, capacitors, a transistor, the bulb, and a terminal strip only if we have no alligator leads. A 220 V appliance test is future work and would bring back the RCD, test box and electrician.
 - The specs win over the article proposal; differences are listed in [article/README.md](article/README.md#decisions).
 - Article in Spanish, IEEE conference format, decimal comma.
 - No power-factor claims; anomaly detection and forecasting are future work.
@@ -82,6 +83,8 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Parts list checked: the build guide now lists every part with an exact quantity (23 rows: 100 kΩ ×1, 4.7 kΩ ×2, 10 kΩ ×3, 470 Ω ×3, 1 kΩ ×1, 10 µF ×1, 22 nF ×2, male-to-female jumpers, 18 AWG loop cable, wire stripper) and a short shopping summary; polarity notes for the capacitor, buzzer and RGB LED. Leftover 220 V details removed from the plan's pin table, research, data model, task T033 and the contract examples (now 12.6 V, 1.62 A, 20.4 W) |
+| 2026-11-18 | Plan B: no electrician available, so the demo measures a 12 V halogen bulb fed by a thermally protected 12 V AC adapter. RCD, test box, household loads and the qualified review leave the MVP (kept for a future 220 V test). Tests are now E1 (bulb vs. its label, ±20 %), E2 alerts (bulb on/off, ~15 W limit), E3 latency, E4 recovery, E5 busiest hour with the simulator. Specs, tasks (+2: calibration registration, retention test), build guide, article (Fig. 4 redrawn, Tables I–II) updated |
 | 2026-11-18 | Consistency check (`/speckit.analyze`): no critical issues; 3 high to fix before the first 220 V session (who builds the test box, a circular rule on "accepted" calibration, how the dashboard learns the "not validated" label). Build guide: new section 4 on building hardware, firmware and server in parallel, then integrating |
 | 2026-11-18 | Task list created (`specs/.../tasks.md`, 93 tasks): setup, shared foundations, then live monitoring (the MVP), history, alerts. Breadboard tests and the server with fake data can run at the same time. Project guides go in `guides/` because `docs/` is not tracked |
 | 2026-11-18 | No reference multimeter (we can't afford a True RMS one): constitution 2.0.0 now allows a demo build whose readings are labelled "not validated". Tests E1–E4 check readings against appliance labels (±15 %) instead of claiming accuracy; the test box is now just plug, ACS712 and socket. Article, specs and build guide updated |

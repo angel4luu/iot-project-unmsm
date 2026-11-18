@@ -6,10 +6,12 @@
 
 ## Summary
 
-Build one safe, calibrated ESP32-S3 monitoring node for a protected single-phase
-laboratory load and one reproducible LAN server deployment. The node is built
-mostly from the team's existing kit (ACS712 current sensor, ESP32-S3 internal ADC)
-plus one certified AC-AC adapter for voltage. It samples the voltage/current
+Build one safe ESP32-S3 monitoring node (nominal calibration, readings labeled
+"not validated") for a 12 V AC extra-low-voltage test loop and one reproducible
+LAN server deployment. The node is built mostly from the team's existing kit
+(ACS712 current sensor, ESP32-S3 internal ADC) plus one certified, thermally
+protected 220 V → 12 V AC plug-in adapter that feeds both the voltage channel and
+a 12 V halogen test bulb (plan B, 2026-11-18). It samples the voltage/current
 channels alternately at 4,000 pairs/s with a corrected inter-channel delay, calculates RMS
 voltage/current and phase-corrected active power, integrates import energy with a
 monotonic clock, evaluates local thresholds, shows status on an RGB LED and a
@@ -35,7 +37,7 @@ tests; JSON Schema fixtures; Docker Compose integration and fault injection;
 supervised nominal calibration and plausibility check (no reference meter); secret scanning and network
 reachability tests  
 **Target Platform**: ESP32-S3 DevKitC-1 monitoring node; one x86-64/ARM64 Linux host on the
-trusted laboratory LAN; modern browser on the same trusted LAN  
+trusted local LAN; modern browser on the same trusted LAN  
 **Project Type**: Embedded firmware plus local services/infrastructure and a
 provisioned web dashboard  
 **Performance Goals**: 4,000 voltage/current pairs/s (8,000 alternating conversions/s); 1-second local decision
@@ -43,9 +45,10 @@ blocks; one summary/5 seconds; 95% dashboard visibility <=10 seconds; local aler
 <=2 seconds and healthy-server alert <=10 seconds; drain recovery queue >=2
 records/s; recover >=99% of a 10-minute outage within five minutes  
 **Constraints**: Controlled educational prototype only; readings (labeled "not validated") limited to
-180–250 V RMS, 0.5–5.0 A RMS (ACS712-20A), about 0–1,100 W (see
-Hardware) and tested loads; no relay; qualified safety review
-before mains energization; dashboard LAN-only; outbound notifications HTTPS only;
+10–16 V RMS, 0.5–2.0 A RMS (ACS712-20A), about 0–25 W on the 12 V AC
+test loop (see Hardware); no relay; no mains wiring by the team (only the
+certified adapter plugs into 220 V); a qualified safety review is required
+before any future mains session; dashboard LAN-only; outbound notifications HTTPS only;
 no committed secrets; 16 KiB maximum MQTT payload; at least 256 offline records in RAM  
 **Scale/Scope**: One node, one circuit, one operator, about 518,400 five-second
 records per 30 days, one Compose host, and one outbound notification destination
@@ -61,7 +64,7 @@ because its default/latest image line is not a stable v2 contract.
 
 | Principle or gate | Status | Planned evidence/control |
 |---|---|---|
-| I. Electrical Safety Before Convenience | PASS | Certified isolated adapter for voltage; ACS712 alone in a closed test box, never on a breadboard; protected range, no relay, de-energized assembly, qualified schematic/PCB/enclosure review, signed safety checklist before hardware test |
+| I. Electrical Safety Before Convenience | PASS | Plan B: no mains wiring; only a certified, thermally protected plug-in adapter touches 220 V and everything the team wires is 12 V AC or less; load loop off the breadboard; no relay; de-energized (unplugged) assembly; team low-voltage wiring checklist before plugging in. A future 220 V session requires the 30 mA RCD, the closed ACS712 test box, and a signed qualified review |
 | II. Measurement Integrity and Evidence | PASS | Constitution 2.0.0: exact quantities/ranges/units and algorithms; no reference meter, so nominal coefficients with offset zeroing and polarity check, every value labeled "not validated", no accuracy figure claimed, plausibility check against nameplates (research R-004) |
 | III. Monitoring MVP Before Optional Complexity | PASS | One-node vertical slice only; LoRa, cutoff, environmental sensing, anomalies, forecasts, and recommendations deferred |
 | IV. Security and Secret Hygiene | PASS | Per-principal mTLS/ACLs, encrypted NVS, ignored runtime secrets, private endpoints absent from tracked examples, secret scan gate |
@@ -70,8 +73,9 @@ because its default/latest image line is not a stable v2 contract.
 | VII. Resilience and Observability | PASS | RAM offline queue, NVS energy checkpoint with uncertain-interval flag, application ACK, deduplication, clock state, restart/outage tests, stage-specific health metrics |
 | Dependencies/config/versioning | PASS | Locked firmware/Python/container dependencies; provisioned dashboards, schemas, infrastructure, and calibration/config revisions |
 
-No constitution exception is requested. Unreviewed mains hardware is a release
-blocker, not an accepted planning exception.
+No constitution exception is requested. The MVP has no mains hardware built by
+the team; any future mains hardware without a signed qualified review is a
+release blocker, not an accepted planning exception.
 
 ### Post-design gate
 
@@ -215,7 +219,7 @@ flowchart LR
     subgraph ELEC[Hazardous controlled electrical setup]
         LOAD[Single-phase protected test load]
         VS[Certified AC-AC adapter<br/>isolated voltage sensing]
-        CS[ACS712 Hall current sensor<br/>closed test box]
+        CS[ACS712 Hall current sensor<br/>12 V AC test loop]
         LOAD --> VS
         LOAD --> CS
     end
@@ -235,7 +239,7 @@ flowchart LR
     VS --> AFE
     CS --> AFE
 
-    subgraph LAN[Trusted laboratory LAN]
+    subgraph LAN[Trusted local LAN]
         subgraph HOST[One version-pinned Compose host]
             BROKER[Mosquitto<br/>MQTT 5 mTLS :8883]
             INGEST[Python ingestion<br/>schema, identity, ledger, alerts]
@@ -260,10 +264,10 @@ flowchart LR
 
 ### Deployment boundaries
 
-- **Electrical boundary**: sensing and protection terminate at the certified
-  AC-AC adapter and the ACS712's isolated Hall path. Mains never reaches ESP32,
-  USB, network, or server wiring. The
-  assembled board/enclosure still requires qualified review.
+- **Electrical boundary**: mains terminates inside the certified, thermally
+  protected AC-AC adapter. Everything after it (12 V AC loop, ACS712, breadboard,
+  ESP32, USB, network) is extra-low voltage; mains never reaches the team's
+  wiring.
 - **Node boundary**: acquisition, calibration, five-second aggregation, energy
   continuity, quality state, local threshold evaluation, clock management, and
   offline queue continue without server availability.
@@ -290,32 +294,32 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 |---|---|---|---|---|---|
 | Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | "ESP32-S3 DevKitC-1" | 1 | Kit | Available |
 | Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | "módulo sensor de corriente ACS712 20A" | 1 | Kit | Available |
-| Voltage sensor | Certified isolated 220 V AC to 9–15 V **AC** plug-in adapter | "adaptador transformador 220V a 12V AC (salida alterna ~)" | 1 | Buy | To buy |
-| Adapter connector | Female DC barrel jack with screw terminals, matching the adapter's plug (usually 5.5 × 2.1 mm; **check the plug**). Carries the adapter's AC output to the breadboard; label it "AC" | "jack DC hembra con bornera 5.5x2.1" | 1 | Buy | To buy (low cost) |
-| Low-voltage assembly | Solderless breadboard and male-to-male jumper wires (low-voltage circuitry only) | "protoboard 830 puntos"; "cables jumper macho-macho" | 1 set | Kit | Available |
-| Signal conditioning | Resistors 1/4 W: 100 kΩ, 4.7 kΩ ×2, 10 kΩ ×3; capacitors 10 µF ×1, 22 nF ×2 | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 1 set | Buy | To buy (low cost) |
-| Local alert | Buzzer | "buzzer activo 5V" | 1 | Kit | Available |
-| Status light | Kit RGB LED (assumed common cathode, **to confirm**) with 3 × 470 Ω | "LED RGB cátodo común 5 mm" | 1 | Kit | Available |
+| Voltage sensor and loop supply | Certified, **thermally protected**, iron-core plug-in adapter, 220 V AC to 12 V **AC**, rated ≥ 2 A (plan B, 2026-11-18). Feeds both the voltage channel and the 12 V test loop | "adaptador transformador 220V a 12V AC 2A con protección térmica (salida alterna ~)" | 1 | Buy | To buy |
+| Adapter connector | Female DC barrel jack with screw terminals, matching the adapter's plug (usually 5.5 × 2.1 mm; **check the plug**). Its two terminals feed the voltage jumpers to the breadboard and the load-loop cable; label it "AC" | "jack DC hembra con bornera 5.5x2.1" | 1 | Buy | To buy (low cost) |
+| Low-voltage assembly | Solderless 830-point breadboard; about 20 male-to-male jumpers; 3–7 male-to-female jumpers (ACS712 VCC/OUT/GND, and the OLED or any ESP32 pin left without a free breadboard hole) | "protoboard 830 puntos"; "cables jumper macho-macho"; "cables jumper macho-hembra" | 1 set | Kit | Available (confirm male-to-female count) |
+| Signal conditioning | Resistors 1/4 W: 100 kΩ ×1 (R1), 4.7 kΩ ×2 (R2, R3), 10 kΩ ×3 (bias ×2, R4); capacitors 10 µF ≥ 25 V electrolytic ×1 (bias), 22 nF ceramic ×2 (anti-alias) | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 6 R + 3 C | Buy | To buy (low cost; one or two spares per value) |
+| Local alert | Active 5 V buzzer | "buzzer activo 5V" | 1 | Kit | Available |
+| Status light | Kit RGB LED (assumed common cathode, **to confirm**) with 3 × 470 Ω 1/4 W series resistors | "LED RGB cátodo común 5 mm"; "resistencia 470 ohm" | 1 LED + 3 R | Kit | Available (buy resistors only if missing) |
 | Local display | OLED 0.96" module, assumed 4-pin SSD1306 on I²C (**to confirm**; a 7-pin SPI module changes the pin table) | "pantalla OLED 0.96 I2C SSD1306" | 1 | Kit | Available |
-| Buzzer driver | NPN transistor 2N2222 (or PN2222A) + 1 kΩ base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 | Buy | To buy (low cost) |
-| Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
-| ACS712 test box | Closed flame-retardant plastic box for the ACS712 **only**, built as a measuring extension cord: plug and cable with gland, ACS712 on the live wire, and a socket for the load. Built or checked by the qualified person | "caja de paso plástica"; "prensaestopa"; "enchufe y tomacorriente" | 1 set | Buy | To buy |
-| Mains protection | 30 mA RCD protecting the test outlet: the device already in the building's panel (marked 30 mA, with a "T" test button) if present, otherwise a certified plug-in portable RCD. Overcurrent: the outlet's existing breaker, if the reviewer accepts it | "protector diferencial portátil 30 mA para enchufe" (only if the panel has none) | 0–1 | Building or buy | To check the building's panel |
-| Test loads | Household resistive loads: 100 W incandescent or halogen bulb; about 500 W halogen work lamp; about 1 kW iron or heater (nameplate ≤ 1.1 kW). Plus one stable small fan (E4, observed only) | "foco halógeno 100 W"; "reflector halógeno 500 W"; "plancha 1000 W" | 3–4 | Team or buy | To select (check nameplates) |
+| Buzzer driver | NPN transistor 2N2222 (or PN2222A, TO-92) + 1 kΩ 1/4 W base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 + 1 R | Buy transistor; resistor from kit | To buy (low cost) |
+| Node power | Certified 5 V 2 A charger and a cable matching the board's connector (USB-C or micro-USB, depending on board revision) | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
+| Test load | One 12 V halogen bulb: G4 12 V 20 W (or a 12 V car bulb, about 21 W); stable resistive load of about 1.7 A | "foco halógeno G4 12V 20W" | 1 | Team or buy | To buy (low cost) |
+| Load-loop wiring | Household copper cable ≥ 0.75 mm² (18 AWG), e.g. lamp cord, two pieces of about 30 cm, from old stock; 2 short alligator-clip leads from the kit; a terminal strip (2 positions used) only if no alligator leads are available. Carries the bulb current from the jack terminals through the ACS712 to the bulb, never through the breadboard | "regleta de bornes 12 polos" (only if no alligator leads) | 1 set | Team or buy | Available (check clips) |
 
-Minimal MVP build (2026-11-18): only parts needed for measurement, local
-indication, safety, and calibration are listed. No laboratory infrastructure is
-assumed: tests run from an ordinary 220 V wall outlet, always protected by a
-30 mA RCD. The qualified person is not provided by a lab either; the team must
-engage a licensed electrician (or an electrical-engineering professor) to review
-the ACS712 test box and test setup and sign the review before any mains
-connection. All low-voltage circuitry (bias and divider networks, filters, buzzer driver,
+Minimal MVP build, plan B (2026-11-18): only parts needed for measurement, local
+indication, safety, and calibration are listed. No laboratory and no electrician
+are available, so the MVP monitors a 12 V AC loop: the certified, thermally
+protected adapter plugs into an ordinary wall outlet and is the only part at
+220 V. Loop: jack terminal 1 → cable → ACS712 IP+ → IP− → 12 V bulb (alligator
+leads or terminal strip) → cable → jack terminal 2. No fuse, RCD, test box, or
+qualified review is needed for this loop: the adapter's thermal protection
+limits a short circuit, and nothing the team touches exceeds 12 V AC. All low-voltage circuitry (bias and divider networks, filters, buzzer driver,
 RGB LED, OLED, ESP32-S3) is assembled on a solderless breadboard with jumper
 wires, so no soldering is required; the adapter plugs into a female barrel jack
 with screw terminals whose two jumpers go to the breadboard (2026-11-18). The
-ACS712 mains side never goes on the breadboard: only its low-voltage header
-(5 V, GND, OUT) is jumpered out of its closed test box; the breadboard and the
-ESP32-S3 stay outside the box. Not used in the
+load loop (about 1.7 A) never goes through the breadboard or jumper wires: it
+runs on household cable and clips to the ACS712 screw terminals, and only the
+ACS712's low-voltage header (5 V, GND, OUT) is jumpered to the breadboard. Not used in the
 minimal build: DHT22 (temperature logging), bench DC polarity source, and a
 dedicated DIN protection panel, and a reference multimeter (none is affordable;
 constitution 2.0.0 allows a demonstration build labeled "not validated").
@@ -340,7 +344,9 @@ instead of a relay bench.
   R1 = 100 kΩ, R2 = 4.7 kΩ referenced to a 1.65 V bias (2 × 10 kΩ from 3.3 V,
   10 µF), giving about ±1.1 V peak for an unloaded 15 V adapter (about 18 V RMS);
   current divider R3 = 4.7 kΩ, R4 = 10 kΩ (14.7 kΩ load, above the ACS712's
-  4.7 kΩ minimum), mapping 2.5 V ± 0.71 V at 5 A RMS to about 1.70 V ± 0.48 V;
+  4.7 kΩ minimum), mapping 2.5 V ± 0.71 V at 5 A RMS to about 1.70 V ± 0.48 V
+  (on the plan B loop, about 1.7 A RMS gives about ±0.16 V peak at GPIO5, and
+  12 V RMS gives about ±0.76 V peak at GPIO4);
   22 nF from each ADC input to ground (anti-alias corner about 1.6–2.3 kHz;
   the small phase shift is absorbed by the phase correction); the ACS712 module
   already carries its supply decoupling capacitor. Proposed ADC pins: GPIO4 (ADC1_CH3) voltage, GPIO5
@@ -365,12 +371,13 @@ instead of a relay bench.
   | 3V3 | Bias divider, OLED VCC | |
   | 5V | ACS712 VCC (module has its own decoupling), buzzer | From the USB-C supply |
   | GND | Common ground of all low-voltage parts | |
-  | USB-C | Certified 5 V charger | No PC connection while energized unless the reviewer approves |
+  | USB | Certified 5 V charger | A PC USB link is acceptable in plan B (everything is extra-low voltage) |
 
-- **Mains safety**: the ACS712 is the only part carrying mains. It stays alone in
-  the closed ACS712 test box, is never on a breadboard, and is not
-  handled while energized; its module creepage, conductor rating, and the whole
-  setup require the qualified review before energization (research R-001).
+- **Mains safety (plan B)**: the team does no mains wiring; the ACS712 carries
+  only the 12 V loop current. Rewire only with the adapter unplugged, keep the
+  loop off the breadboard, and never open or modify the adapter. A future 220 V
+  session would put the ACS712 alone in a closed test box with an RCD and a
+  signed qualified review (research R-001).
 
 ### Local indication
 
@@ -390,9 +397,9 @@ keep working with the network down.
 
 | Field | Exact meaning | Wire unit | Valid calibrated range |
 |---|---|---|---|
-| `voltage_rms` | Square root of mean squared calibrated instantaneous voltage across a 5 s window | V | 180–250 V RMS |
-| `current_rms` | Square root of mean squared calibrated instantaneous current across the same paired window | A | 0.5–5.0 A RMS (ACS712-20A) |
-| `active_power` | Mean instantaneous `v*i` after offset, gain, and phase correction; not `Vrms*Irms` | W | 0–1,100 W consumption claim; signed diagnostic value |
+| `voltage_rms` | Square root of mean squared calibrated instantaneous voltage across a 5 s window | V | 10–16 V RMS (12 V AC loop) |
+| `current_rms` | Square root of mean squared calibrated instantaneous current across the same paired window | A | 0.5–2.0 A RMS (ACS712-20A, 12 V loop) |
+| `active_power` | Mean instantaneous `v*i` after offset, gain, and phase correction; not `Vrms*Irms` | W | 0–25 W (not validated); signed diagnostic value |
 | `active_energy_import_total` | Monotonic sum of `max(active_power,0)*monotonic_dt/3600` for one counter continuity ID | Wh | No accuracy claim; labeled "not validated" (nominal calibration) |
 
 The firmware maintains 1-second calculation/quality blocks and combines five
@@ -401,22 +408,24 @@ min/max and internal diagnostic counts locally, but the v1 wire contract carries
 the contractually required values, sample count, valid ratio, calibration
 revision, and flags. Schema 1.0.0 limits (for example the 2,500 W threshold
 maximum) are wire bounds; the node and `energyctl` reject thresholds above the
-calibrated maximum (1,100 W). No field claims apparent power, reactive power, power factor,
+plan B range maximum (25 W). No field claims apparent power, reactive power, power factor,
 or billing accuracy.
 
 ### Calibration and plausibility procedure
 
 No reference meter is used (constitution 2.0.0, research R-004).
 
-1. Complete and sign a de-energized schematic/test-box/protection review,
-   including the ACS712 module's creepage and conductor rating.
+1. Complete the team's low-voltage wiring checklist with the adapter unplugged
+   (loop off the breadboard, tight ACS712 and jack terminals, no bare crossing
+   conductors, adapter certified and unmodified).
 2. Bench stage without mains: verify the voltage channel with the AC-AC adapter
    output only, recorded waveforms, and the ACS712 zero-current offset, using the
    ESP32-S3's own ADC logs.
 3. Record build revision, firmware commit, ADC settings, sensors and ACS712
    variant, wiring, operator, load identities and nameplate ratings, and the
    statement that no reference instrument is used.
-4. Load nominal coefficients: voltage gain from the adapter ratio and R1/R2,
+4. Load nominal coefficients: voltage gain from R1/R2 only (the node measures
+   the 12 V adapter output directly),
    current gain from 100 mV/A and R3/R4, phase correction from the known
    one-conversion offset between channels.
 5. Warm up at least ten minutes; capture 60 seconds at zero current and store the
@@ -424,10 +433,10 @@ No reference meter is used (constitution 2.0.0, research R-004).
 6. Switch on a resistive load: active power must be positive (current polarity);
    if it is negative, correct the sign in the coefficients instead of rewiring.
    Freeze the result as a `nominal` calibration revision.
-7. Plausibility check (SC-001) on at least three stable resistive loads across
-   the range (about 100 W, 500 W, 1 kW): V_RMS in 180-250 V, P positive and
-   within ±15% of the nameplate rating. Capture >=5 minutes per point. Record one
-   fan for qualitative V/I/P behavior only.
+7. Plausibility check (SC-001) on the 12 V halogen bulb (about 20 W): V_RMS in
+   10-16 V, P positive and within ±20% of the nameplate rating; with the bulb
+   off, current within the absolute noise limit. Capture >=5 minutes on and
+   >=1 minute off. Windows flagged only `calibration_missing` are admissible.
 8. Every displayed and published value carries the "not validated" label derived
    from the calibration kind. Below-range/no-load current uses an absolute noise
    limit.
@@ -593,8 +602,8 @@ horizons and promotion thresholds before any result affects users.
 The implementation sequence should keep each vertical milestone independently
 verifiable: contracts/simulator; server storage/dashboard; firmware calculations;
 calibration; end-to-end recovery/security; then thresholds/alerts. Task generation
-must preserve that dependency order and place supervised mains tests after all
-simulation and low-voltage gates.
+must preserve that dependency order and place the 12 V loop session after all
+simulation and bench gates.
 
 ## Complexity Tracking
 

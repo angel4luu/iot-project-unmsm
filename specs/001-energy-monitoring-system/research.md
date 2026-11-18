@@ -11,10 +11,26 @@ review by a qualified person before energization.
 
 ## R-001 Measurement range and sensing architecture
 
+**Amended 2026-11-18 (plan B, 12 V AC MVP; supersedes the mains test path below
+for the MVP).** No electrician or qualified reviewer is available, so the MVP
+monitors an extra-low-voltage loop instead of a 220 V load. A certified,
+thermally protected plug-in 220 V → 12 V AC adapter (iron-core, rated ≥ 2 A)
+feeds one 12 V halogen bulb (G4 12 V 20 W or a 12 V car bulb) in series with
+the ACS712 IP+/IP− terminals, using household cable and the kit's alligator
+leads (or a small terminal strip). The same adapter output feeds the voltage
+channel, so the node measures the loop's own voltage directly (no 220/12 ratio).
+Proposed range: `10–16 V RMS`, `55–65 Hz`, `0.5–2.0 A RMS`, and about
+`0–25 W`. Only the certified adapter touches the 220 V outlet, so the MVP has no
+mains wiring, no RCD, no test box, no fuse (the adapter's thermal protection
+limits a short), and no qualified-person review. The mains decision and safety
+conditions below are kept for the future 220 V session and apply in full if it
+is ever done.
+
 **Amended 2026-11-18** (hardware adapted to the team's available kit; supersedes
 the 2026-10-14 SCT-013-020/ZMPT101B decision).
 
-**Decision**: Current is sensed with the team's `ACS712` Hall-effect module (the
+**Mains decision (kept for the future 220 V session; the MVP uses the plan B
+ranges above)**: Current is sensed with the team's `ACS712` Hall-effect module (the
 load conductor passes through the module). Voltage is sensed with a certified,
 isolated 220 V-to-9–12 V **AC-AC** plug-in adapter (AC output, not a DC charger);
 it is the only sensing part bought. Bare or exposed ZMPT101B modules remain
@@ -42,7 +58,8 @@ conditions, so the design is reasonable when the range is narrowed to the
 sensor's useful resolution (this project itself claims no accuracy; R-004). A certified plug-in AC-AC adapter keeps all custom voltage
 sensing on the low-voltage side and is cheaper and safer than a custom ZMPT board.
 
-**Safety conditions for the ACS712 (non-negotiable)**: the ACS712 is the only
+**Safety conditions for the ACS712 on mains (future 220 V session only;
+non-negotiable then)**: the ACS712 is the only
 part whose terminals carry mains, so the module sits alone in a closed,
 touch-safe, flame-retardant test box (a measuring extension cord, amended
 2026-11-18) with strain relief and covered terminals; only its low-voltage
@@ -97,8 +114,13 @@ Conditioning (final values set at the bench and in the schematic review):
 - The team's 470 Ω and 1 kΩ resistors are too low for these networks; a low-cost
   resistor assortment (10 kΩ–100 kΩ) and a few 10 µF capacitors are bought.
 
-*Amended 2026-11-18 (minimal MVP, no laboratory available)*: the energized
-prototype requires a 30 mA RCD/GFCI protecting the test outlet (the device already in the building's
+*Amended 2026-11-18 (plan B)*: the MVP has no mains wiring (R-001), so the
+requirements in the next sentence apply only to a future 220 V session. On the
+12 V loop the conditioning network is unchanged (the 12 V adapter output is
+what R1/R2 were sized for); only the firmware voltage gain changes, and the
+load loop (about 1.7 A) runs through cable and clips, never through the
+breadboard. *Amended 2026-11-18 (minimal MVP, no laboratory available)*: an
+energized mains prototype requires a 30 mA RCD/GFCI protecting the test outlet (the device already in the building's
 electrical panel if present, otherwise a certified plug-in portable RCD) and the
 outlet's existing branch-circuit breaker as overcurrent protection, accepted
 only if the qualified reviewer confirms that the test cable, terminals, and
@@ -175,7 +197,8 @@ earlier true-RMS reference, guard-band, and series-connection decisions.
 **Decision**: The demonstration build runs on **nominal coefficients** and makes
 no accuracy claim. Voltage gain comes from the adapter's rated ratio and the
 R1/R2 divider; current gain from the ACS712-20A datasheet sensitivity
-(100 mV/A) and the R3/R4 divider; the phase correction from the known sampling
+(100 mV/A) and the R3/R4 divider (plan B: the voltage gain uses only R1/R2,
+because the node measures the 12 V adapter output itself); the phase correction from the known sampling
 offset between the two channels (one conversion period, 125 µs at 8,000
 conversions/s).
 Procedure: warm up for 10 minutes; at no load, measure zero for 60 seconds and
@@ -186,13 +209,18 @@ calibration revisions, operator, date, wiring, sensor identity and variant, ADC
 configuration, load identity and nameplate rating, and the statement that no
 reference instrument was used.
 
-Plausibility evaluation (SC-001) uses at least three stable resistive household
-loads across the range (about 100 W, 500 W, and 1 kW): the RMS voltage must lie in
-180–250 V, active power must be positive, and active power must fall within ±15%
-of the nameplate rating. The ±15% band is a working allowance for the nominal
-error of the chain plus the spread between a load's nameplate and its actual
-draw; it is a plausibility band, not an accuracy limit. One stable inductive load
-(small fan) is recorded for qualitative V/I/P behavior only. Collect at least five
+Plausibility evaluation (SC-001, amended for plan B) uses one stable resistive
+12 V halogen bulb (about 20 W): the RMS voltage must lie in 10–16 V, active
+power must be positive, and active power must fall within ±20% of the nameplate
+rating; with the bulb off, current must fall to the absolute noise limit. The
+±20% band is a working allowance for the nominal error of the chain plus the
+spread between the nameplate and the actual draw; it is wider than the earlier
+mains band (±15%) because a plug-in adapter's loaded voltage is often 5–10%
+above 12 V and halogen power rises faster than voltage. It is a plausibility
+band, not an accuracy limit. No inductive load is used in the MVP. During the
+plausibility session, windows whose only quality flag is `calibration_missing`
+(the server has not yet registered the nominal revision) are admissible
+evidence; any other flag makes the window inadmissible. Collect at least five
 minutes per point. No-load behavior uses an absolute noise threshold. Every
 displayed and published value carries the "not validated" label, which the
 server derives from the calibration artifact's kind (`nominal`). Preserve raw
@@ -402,8 +430,8 @@ are fixed in implementation lockfiles.
 Verification layers are calculation unit tests with recorded waveform fixtures,
 JSON Schema contract tests, broker/ingestion/storage integration tests, outage and
 clock-fault injection, dashboard provisioning checks, secret scanning, and
-plausibility checks on real loads (no reference meter, R-004). Hardware-in-the-loop tests are separately
-marked because they require qualified supervision.
+plausibility checks on the 12 V bulb loop (no reference meter, R-004). Hardware-in-the-loop tests are separately
+marked because they need the physical prototype.
 
 **Rationale**: These tools have stable support for the selected device, protocol,
 storage, and reproducible local deployment, while keeping the repository split

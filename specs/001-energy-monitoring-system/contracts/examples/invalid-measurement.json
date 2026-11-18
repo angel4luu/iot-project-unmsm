@@ -13,9 +13,9 @@
   },
   "clock": { "source": "sntp", "last_sync_age_s": 30 },
   "measurements": {
-    "voltage_rms": { "value": 219.8 },
-    "current_rms": { "value": 2.31, "unit": "A" },
-    "active_power": { "value": 491.2, "unit": "W" },
+    "voltage_rms": { "value": 12.6 },
+    "current_rms": { "value": 1.62, "unit": "A" },
+    "active_power": { "value": 20.4, "unit": "W" },
     "active_energy_import_total": {
       "value": 12543.8,
       "unit": "Wh",
