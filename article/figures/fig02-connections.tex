@@ -1,6 +1,6 @@
 % Fig. 2: node connections as a single-line block diagram (single column).
-% Source: plan.md (Hardware and Measurement Design) and research.md R-001/R-002.
-% Pin numbers are omitted: they are candidates until the PCB review.
+% Source: plan.md (Hardware and Measurement Design, amended 2026-11-18) and
+% research.md R-001/R-002. Pin numbers are omitted until the schematic review.
 % Replace or complement with a labelled photo once the prototype is built.
 \begin{tikzpicture}[
   font=\scriptsize,
@@ -9,10 +9,9 @@
     minimum height=7mm, inner sep=2pt},
   mains/.style={blk, fill=white, text width=18mm, minimum height=6mm},
   iso/.style={blk, fill=white, text width=16mm, double, double distance=0.6pt},
-  fuse/.style={draw, fill=white, minimum width=4mm, minimum height=2mm, inner sep=0pt},
+  per/.style={blk, text width=11mm, minimum height=5.5mm},
   wire/.style={line width=1pt},
   arr/.style={-{Latex[length=1.5mm]}, semithick},
-  bus/.style={{Latex[length=1.5mm]}-{Latex[length=1.5mm]}, semithick},
   lbl/.style={font=\tiny, inner sep=1pt, align=center},
   ttl/.style={font=\scriptsize\bfseries, align=center},
 ]
@@ -20,41 +19,50 @@
 \node[mains] (grid) at (0.9,0.95) {Red monofásica\\220 V, 60 Hz};
 \node[mains] (rcd) at (0.9,0.1) {Diferencial 30 mA};
 \node[mains] (ocp) at (0.9,-0.75) {Protección bipolar 10 A};
-\node[mains] (load) at (0.9,-4.75) {Carga de prueba};
+\node[mains] (load) at (0.9,-4.95) {Carga de prueba};
 \draw[wire] (grid) -- (rcd);
 \draw[wire] (rcd) -- (ocp);
-\draw[wire] (ocp) -- (load);
 
 % --- Isolating devices (straddle the barrier) ---
-\node[iso] (psu) at (3.35,-1.6) {Fuente aislada certificada};
-\node[iso] (vs) at (3.35,-2.7) {Sensado de tensión aislado};
-\node[iso] (ct) at (3.35,-3.8) {SCT-013-020 (20 A/1 V)};
-\draw[semithick] (0.9,-1.6) -- node[fuse, pos=0.55] {} (psu.west);
-\draw[semithick] (0.9,-2.7) -- node[fuse, pos=0.55] {} (vs.west);
-\node[lbl, above] at (1.85,-2.6) {fusible};
-\draw[semithick] (0.9,-3.8) ellipse (2.2mm and 1.1mm);
-\draw[semithick, densely dashed] (1.12,-3.8) -- node[lbl, above] {un conductor} (ct.west);
-\fill (0.9,-1.6) circle (0.8pt) (0.9,-2.7) circle (0.8pt);
+\node[iso] (psu) at (3.35,-1.45) {Cargador USB certificado};
+\node[iso] (vs) at (3.35,-2.7) {Adaptador CA-CA certificado};
+\node[iso] (cs) at (3.35,-3.95) {ACS712 (efecto Hall)};
+% The load conductor passes through the ACS712 (series path).
+\coordinate (in) at (0,-3.8); \coordinate (out) at (0,-4.1);
+\draw[wire] (ocp) -- (0.9,-3.8) -- (cs.west |- in);
+\draw[wire] (cs.west |- out) -- (0.9,-4.1) -- (load);
+\node[lbl, above] at (1.75,-3.8) {en serie};
+\draw[semithick] (0.9,-1.45) -- (psu.west);
+\draw[semithick] (0.9,-2.7) -- (vs.west);
+\fill (0.9,-1.45) circle (0.8pt) (0.9,-2.7) circle (0.8pt);
+\node[lbl, above] at (1.75,-1.45) {enchufe};
+\node[lbl, above] at (1.75,-2.7) {enchufe};
 
 % --- Low-voltage side ---
-\node[blk, minimum width=17mm] (mcu) at (5.55,-1.6) {ESP32};
-\node[blk, minimum width=17mm] (adc) at (5.55,-2.7) {ADS131M02\\2 canales};
-\node[blk, text width=10mm] (led) at (7.75,-1.6) {LED o\\zumbador};
-\node[blk, text width=10mm] (mem) at (7.75,-2.7) {FRAM\\y RTC};
+\node[blk, minimum width=17mm] (mcu) at (5.55,-1.45) {ESP32-S3\\ADC1 interno};
+\node[blk, text width=17mm] (afe) at (5.55,-3.3) {Divisores,\\polarización y RC};
 \draw[arr] (psu) -- node[lbl, above] {5 V} (mcu);
-\draw[arr] (vs) -- node[lbl, below] {canal V} (adc);
-\draw[arr] (ct.east) -| node[lbl, pos=0.25, above] {canal I} (adc.south);
-\draw[bus] (adc) -- node[lbl, right] {SPI, DRDY} (mcu);
-\draw[arr] (mcu.east |- led.west) -- node[lbl, above] {GPIO} (led.west);
-\draw[bus] ($(mcu.east)+(0,-0.22)$) -| (6.75,-2.7) -- (mem.west);
-\node[lbl, right] at (6.75,-2.2) {I\textsuperscript{2}C};
+\draw[arr] (vs.east) -- node[lbl, above] {$V$} ++(0.45,0) |- ($(afe.west)+(0,0.12)$);
+\draw[arr] (cs.east) -- node[lbl, below] {$I$} ++(0.45,0) |- ($(afe.west)+(0,-0.12)$);
+\draw[arr] (afe) -- node[lbl, right] {2 canales} (mcu);
 \draw[arr] (mcu.north) -- ++(0,0.45) node[lbl, above] {Wi-Fi hacia la red del laboratorio};
+
+\node[per] (bz) at (7.75,-1.0) {Zumbador};
+\node[per] (rgb) at (7.75,-1.75) {LED RGB};
+\node[per] (oled) at (7.75,-2.5) {OLED};
+\node[per] (dht) at (7.75,-3.25) {DHT22};
+\node[lbl, below] at (dht.south) {(solo calibración)};
+\draw[semithick] (mcu.east) -- (6.75,-1.45);
+\draw[semithick] (6.75,-1.0) -- (6.75,-3.25);
+\coordinate (bus) at (6.75,0);
+\foreach \p in {bz,rgb,oled,dht} \draw[arr] (\p.west -| bus) -- (\p.west);
+\node[lbl, rotate=90, anchor=south] at (6.75,-2.15) {GPIO, I\textsuperscript{2}C};
 
 % --- Barrier and titles ---
 \begin{scope}[on background layer]
-  \draw[very thick, dash pattern=on 3pt off 2pt] (3.35,1.25) -- (3.35,-4.55);
+  \draw[very thick, dash pattern=on 3pt off 2pt] (3.35,1.25) -- (3.35,-4.75);
 \end{scope}
-\node[lbl, fill=white] at (3.35,-4.75) {barrera de aislamiento};
+\node[lbl, fill=white] at (3.35,-4.95) {barrera de aislamiento};
 \node[ttl, anchor=south] at (0.9,1.4) {Lado de red};
 \node[ttl, anchor=south] at (6.0,1.4) {Baja tensión (envolvente)};
 \end{tikzpicture}

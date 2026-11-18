@@ -1,7 +1,7 @@
 # Phase 0 Research: Energy Monitoring System
 
 **Feature**: `001-energy-monitoring-system`  
-**Date**: 2026-10-14  
+**Date**: 2026-10-14 (hardware amended 2026-11-18)  
 **Status**: Complete for planning
 
 This record resolves the technical unknowns in the feature specification. It is
@@ -11,66 +11,106 @@ review by a qualified person before energization.
 
 ## R-001 Measurement range and sensing architecture
 
-**Decision**: Claim the MVP accuracy target only over `180–250 V RMS`,
-`0.25–10.0 A RMS`, `0–2.5 kW` active power, and `55–65 Hz`. Protect the test
-path at 10 A. Use a `SCT-013-020` 20 A/1 V current transformer and either a
-certified isolated 220 V-to-low-voltage AC adapter (preferred) or a bare
-`ZMPT101B` on a purpose-built, safety-reviewed PCB. Do not use a common exposed
-ZMPT101B/LM358 module. Values outside the calibrated range may be observed but
-MUST carry `out_of_range` and are outside the 5% claim.
+**Amended 2026-11-18** (hardware adapted to the team's available kit; supersedes
+the 2026-10-14 SCT-013-020/ZMPT101B decision).
 
-**Rationale**: This range covers representative laboratory loads while retaining
-sensor headroom. The SCT variant includes its burden, avoiding the open-secondary
-risk of a current-output CT. A certified adapter reduces custom mains-design risk;
-the ZMPT option is retained because it is obtainable and galvanically isolated,
-but component ratings, creepage, fusing, enclosure, and assembly still determine
-system safety.
+**Decision**: Current is sensed with the team's `ACS712` Hall-effect module (the
+load conductor passes through the module). Voltage is sensed with a certified,
+isolated 220 V-to-9–12 V **AC-AC** plug-in adapter (AC output, not a DC charger);
+it is the only sensing part bought. Bare or exposed ZMPT101B modules remain
+rejected. The calibrated claim is narrowed to `180–250 V RMS`, `55–65 Hz`, and a
+current range set by the ACS712 variant. The team's module is the
+**`ACS712ELCTR-20A`** (confirmed 2026-11-18), so the claim is `0.5–5.0 A RMS`
+and about `0–1,100 W`; the other rows are kept for reference:
+
+| ACS712 variant | Sensitivity | Calibrated current | Calibrated power (approx.) |
+|---|---|---|---|
+| `ACS712ELCTR-05B` | 185 mV/A | `0.25–3.0 A RMS` (±5 A peak limit) | `0–650 W` |
+| `ACS712ELCTR-20A` | 100 mV/A | `0.5–5.0 A RMS` | `0–1,100 W` |
+| `ACS712ELCTR-30A` | 66 mV/A | `0.5–5.0 A RMS` | `0–1,100 W` |
+
+The test path stays protected at 10 A. Values outside the calibrated range may be
+observed but MUST carry `out_of_range` and are outside the 5% claim. Peaks beyond
+the sensor or ADC span (for example high-crest-factor nonlinear loads) MUST raise
+`clipping`.
+
+**Rationale**: The project is an educational demonstration and the team already
+owns an ACS712 and two ESP32-S3 boards. A comparable ACS712 + microcontroller-ADC
+design is reported in the literature with sub-5% RMS error under controlled
+conditions, so the claim stays credible if the range is narrowed to the sensor's
+useful resolution. A certified plug-in AC-AC adapter keeps all custom voltage
+sensing on the low-voltage side and is cheaper and safer than a custom ZMPT board.
+
+**Safety conditions for the ACS712 (non-negotiable)**: the ACS712 is the only
+part whose terminals carry mains, so the module sits in its own compartment of a
+closed, touch-safe, flame-retardant enclosure with strain relief and covered
+terminals; only its low-voltage header leaves that compartment. It is never
+mounted on a solderless breadboard and never handled while energized. The
+qualified reviewer MUST check the specific module's creepage/clearance between
+the mains terminal and the low-voltage pins, the conductor rating, and the
+enclosure before energization. While energized, the ESP32-S3 is powered from a
+certified charger and data leaves only over Wi-Fi; a USB connection to a
+mains-earthed computer is not used unless the reviewer approves it.
 
 **Alternatives rejected**:
 
-- `SCT-013-000`: external burden and 100 A range add avoidable risk and reduce
-  useful resolution for a 10 A prototype.
-- `ACS712`: conductor insertion and PCB mains routing are unnecessary for a
-  monitoring-only clamp-on prototype.
-- Generic ZMPT101B module: component voltage ratings, layout, creepage, and output
+- `SCT-013-020` + `ADS131M02` (previous decision): better metrology and a
+  clamp-on, non-invasive current path, but both are purchases and the external ADC
+  adds board work; not justified for the educational scope. Retained as the
+  documented upgrade path.
+- Bare/generic `ZMPT101B` module: component ratings, layout, creepage, and output
   compatibility are not sufficiently controlled.
+- `PZEM-004T` metering module: hides the sampling and active-power algorithm the
+  project must demonstrate (FR-003).
 
 **Sources**: [Peru supply description](https://www.gob.pe/que/29306-informacion-general-sobre-lima),
-[YHDC SCT-013 product information](https://en.yhdc.com/product/SCT013-401.html),
-[SCT-013 series data](https://www.tinytronics.nl/product_files/005965_Datasheet_SCT013.pdf),
-[ZMPT101B data](https://img.ozdisan.com/ETicaret_Dosya/625106_302431.pdf).
+[ACS712 datasheet](https://www.allegromicro.com/-/media/files/datasheets/acs712-datasheet.ashx),
+[RMS benchmark with ACS712 (Marin et al., 2026)](https://doi.org/10.3390/electricity7030077).
 
 ## R-002 Isolation, protection, and analog conditioning
 
-**Decision**: Use an `ADS131M02` external simultaneous-sampling ADC in
-high-resolution mode at 4,000 sample pairs/s. Connect voltage to AIN0 at PGA 2
-and current to AIN1 at PGA 1. Each channel uses the datasheet differential
-anti-alias network (50 ohms in each leg and 4.7 nF differential) plus the
-manufacturer's external clamp topology. For the ZMPT option, use four series,
-flameproof, voltage-rated approximately 27.4 kohm/0.5 W primary resistors
-(109.6 kohm total, split across both leads) and a 100 ohm secondary burden.
+**Amended 2026-11-18.**
+
+**Decision**: Use the ESP32-S3's internal ADC1 (ADC2 conflicts with Wi-Fi) in
+continuous DMA mode with an alternating two-channel pattern at 8,000 conversions/s,
+giving 4,000 voltage/current pairs/s. The fixed inter-channel delay (one
+conversion, 125 µs, about 2.7° at 60 Hz) plus the adapter's and sensor's own phase
+shift are removed by the existing fractional-sample phase correction. Apply
+Espressif's ADC calibration scheme, then per-device offset and gain calibration;
+keep both signals inside the ADC's linear mid-range at the chosen attenuation.
+
+Conditioning (final values set at the bench and in the schematic review):
+
+- **Voltage**: adapter output → resistor divider to about 1/30 → AC-coupled onto
+  a mid-supply bias (two equal resistors of about 10 kΩ plus a 10 µF capacitor)
+  → small RC anti-alias filter → ADC1.
+- **Current**: ACS712 output (centred at VCC/2, powered from 5 V) → resistor
+  divider into the 3.3 V-safe range with total load of at least 4.7 kΩ (ACS712
+  minimum load) → RC filter → ADC1.
+- The team's 470 Ω and 1 kΩ resistors are too low for these networks; a low-cost
+  resistor assortment (10 kΩ–100 kΩ) and a few 10 µF capacitors are bought.
 
 The energized prototype requires an upstream 30 mA RCD/GFCI, two-pole 10 A
-overcurrent protection, separately fused voltage-sense branch, certified isolated
-low-voltage supply, touch-safe flame-retardant enclosure, strain relief, covered
-terminals, and guarded mains PCB zone. No mains wiring may use solderless
-breadboard or flying leads. A qualified person MUST review the schematic, parts'
-ratings, creepage/clearance, slots, conductor sizing, enclosure, and test setup
-before energization.
+overcurrent protection, the certified isolated adapter for voltage, a certified
+low-voltage supply for the node, the enclosure conditions in R-001, and no mains
+wiring on breadboards or flying leads. A qualified person MUST review the
+schematic, parts' ratings, creepage/clearance, conductor sizing, enclosure, and
+test setup before energization.
 
-**Rationale**: Simultaneous voltage/current conversion removes multiplexing skew
-from active-power calculation. The ADC provides differential inputs, programmable
-gain, phase calibration support, and SPI CRC. Isolation-component ratings alone do
-not certify the assembled prototype.
+**Rationale**: Alternating sampling with a known, constant delay is a documented
+phase-correction method, so FR-003 (active power as mean of v·i from synchronized
+observations) is still met. The internal ADC is the main accuracy risk; it is
+handled by calibration, by narrowing the range (R-001), and by averaging 20,000
+pairs per summary.
 
-**Alternative rejected**: ESP32's internal SAR ADC is a fallback only. It lacks
-simultaneous channels and introduces device-dependent nonlinearity and phase risk
-that make the active-power target harder to defend.
+**Alternative rejected**: External simultaneous ADC (`ADS131M02`): removes
+multiplexing skew and offers CRC-checked SPI, but is a purchase and extra board
+work; retained as the upgrade path. The contract flag `adc_crc_error` stays in
+schema 1.0.0 for compatibility but is not emitted by the internal ADC.
 
-**Sources**: [ADS131M02 product page](https://www.ti.com/product/ADS131M02),
-[ADS131M02 datasheet](https://www.ti.com/lit/ds/symlink/ads131m02.pdf),
-[ADS131M0x input protection](https://www.ti.com/lit/an/sbaa506/sbaa506.pdf),
-[ESP32 datasheet](https://documentation.espressif.com/esp32_datasheet_en.html).
+**Sources**: [ESP32-S3 ADC continuous mode](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/peripherals/adc_continuous.html),
+[ESP32-S3 ADC calibration](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/peripherals/adc_calibration.html),
+[ACS712 datasheet](https://www.allegromicro.com/-/media/files/datasheets/acs712-datasheet.ashx).
 
 ## R-003 Sampling, quantities, and energy continuity
 
@@ -89,66 +129,99 @@ delta_energy_Wh = active_power_W * monotonic_elapsed_seconds / 3600
 active_energy_import_Wh += max(active_power_W, 0) * dt / 3600
 ```
 
-Active power is signed internally to detect reversed CT polarity. Sustained
+Active power is signed internally to detect reversed sensor polarity. Sustained
 negative power raises `polarity_reversed`; it is not silently converted into
 consumption. Energy integration uses monotonic time and is never adjusted by a
-wall-clock correction. Energy checkpoints use double-buffered records with
-sequence number and CRC in `MB85RC256V` FRAM every 5 seconds. Pending telemetry
-uses compact binary FRAM records and retains at least 256 summaries (more than 21
-minutes), sufficient for the specified 10-minute outage test.
+wall-clock correction.
+
+*Amended 2026-11-18 (no FRAM)*: the energy total is checkpointed to NVS (internal
+flash) every 60 seconds as double-buffered records with sequence number and CRC,
+and on orderly shutdown. After an unexpected restart the counter resumes from the
+last checkpoint and the gap since that checkpoint is reported as an uncertain
+interval (FR-005). Pending telemetry is held in a RAM ring buffer of at least 256
+compact summaries (more than 21 minutes), sufficient for the specified 10-minute
+communications outage. A power loss or reboot during an outage loses the unsent
+summaries; the server sees the new `boot_id` and sequence gap and reports it as a
+data gap, never as zero consumption.
 
 **Rationale**: High-rate paired samples are necessary to distinguish active power
 from apparent power. One-second blocks meet local warning latency while 5-second
-messages limit network and storage load. FRAM avoids rewriting internal flash on
-every checkpoint.
+messages limit network and storage load. A 60-second NVS checkpoint keeps flash
+wear acceptable for a prototype campaign without extra hardware.
 
 **Alternative rejected**: `Vrms * Irms` is apparent power and MUST NOT be labeled
 active power. Wall-clock differences are unsafe for integration because SNTP
 corrections can jump.
 
-**Sources**: [ADS131M02 datasheet](https://www.ti.com/lit/ds/symlink/ads131m02.pdf),
-[MB85RC256V datasheet](https://www.fujitsu.com/us/Images/MB85RC256V-DS501-00017-3v0-E.pdf),
+**Sources**: [ESP-IDF NVS](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/storage/nvs_flash.html),
 [ESP-IDF system time](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html).
 
 ## R-004 Calibration and measurement evidence
 
-**Decision**: Calibrate with an identifiable reference meter whose documented
-uncertainty is at most 1%. Record hardware/firmware/calibration revisions,
-operator, date, ambient conditions, wiring, sensor identity, ADC configuration,
-reference evidence, and load identity. Warm up for 10 minutes; measure zero for
-60 seconds; calibrate voltage and current gain; calibrate phase with a stable
-non-unity-power-factor load; freeze coefficients before acceptance testing.
+**Amended 2026-11-18** (reference instrument is the team's multimeter; resistive
+loads are the main reference points).
 
-Acceptance uses a separate dataset containing low (about 50–100 W), medium
-(400–800 W), high (1.5–2.0 kW) resistive loads and one stable inductive or
-nonlinear load. Collect at least five minutes per power point and 15 minutes for
-energy. Each required quantity at every accepted point—not merely the mean—must
-be within 5% of reference. No-load behavior uses an absolute noise threshold.
-Preserve reference readings, raw waveform excerpts, calculated blocks, summaries,
-coefficients, scripts, hashes, and pass/fail tables.
+**Decision**: Calibrate with an identifiable **true-RMS** reference meter (model
+to confirm). Its documented AC uncertainty `u_ref` at each point is recorded. If
+`u_ref <= 1%`, acceptance is `|error| <= 5%`; if `1% < u_ref <= 2%`, acceptance
+is guard-banded to `|error| <= 5% - u_ref`; a meter above 2% or without true-RMS
+cannot support the claim. With one meter, V and I are read alternately on a
+stable load. Record hardware/firmware/calibration revisions, operator, date,
+ambient temperature (read by a DHT22 placed inside the enclosure next to the
+ACS712, logged as calibration metadata only), wiring, sensor identity and variant,
+ADC configuration, reference evidence, and load identity.
+
+Procedure: warm up for 10 minutes; at no load, measure zero for 60 seconds and
+store the ACS712 offset (auto-zero is repeated before each session); calibrate
+voltage and current gain on resistive loads; calibrate the phase correction on a
+resistive load by adjusting it until `P = V_RMS * I_RMS` (unity power factor);
+freeze coefficients before acceptance testing.
+
+Acceptance uses a separate dataset with at least three stable resistive loads
+spread across the calibrated range (for example about 100 W, 500 W, and 1 kW for
+the 20 A module), where the reference power is `V_ref * I_ref` and the
+reference energy is that power times the monotonic interval. One stable inductive
+or nonlinear load is also recorded: its V and I are validated against the
+true-RMS meter, but its W/Wh are reported as observations only, without an
+accuracy claim, unless a power reference with documented uncertainty is
+available. Collect at least five minutes per point and 15 minutes for energy.
+Every required quantity at every accepted point—not merely the mean—must meet the
+acceptance limit. No-load behavior uses an absolute noise threshold. Preserve
+reference readings, raw waveform excerpts, calculated blocks, summaries,
+coefficients, temperatures, scripts, hashes, and pass/fail tables.
 
 **Rationale**: Separate calibration and validation data prevent circular evidence.
-The phase-sensitive load is needed to validate active power rather than only
-unity-power-factor apparent power.
+On a resistive load, V·I from a true-RMS meter is a valid active-power reference,
+and unity power factor also gives a reference for the phase correction without a
+power analyzer. Claiming active-power accuracy on a non-unity-power-factor load
+would need a reference that the team does not have (constitution II), so that load
+is used for V/I validation and qualitative behavior only. The ACS712 offset drifts
+with temperature, so enclosure temperature is evidence for interpreting errors.
 
 **Sources**: [ADE7953 calibration guidance](https://www.analog.com/cn/resources/app-notes/an-1118.html),
-[ADE7953 product information](https://www.analog.com/en/products/ade7953.html).
+[ACS712 datasheet](https://www.allegromicro.com/-/media/files/datasheets/acs712-datasheet.ashx).
 
 ## R-005 Clock and timestamp model
 
-**Decision**: SNTP UTC is authoritative, with battery-backed `DS3231` holdover
-after cold restart. Every measurement states `sntp`, `holdover`, or
-`unsynchronized`, plus the last synchronization age. The observation timestamp is
-the end of the measurement window in RFC 3339 UTC with milliseconds. The server
-adds `received_at` and `stored_at`; ordering and deduplication use observation
-time together with `boot_id`, `sequence`, and immutable `message_id`.
+**Amended 2026-11-18** (no external RTC).
+
+**Decision**: SNTP UTC is authoritative. There is no battery-backed RTC:
+`holdover` now means that after a successful SNTP sync in the current boot, the
+system clock keeps running on the internal oscillator while SNTP is unreachable,
+with the last-sync age reported. After a cold restart, observations are
+`unsynchronized` (diagnostic only, never `valid` evidence) until the first SNTP
+sync. Every measurement states `sntp`, `holdover`, or `unsynchronized`, plus the
+last synchronization age. The observation timestamp is the end of the measurement
+window in RFC 3339 UTC with milliseconds. The server adds `received_at` and
+`stored_at`; ordering and deduplication use observation time together with
+`boot_id`, `sequence`, and immutable `message_id`. The contract enum is unchanged.
 
 **Rationale**: The three timestamps separate physical observation, network delay,
 and persistence delay. Explicit clock quality prevents an unsynchronized value
-from appearing trustworthy.
+from appearing trustworthy. The node starts on the lab Wi-Fi, so the unsynchronized
+period after boot is normally a few seconds; an RTC is the upgrade path if it is not.
 
 **Sources**: [RFC 3339](https://www.rfc-editor.org/info/rfc3339/),
-[DS3231](https://www.analog.com/en/products/ds3231.html),
 [ESP-IDF system time](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/system_time.html).
 
 ## R-006 Telemetry protocol and recovery

@@ -18,6 +18,12 @@
 - Q: Which acceptance-threshold profile should the first release be required to pass? → A: Balanced profile: 5% measurement error, 95% of updates within 10 seconds, 99% outage recovery, and local/remote alerts within 2/10 seconds.
 - Q: How should the operator be allowed to access the first-release dashboard? → A: Only from a trusted laboratory/local network; outbound remote threshold alerts are allowed.
 
+### Session 2026-11-18
+
+- Q: Must the prototype be built from new metrology-grade parts? → A: No. It is an educational demonstration built mostly from the team's available kit with minimal purchases; the calibrated range is narrowed to what that hardware supports (see plan › Hardware).
+- Q: Should the node show readings locally? → A: Yes. The node shows its latest values and state on a local display and status light, and keeps doing so when the network is unavailable (FR-018).
+- Q: Does recording ambient temperature during calibration count as the deferred environmental-sensing feature? → A: No. Temperature recorded only as calibration evidence metadata is not product environmental sensing; it is not published, stored as telemetry, or shown on the dashboard.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Monitor electrical consumption in real time (Priority: P1)
@@ -102,6 +108,7 @@ flowchart LR
 - Near-real-time telemetry, durable time-series history, dashboard views, node-health status, and threshold alerts.
 - Dashboard access restricted to the trusted laboratory/local network, with outbound remote threshold notifications permitted.
 - A local visible or audible warning for configured safety thresholds.
+- A local display and status light on the node showing its latest readings and state.
 - Evaluation against a reference meter and controlled load changes.
 
 **Deferred until the monitoring MVP is validated**:
@@ -134,6 +141,7 @@ flowchart LR
 - **FR-015**: The system MUST distinguish normal, warning, invalid-measurement, offline, and insufficient-data states.
 - **FR-016**: The first release MUST NOT perform automatic load disconnection; its responses are limited to local warnings, remote threshold alerts, dashboard status, and alert history.
 - **FR-017**: The system MUST provide enough operational status information to determine whether failures originate at measurement, connectivity, ingestion, storage, threshold evaluation, or presentation stages.
+- **FR-018**: The monitoring node MUST locally show its latest RMS voltage, RMS current, active power, and accumulated energy with units and quality, and its current state (normal, warning, invalid-measurement, offline, insufficient-data), including while remote services are unavailable; values that are not valid MUST NOT be shown as plain readings.
 
 ### Key Entities
 
@@ -164,5 +172,6 @@ flowchart LR
 - The first release has one operator role and restricts dashboard access to the trusted laboratory/local network; public dashboard access, multi-user access, billing, and tenant isolation are outside scope, while outbound remote threshold notifications are permitted.
 - Thirty days is a practical initial retention period and may be adjusted after measuring storage usage.
 - Threshold detection is the only consumption-alert method in the first release; historical anomaly detection, forecasting, and recommendations require separate future specifications after sufficient validated history exists.
-- Environmental sensing and automatic load switching remain separate future features so that they do not block validation of the core monitoring path.
+- Environmental sensing and automatic load switching remain separate future features so that they do not block validation of the core monitoring path. Ambient temperature recorded only as calibration evidence is not environmental sensing.
+- The prototype is an educational demonstration built mostly from hardware the team already owns; its accuracy claim applies only to the narrowed calibrated range stated in the plan.
 

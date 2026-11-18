@@ -36,7 +36,7 @@
 % ---- Electrical layer ----
 \node[hw] (load) at (1.45,-0.1) {Carga\\monofásica};
 \node[hw] (vs) at (3.35,-0.1) {Sensor de\\tensión aislado};
-\node[hw] (cs) at (5.35,-0.1) {Sensor de\\corriente (TC)};
+\node[hw] (cs) at (5.35,-0.1) {Sensor de\\corriente (Hall)};
 \node[ex] (ref) at (7.35,-0.1) {Instrumento\\de referencia};
 \draw[thin] (load) -- (vs);
 \draw[thin] (load.north) |- ++(0,0.3) -| (cs.north);
@@ -47,9 +47,9 @@
 \node[lbl, fill=gray!7, anchor=east] at (\R-0.05,-0.9) {aislamiento galvánico};
 
 % ---- Node layer ----
-\node[hw, text width=43mm] (node) at (3.75,-1.7) {\textbf{Nodo de medición (ESP32)}\\[1pt]
+\node[hw, text width=43mm] (node) at (3.75,-1.7) {\textbf{Nodo de medición (ESP32-S3)}\\[1pt]
   {\tiny $V_{\mathrm{RMS}}$, $I_{\mathrm{RMS}}$, $P$, $E$ y calidad;\\ cola local y umbral local}};
-\node[hw] (led) at (7.35,-1.7) {Aviso local\\LED o zumbador};
+\node[hw] (led) at (7.35,-1.7) {Aviso local\\LED, OLED\\y zumbador};
 \draw[sig] (vs) -- (vs |- node.north);
 \draw[sig] (cs) -- (cs |- node.north);
 \draw[sig] (node) -- (led);

@@ -10,10 +10,11 @@ complete this quickstart.
 ## 1. Prerequisites
 
 - Git, Make, Docker Engine with Compose v2, Python 3.14, and `uv`.
-- For firmware-only work: ESP-IDF 5.4 LTS toolchain and a supported ESP32 board.
-- For hardware acceptance: qualified supervision, approved schematic/PCB and
-  enclosure, upstream RCD/GFCI and overcurrent protection, reference meter, and
-  the signed safety/calibration procedures.
+- For firmware-only work: ESP-IDF 5.4 LTS toolchain and an ESP32-S3 DevKitC-1.
+- For hardware acceptance: qualified supervision, approved schematic and closed
+  enclosure (ACS712 in its own compartment, never on a breadboard), upstream
+  RCD/GFCI and overcurrent protection, certified AC-AC adapter, true-RMS reference
+  meter, and the signed safety/calibration procedures.
 - A trusted-LAN host whose firewall can restrict TCP 443 and 8883 to the lab
   subnets. The host must not have public port forwarding or UPnP exposure.
 
@@ -134,9 +135,15 @@ make firmware-flash-test-fixtures
 ```
 
 Start with recorded ADC/waveform fixtures or an isolated signal source. Unit tests
-verify RMS, phase-corrected active power, monotonic-time Wh integration, quality
-classification, threshold timing, queue replay, config rollback rejection, CRC,
-and restart recovery. Do not use an energized mains front end at this stage.
+verify RMS, alternating-sample delay and phase correction, active power,
+monotonic-time Wh integration, NVS checkpoint recovery, quality classification,
+threshold timing, queue replay, config rollback rejection, sample-gap detection,
+and the LED/OLED state mapping.
+
+Then a low-voltage bench stage: the certified AC-AC adapter (plugged into a
+protected outlet) drives the voltage channel; the ACS712 offset and polarity are
+checked with a low-voltage DC current. No mains conductor passes through the
+ACS712 at this stage.
 
 ## 8. Controlled calibration and hardware acceptance
 
@@ -148,17 +155,21 @@ the versioned documents that implementation will place under `docs/safety/` and
    strain-relief, fuse, and conductor checks.
 2. Energize only inside the controlled setup with RCD/GFCI and two-pole 10 A
    protection; never work live or expose terminals.
-3. Warm up 10 minutes and capture a 60-second zero-current record.
-4. Calibrate voltage gain, current gain, and phase against the identified
-   <=1%-uncertainty reference meter.
+3. Warm up 10 minutes and capture a 60-second zero-current record (ACS712 offset).
+4. Calibrate voltage and current gain on resistive loads, and the phase
+   correction on a resistive load (`P = V_RMS*I_RMS`), against the identified
+   true-RMS reference meter; log the enclosure temperature.
 5. Freeze a new calibration revision.
-6. Validate on separate low, medium, high, and non-unity-PF loads. Require every
-   accepted V, A, W, and Wh comparison to be within 5%.
+6. Validate on at least three separate resistive loads across the calibrated
+   range, plus one inductive/nonlinear load for V and A only. Require every
+   accepted comparison to meet the 5% (or guard-banded) limit.
 7. Hash and preserve the procedure, wiring/build revisions, raw captures,
-   reference readings, coefficients, software revision, and pass/fail report.
+   reference readings, temperatures, coefficients, software revision, and
+   pass/fail report.
 
-The result is a prototype measurement claim only for 180–250 V, 0.25–10 A,
-0–2.5 kW, and the tested configurations. It is not a permanent-installation,
+The result is an educational prototype measurement claim only for 180–250 V, the
+0.5–5 A range of the ACS712-20A (about 1.1 kW), and the
+tested configurations. It is not a permanent-installation,
 billing, or safety-device approval.
 
 ## 9. Stop services and preserve evidence

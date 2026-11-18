@@ -38,8 +38,8 @@ only its matching node topics.
 | `nominal_voltage_V` | decimal | Default 220; informational, not a substitute for measured voltage |
 | `calibrated_voltage_min_V` | decimal | Default 180 |
 | `calibrated_voltage_max_V` | decimal | Default 250 |
-| `calibrated_current_min_A` | decimal | Default 0.25 |
-| `calibrated_current_max_A` | decimal | Default 10.0 |
+| `calibrated_current_min_A` | decimal | Default 0.5 (ACS712-20A) |
+| `calibrated_current_max_A` | decimal | Default 5.0 (ACS712-20A) |
 | `active` | boolean | Inactive circuits do not create consumption alerts |
 
 ### CalibrationArtifact
@@ -51,7 +51,9 @@ only its matching node topics.
 | `hardware_revision` | string | Exact build calibrated |
 | `firmware_commit` | string | Full VCS revision |
 | `reference_meter_id` | string | Serial or lab asset identity |
-| `reference_uncertainty_percent` | decimal | Must be <=1 for acceptance evidence |
+| `reference_uncertainty_percent` | decimal | True-RMS meter's AC uncertainty at the point; <=1 uses the 5% limit, >1 and <=2 uses the guard-banded limit `5 - u_ref`, >2 cannot be acceptance evidence |
+| `current_sensor_variant` | string | ACS712 variant from the chip marking (`05B`, `20A`, `30A`) |
+| `enclosure_temperature_C` | decimal? | DHT22 reading during calibration; evidence metadata only |
 | `voltage_gain` | decimal | Applied after offset correction |
 | `current_gain` | decimal | Applied after offset correction |
 | `phase_correction_samples` | decimal | Signed fractional sample correction |
@@ -69,7 +71,7 @@ Calibration records are append-only. Editing coefficients creates a new revision
 |---|---|---|
 | `config_version` | integer | Monotonically increasing per node |
 | `node_id`, `circuit_id` | string | Must match the target node/circuit |
-| `active_power_limit_W` | decimal | `>0` and `<=2500` for the calibrated MVP |
+| `active_power_limit_W` | decimal | `>0` and `<=1100` for the calibrated MVP (schema wire bound 2,500) |
 | `confirm_ms` | integer | 1,000–300,000; default 10,000 |
 | `clear_below_W` | decimal | `>=0` and `< active_power_limit_W`; default 95% of limit |
 | `clear_ms` | integer | 1,000–300,000 |
