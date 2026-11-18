@@ -294,6 +294,8 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | "ESP32-S3 DevKitC-1" | 1 | Kit | Available |
 | Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | "módulo sensor de corriente ACS712 20A" | 1 | Kit | Available |
 | Voltage sensor | Certified isolated 220 V AC to 9–15 V **AC** plug-in adapter | "adaptador transformador 220V a 12V AC (salida alterna ~)" | 1 | Buy | To buy |
+| Adapter connector | Female DC barrel jack with screw terminals, matching the adapter's plug (usually 5.5 × 2.1 mm; **check the plug**). Carries the adapter's AC output to the breadboard; label it "AC" | "jack DC hembra con bornera 5.5x2.1" | 1 | Buy | To buy (low cost) |
+| Low-voltage assembly | Solderless breadboard and male-to-male jumper wires (low-voltage circuitry only) | "protoboard 830 puntos"; "cables jumper macho-macho" | 1 set | Kit | Available |
 | Signal conditioning | Resistors 1/4 W: 100 kΩ, 4.7 kΩ ×2, 10 kΩ ×3; capacitors 10 µF ×1, 22 nF ×2 | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 1 set | Buy | To buy (low cost) |
 | Local alert | Buzzer | "buzzer activo 5V" | 1 | Kit | Available |
 | Status light | Kit RGB LED (assumed common cathode, **to confirm**) with 3 × 470 Ω | "LED RGB cátodo común 5 mm" | 1 | Kit | Available |
@@ -311,9 +313,14 @@ assumed: tests run from an ordinary 220 V wall outlet, always protected by a
 30 mA RCD. The qualified person is not provided by a lab either; the team must
 engage a licensed electrician (or an electrical-engineering professor) to review
 the node enclosure and test setup and sign the review before any mains
-connection. Not used in the minimal build: DHT22 (temperature logging), DC
-barrel socket (the adapter cable is cut and soldered or screwed to the board),
-bench DC polarity source, and a dedicated DIN protection panel.
+connection. All low-voltage circuitry (bias and divider networks, filters, buzzer driver,
+RGB LED, OLED, ESP32-S3) is assembled on a solderless breadboard with jumper
+wires, so no soldering is required; the adapter plugs into a female barrel jack
+with screw terminals whose two jumpers go to the breadboard (2026-11-18). The
+ACS712 mains side never goes on the breadboard: only its low-voltage header
+(5 V, GND, OUT) is jumpered out of its closed compartment. Not used in the
+minimal build: DHT22 (temperature logging), bench DC polarity source, and a
+dedicated DIN protection panel.
 
 Not used: ADS131M02, SCT-013-020, ZMPT101B, MB85RC256V FRAM, DS3231 RTC (kept
 as the documented upgrade path), and the kit's relay, Arduino Uno R4, motors,

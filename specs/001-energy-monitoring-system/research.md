@@ -46,6 +46,9 @@ part whose terminals carry mains, so the module sits in its own compartment of a
 closed, touch-safe, flame-retardant enclosure with strain relief and covered
 terminals; only its low-voltage header leaves that compartment. It is never
 mounted on a solderless breadboard and never handled while energized. The
+low-voltage conditioning and peripherals, by contrast, may be assembled on a
+solderless breadboard (amended 2026-11-18), since they are separated from mains
+by the certified adapter and the ACS712 isolation barrier. The
 qualified reviewer MUST check the specific module's creepage/clearance between
 the mains terminal and the low-voltage pins, the conductor rating, and the
 enclosure before energization. While energized, the ESP32-S3 is powered from a

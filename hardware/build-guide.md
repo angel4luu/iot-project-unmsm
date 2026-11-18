@@ -57,8 +57,9 @@ permanente.
    USB-C certificado.
 7. El adaptador CA-CA tiene salida de corriente **alterna** y se usa para medir.
    Nunca lo enchufe en una entrada de alimentación de CC, incluida la entrada
-   jack del Arduino Uno R4. Se corta su conector y sus dos cables se sueldan o
-   atornillan a la red de medición de tensión de baja tensión descrita aquí.
+   jack del Arduino Uno R4. Su conector se enchufa en un jack DC hembra con
+   bornera, rotulado "CA", y de sus dos tornillos salen dos cables jumper al
+   protoboard, a la red de medición de tensión descrita aquí.
 8. Las etapas 1 a 4 son trabajo desenergizado o en baja tensión. La etapa 6 solo
    se permite después de la revisión firmada, en el montaje controlado y
    supervisado. Nunca trabaje con tensión ni deje terminales energizados
@@ -79,6 +80,8 @@ estado, no una autorización para sustituir componentes sin revisión.
 | Controlador y ADC | Espressif ESP32-S3 DevKitC-1, ADC1 interno | `ESP32-S3 DevKitC-1` | 1 | Kit; disponible |
 | Sensor de corriente | Módulo Allegro ACS712ELCTR-20A, 100 mV/A | `módulo sensor de corriente ACS712 20A` | 1 | Kit; disponible |
 | Sensor de tensión | Adaptador enchufable certificado y aislado, 220 V CA a 9–15 V CA | `adaptador transformador 220V a 12V AC (salida alterna ~)` | 1 | Comprar |
+| Conector del adaptador | Jack DC hembra con bornera de tornillos, del mismo tamaño que el conector del adaptador (normalmente 5,5 × 2,1 mm; **revise el conector**) | `jack DC hembra con bornera 5.5x2.1` | 1 | Comprar; bajo costo |
+| Montaje de baja tensión | Protoboard y cables jumper macho-macho (solo circuitos de baja tensión) | `protoboard 830 puntos`; `cables jumper macho-macho` | 1 juego | Kit; disponible |
 | Resistencias de divisores y polarización | 1/4 W: 100 kΩ, 4,7 kΩ ×2, 10 kΩ ×3 | `resistencias 1/4 W 100k, 10k, 4.7k` | 1 juego | Comprar; bajo costo |
 | Condensadores de polarización y filtro | 10 µF ×1 y 22 nF ×2 | `condensador electrolítico 10uF 25V`; `condensador cerámico 22nF` | 1 juego | Comprar; bajo costo |
 | Aviso local | Zumbador activo de 5 V | `buzzer activo 5V` | 1 | Kit; disponible |
@@ -100,6 +103,12 @@ electricista con licencia (o a un docente de ingeniería eléctrica) para revisa
 la envolvente del nodo y el montaje de prueba, y firmar la revisión antes de
 cualquier conexión a la red.
 
+Todo el circuito de baja tensión (polarización, divisores, filtros, excitación
+del zumbador, LED RGB, OLED y ESP32-S3) se arma en un **protoboard** con cables
+jumper, así que no hace falta soldar. El lado de red del ACS712 nunca va en el
+protoboard: solo salen de su compartimento cerrado sus pines de baja tensión
+(5 V, GND y OUT).
+
 No use en este montaje el relé del kit, el Arduino Uno R4, los motores, los
 servos ni los sensores no relacionados. La entrada jack del Arduino Uno R4 no es
 una entrada para el adaptador de CA. Este diseño no incluye ninguna placa propia
@@ -116,9 +125,11 @@ de medición conectada directamente a la red.
 - No se asume un osciloscopio: las formas de onda se capturan con el propio ADC
   del ESP32-S3 (registro de muestras crudas por USB en el banco, antes de
   cualquier etapa con red).
-- Protoboard y cables jumper solo para pruebas de periféricos de baja tensión.
-- Herramientas de soldadura y para mecanizar la envolvente;
-  nada de cableado de red en protoboard ni con cables expuestos.
+- Protoboard y cables jumper para todo el circuito de baja tensión; no se
+  requiere soldar.
+- Destornillador pequeño (bornera del jack) y herramientas para perforar la
+  envolvente (prensaestopas); nada de cableado de red en protoboard ni con
+  cables expuestos.
 - Bitácora de montaje: fecha, operador, identidad de la placa y los sensores,
   revisión del cableado y del *firmware*, identidad del instrumento, mediciones,
   temperatura e incidencias.
@@ -209,9 +220,10 @@ conductor de carga ni de red por el ACS712 en esta etapa.
 
 ### Circuito nominal
 
-- Corte el conector de salida del adaptador y suelde o atornille sus dos cables
-  a la placa. Mantenga el adaptador desenchufado de su tomacorriente protegido
-  mientras cablea.
+- Enchufe el conector del adaptador en el jack DC hembra con bornera y lleve
+  dos cables jumper desde sus tornillos al protoboard; no se corta ningún cable.
+  Mantenga el adaptador desenchufado de su tomacorriente protegido mientras
+  cablea.
 - Arme el nodo de polarización de 1,65 V (Vb): dos resistencias iguales de
   10 kΩ en serie entre 3V3 y GND, con 10 µF de Vb a GND.
 - Conecte un cable de salida del adaptador directamente a Vb. La salida del
@@ -403,7 +415,7 @@ facturación ni el uso como dispositivo de seguridad.
 | Falta un color del RGB | Tipo de LED u orden de pines, o falta la resistencia en serie | Confirme el supuesto de cátodo común y el mapa GPIO17/18/21; verifique cada resistencia de 470 Ω |
 | Vb no está cerca de 1,65 V | Error en el divisor de polarización, la tierra o el condensador de 10 µF | Con el adaptador desenchufado, mida Vb y revise el divisor de dos 10 kΩ |
 | La señal en GPIO4 se recorta | El divisor o la salida del adaptador difieren del valor nominal | Deténgase; anote la forma de onda y el adaptador; cambie solo mediante revisión del esquema |
-| No hay oscilación en GPIO4 | Adaptador desenchufado, cable mal soldado o error en R1/R2/Vb | Confirme que el adaptador es de salida CA, revise sus soldaduras y el esquema de baja tensión |
+| No hay oscilación en GPIO4 | Adaptador desenchufado, jumper suelto en la bornera o el protoboard, o error en R1/R2/Vb | Confirme que el adaptador es de salida CA, ajuste los tornillos del jack, reinserte los jumpers y revise el esquema de baja tensión |
 | El *offset* en GPIO5 está lejos de ~1,70 V | Alimentación del ACS712, divisor, tierra o versión del sensor | Verifique 5 V, tierra común, R3 = 4,7 kΩ, R4 = 10 kΩ y que el módulo sea el de 20 A |
 | La potencia activa sale negativa | Sentido del conductor en IP+/IP− | Si la potencia sale negativa en la carga resistiva, corrija el signo en los coeficientes de calibración; no recablee con tensión |
 | Los valores del ADC saltan o se pierden muestras | Ruido de cableado, configuración del ADC, desbordamiento de DMA o conversión faltante | Revise tierras y filtros de baja tensión y el diagnóstico del *firmware*; las ventanas afectadas son inválidas |
@@ -422,8 +434,8 @@ facturación ni el uso como dispositivo de seguridad.
   incertidumbre antes de calibrar.
 - El adaptador CA-CA certificado está por comprar. Verifique en el banco su
   certificación, su salida y su aptitud antes de usarlo.
-- La disposición final de los componentes (placa perforada o montaje en la
-  envolvente) está por definir y revisar. Conserve los valores de divisores,
+- El circuito de baja tensión va en protoboard; su ubicación dentro de la
+  envolvente (separado del compartimento del ACS712) está por revisar. Conserve los valores de divisores,
   polarización y filtros del plan; no sustituya valores no listados.
 - Protección diferencial: revisar si el tablero eléctrico del edificio tiene un
   interruptor diferencial de 30 mA (botón "T") que proteja el tomacorriente de

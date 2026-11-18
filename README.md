@@ -72,7 +72,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 ## Key decisions made
 
 - Wi-Fi, not LoRa. No automatic power cut-off (safety).
-- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer. Minimal purchases: certified AC adapter, resistors and capacitors, a transistor for the buzzer, a small box for the ACS712, a true-RMS multimeter, and a portable 30 mA RCD only if the home panel has none. The ACS712 always goes in a closed box, never on the breadboard.
+- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer. All low-voltage wiring on a breadboard (no soldering). Minimal purchases: certified AC adapter with a female barrel jack with screw terminals, resistors and capacitors, a transistor for the buzzer, a small box for the ACS712, a true-RMS multimeter, and a portable 30 mA RCD only if the home panel has none. The ACS712 always goes in a closed box, never on the breadboard.
 - The specs win over the article proposal; differences are listed in [article/README.md](article/README.md#decisions).
 - Article in Spanish, IEEE conference format, decimal comma.
 - No power-factor claims; anomaly detection and forecasting are future work.
@@ -81,6 +81,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Low-voltage circuit goes on a breadboard (no soldering); the AC adapter plugs into a female barrel jack with screw terminals instead of cutting its cable |
 | 2026-11-18 | Minimal MVP: temperature sensor (DHT22), barrel socket, 12 V polarity bulb and dedicated test panel dropped; LEDs, buzzer and OLED kept. Protection is the 30 mA RCD from the home panel (or a portable one) plus the outlet's existing breaker, if the reviewer accepts it |
 | 2026-11-18 | No lab available: protection (30 mA RCD + 10 A breaker) becomes a portable test panel to buy, assembled by an electrician; household test loads; 12 V bulb for the polarity check |
 | 2026-11-18 | Build guide translated to Spanish. Reference multimeter will be bought (not borrowed) |
