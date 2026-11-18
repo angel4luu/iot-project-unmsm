@@ -42,7 +42,7 @@ provisioned web dashboard
 blocks; one summary/5 seconds; 95% dashboard visibility <=10 seconds; local alert
 <=2 seconds and healthy-server alert <=10 seconds; drain recovery queue >=2
 records/s; recover >=99% of a 10-minute outage within five minutes  
-**Constraints**: Controlled educational prototype only; calibrated claim limited to
+**Constraints**: Controlled educational prototype only; readings (labeled "not validated") limited to
 180–250 V RMS, 0.5–5.0 A RMS (ACS712-20A), about 0–1,100 W (see
 Hardware) and tested loads; no relay; qualified safety review
 before mains energization; dashboard LAN-only; outbound notifications HTTPS only;
@@ -179,9 +179,9 @@ tests/
 └── fixtures/
     ├── waveforms/
     ├── telemetry/
-    └── reference-meter/
+    └── plausibility/
 
-docs/
+guides/                      # not docs/: docs/ is git-ignored local lab material
 ├── architecture/
 ├── safety/
 ├── calibration/
@@ -301,7 +301,7 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
 | ACS712 test box | Closed flame-retardant plastic box for the ACS712 **only**, built as a measuring extension cord: plug and cable with gland, ACS712 on the live wire, and a socket for the load. Built or checked by the qualified person | "caja de paso plástica"; "prensaestopa"; "enchufe y tomacorriente" | 1 set | Buy | To buy |
 | Mains protection | 30 mA RCD protecting the test outlet: the device already in the building's panel (marked 30 mA, with a "T" test button) if present, otherwise a certified plug-in portable RCD. Overcurrent: the outlet's existing breaker, if the reviewer accepts it | "protector diferencial portátil 30 mA para enchufe" (only if the panel has none) | 0–1 | Building or buy | To check the building's panel |
-| Test loads | Household resistive loads: 100 W incandescent or halogen bulb; about 500 W halogen work lamp; about 1 kW iron or heater (nameplate ≤ 1.1 kW). Plus one stable inductive (small fan) or nonlinear load (LED lamp or charger) | "foco halógeno 100 W"; "reflector halógeno 500 W"; "plancha 1000 W" | 3–4 | Team or buy | To select (check nameplates) |
+| Test loads | Household resistive loads: 100 W incandescent or halogen bulb; about 500 W halogen work lamp; about 1 kW iron or heater (nameplate ≤ 1.1 kW). Plus one stable small fan (E4, observed only) | "foco halógeno 100 W"; "reflector halógeno 500 W"; "plancha 1000 W" | 3–4 | Team or buy | To select (check nameplates) |
 
 Minimal MVP build (2026-11-18): only parts needed for measurement, local
 indication, safety, and calibration are listed. No laboratory infrastructure is
@@ -393,7 +393,7 @@ keep working with the network down.
 | `voltage_rms` | Square root of mean squared calibrated instantaneous voltage across a 5 s window | V | 180–250 V RMS |
 | `current_rms` | Square root of mean squared calibrated instantaneous current across the same paired window | A | 0.5–5.0 A RMS (ACS712-20A) |
 | `active_power` | Mean instantaneous `v*i` after offset, gain, and phase correction; not `Vrms*Irms` | W | 0–1,100 W consumption claim; signed diagnostic value |
-| `active_energy_import_total` | Monotonic sum of `max(active_power,0)*monotonic_dt/3600` for one counter continuity ID | Wh | Accuracy claimed only across accepted test intervals |
+| `active_energy_import_total` | Monotonic sum of `max(active_power,0)*monotonic_dt/3600` for one counter continuity ID | Wh | No accuracy claim; labeled "not validated" (nominal calibration) |
 
 The firmware maintains 1-second calculation/quality blocks and combines five
 blocks into one summary. A nominal summary has 20,000 paired samples. It reports
@@ -563,7 +563,7 @@ disagreement becomes a health alert rather than silently changing the result.
 The MVP does not train or serve models. Before the raw 30-day expiry, an export
 job creates immutable daily Parquet snapshots from accepted measurements and a
 manifest with exact query, UTC interval, schema/calibration/firmware revisions,
-quality exclusions, controlled-load/reference labels, file hashes, code commit,
+quality exclusions, controlled-load labels, file hashes, code commit,
 and environment-lock hash. Raw snapshot, curated dataset, labels, and split
 manifest remain separate; reruns create new versions.
 
@@ -581,7 +581,7 @@ horizons and promotion thresholds before any result affects users.
 
 | Requirement/outcome | Design element | Minimum verification evidence |
 |---|---|---|
-| FR-001–005, SC-001 | Alternating ADC with delay correction, formulas, quality, NVS checkpoint, calibration | Waveform unit tests (including delay correction); sample-gap/restart injection; signed reference-meter report |
+| FR-001–005, SC-001 | Alternating ADC with delay correction, formulas, quality, NVS checkpoint, calibration | Waveform unit tests (including delay correction); sample-gap/restart injection; signed plausibility report (no reference meter) |
 | FR-006, SC-002–003 | MQTT QoS 1, durable queue, ledger, app ACK | Duplicate/conflict tests; broker/ingestion/storage stops; timed 10-minute recovery report |
 | FR-007 | mTLS, ACL, encrypted provisioning, LAN-only ingress | Anonymous/untrusted/wrong-topic negatives, secret scan, LAN port scan |
 | FR-008 | Influx 30-day bucket | Provisioning assertion and retention API test |

@@ -24,7 +24,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Track | Where we are | Next |
 |---|---|---|
-| System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Break the plan into tasks (`/speckit.tasks`) |
+| System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Consistency check (`/speckit.analyze`), then start building: repo setup, then the server with fake data and the breadboard tests in parallel |
 | Article | Introduction and Methodology done and trimmed (5 pages; about 1–1.3 pages left for Results and Conclusions in a 6-page paper) | Results, once the experiments run |
 
 *Last updated: 2026-11-18*
@@ -36,8 +36,8 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Step | What it means | Status |
 |---|---|---|
 | Design | Requirements, architecture, research, data formats | ✅ Oct 14 (hardware adapted Nov 18) |
-| Task list | Turn the design into an ordered to-do list | ⏳ |
-| Simulated version | Server, database and dashboard working with fake data | ⬜ |
+| Task list | Turn the design into an ordered to-do list (93 tasks, hardware and software tracks in parallel) | ✅ Nov 18 |
+| Simulated version | Server, database and dashboard working with fake data | ⏳ |
 | Device software | Measuring and calculating on the ESP32 | ⬜ |
 | Safety review and calibration | Qualified review **before** connecting to mains; nominal calibration and plausibility check (no reference meter) | ⬜ |
 | Full system tests | Real device end to end, network-outage recovery, security | ⬜ |
@@ -64,6 +64,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | 0 | Who is the qualified person (licensed electrician or electrical-engineering teacher) who reviews the setup and signs the safety review? | Any 220 V test |
 | 1 | ~~Reference meter~~ Resolved 2026-11-18: none; readings are shown as "not validated" (constitution 2.0.0). A True RMS meter lent by the electrician could be added later | — |
 | 2 | How many repetitions per test | Methodology text, experiments |
+| 7 | Seven-day dataset for the "busiest hour" test (E8): short supervised sessions over a week, or the simulator? | Task T074, Results |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |
 | 5 | Faculty name and contact emails for the author block | Submission |
@@ -81,6 +82,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Task list created (`specs/.../tasks.md`, 93 tasks): setup, shared foundations, then live monitoring (the MVP), history, alerts. Breadboard tests and the server with fake data can run at the same time. Project guides go in `guides/` because `docs/` is not tracked |
 | 2026-11-18 | No reference multimeter (we can't afford a True RMS one): constitution 2.0.0 now allows a demo build whose readings are labelled "not validated". Tests E1–E4 check readings against appliance labels (±15 %) instead of claiming accuracy; the test box is now just plug, ACS712 and socket. Article, specs and build guide updated |
 | 2026-11-18 | Article: new test-setup figure (Fig. 4), step-by-step test session, and the load or action for each test in Table II. The enclosure is now a test box for the ACS712 only; the multimeter (not a clamp meter) reads current in series through its sockets |
 | 2026-11-18 | Low-voltage circuit goes on a breadboard (no soldering); the AC adapter plugs into a female barrel jack with screw terminals instead of cutting its cable (jack drawn in Fig. 2 and listed in Table I) |

@@ -128,7 +128,7 @@ Invariants:
 - `invalid` quantities are null; the last valid values must not be copied into a
   new invalid record.
 - `degraded` may contain values for diagnosis but those values are excluded from
-  accuracy, alert, and model evidence unless a procedure explicitly says otherwise.
+  plausibility, alert, and model evidence unless a procedure explicitly says otherwise.
 - Negative active power is retained for diagnostics and raises
   `polarity_reversed`; it does not decrement imported energy.
 
