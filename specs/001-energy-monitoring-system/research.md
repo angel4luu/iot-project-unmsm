@@ -30,15 +30,16 @@ and about `0–1,100 W`; the other rows are kept for reference:
 | `ACS712ELCTR-30A` | 66 mV/A | `0.5–5.0 A RMS` | `0–1,100 W` |
 
 The test path stays protected at 10 A. Values outside the calibrated range may be
-observed but MUST carry `out_of_range` and are outside the 5% claim. Peaks beyond
+observed but MUST carry `out_of_range` and are outside the plausibility
+range (R-004). Peaks beyond
 the sensor or ADC span (for example high-crest-factor nonlinear loads) MUST raise
 `clipping`.
 
 **Rationale**: The project is an educational demonstration and the team already
 owns an ACS712 and two ESP32-S3 boards. A comparable ACS712 + microcontroller-ADC
 design is reported in the literature with sub-5% RMS error under controlled
-conditions, so the claim stays credible if the range is narrowed to the sensor's
-useful resolution. A certified plug-in AC-AC adapter keeps all custom voltage
+conditions, so the design is reasonable when the range is narrowed to the
+sensor's useful resolution (this project itself claims no accuracy; R-004). A certified plug-in AC-AC adapter keeps all custom voltage
 sensing on the low-voltage side and is cheaper and safer than a custom ZMPT board.
 
 **Safety conditions for the ACS712 (non-negotiable)**: the ACS712 is the only
@@ -78,8 +79,10 @@ mains-earthed computer is not used unless the reviewer approves it.
 **Decision**: Use the ESP32-S3's internal ADC1 (ADC2 conflicts with Wi-Fi) in
 continuous DMA mode with an alternating two-channel pattern at 8,000 conversions/s,
 giving 4,000 voltage/current pairs/s. The fixed inter-channel delay (one
-conversion, 125 µs, about 2.7° at 60 Hz) plus the adapter's and sensor's own phase
-shift are removed by the existing fractional-sample phase correction. Apply
+conversion, 125 µs, about 2.7° at 60 Hz) is removed by the fractional-sample
+phase correction. Without a reference meter (R-004) the adapter's and sensor's
+own phase shift stays uncorrected; on resistive loads its effect on active power
+is small (cos 3° ≈ 0.999), and on other loads P is only observed. Apply
 Espressif's ADC calibration scheme, then per-device offset and gain calibration;
 keep both signals inside the ADC's linear mid-range at the chosen attenuation.
 
@@ -166,52 +169,43 @@ corrections can jump.
 
 ## R-004 Calibration and measurement evidence
 
-**Amended 2026-11-18** (reference instrument is the team's multimeter; resistive
-loads are the main reference points).
+**Amended 2026-11-18 (constitution 2.0.0): no reference meter.** Supersedes the
+earlier true-RMS reference, guard-band, and series-connection decisions.
 
-**Decision**: Calibrate with an identifiable **true-RMS** reference meter (model
-to confirm). Its documented AC uncertainty `u_ref` at each point is recorded. If
-`u_ref <= 1%`, acceptance is `|error| <= 5%`; if `1% < u_ref <= 2%`, acceptance
-is guard-banded to `|error| <= 5% - u_ref`; a meter above 2% or without true-RMS
-cannot support the claim. With one meter, V and I are read alternately on a
-stable load. Record hardware/firmware/calibration revisions, operator, date,
-ambient conditions, wiring, sensor identity and variant,
-ADC configuration, reference evidence, and load identity.
-
-*Amended 2026-11-18 (reference connection)*: the reference current is read with
-the true-RMS multimeter in series through two shrouded sockets of the ACS712
-test box, on fused current inputs, connected only with the circuit de-energized;
-the reference voltage is read at two shrouded sockets of the same box. A plain
-multimeter is kept instead of a clamp meter and line splitter to minimise cost;
-the meter must still meet the 2% limit at about 0.45 A and 4.5 A, and its 10 A
-input must be rated for at least 5 A continuous.
-
+**Decision**: The demonstration build runs on **nominal coefficients** and makes
+no accuracy claim. Voltage gain comes from the adapter's rated ratio and the
+R1/R2 divider; current gain from the ACS712-20A datasheet sensitivity
+(100 mV/A) and the R3/R4 divider; the phase correction from the known sampling
+offset between the two channels (one conversion period, 125 µs at 8,000
+conversions/s).
 Procedure: warm up for 10 minutes; at no load, measure zero for 60 seconds and
-store the ACS712 offset (auto-zero is repeated before each session); calibrate
-voltage and current gain on resistive loads; calibrate the phase correction on a
-resistive load by adjusting it until `P = V_RMS * I_RMS` (unity power factor);
-freeze coefficients before acceptance testing.
+store the ACS712 offset (repeated before every session); switch on a resistive
+load and confirm that active power is positive (otherwise correct the sign in the
+coefficients); freeze the nominal calibration revision. Record hardware/firmware/
+calibration revisions, operator, date, wiring, sensor identity and variant, ADC
+configuration, load identity and nameplate rating, and the statement that no
+reference instrument was used.
 
-Acceptance uses a separate dataset with at least three stable resistive loads
-spread across the calibrated range (for example about 100 W, 500 W, and 1 kW for
-the 20 A module), where the reference power is `V_ref * I_ref` and the
-reference energy is that power times the monotonic interval. One stable inductive
-or nonlinear load is also recorded: its V and I are validated against the
-true-RMS meter, but its W/Wh are reported as observations only, without an
-accuracy claim, unless a power reference with documented uncertainty is
-available. Collect at least five minutes per point and 15 minutes for energy.
-Every required quantity at every accepted point—not merely the mean—must meet the
-acceptance limit. No-load behavior uses an absolute noise threshold. Preserve
-reference readings, raw waveform excerpts, calculated blocks, summaries,
-coefficients, scripts, hashes, and pass/fail tables.
+Plausibility evaluation (SC-001) uses at least three stable resistive household
+loads across the range (about 100 W, 500 W, and 1 kW): the RMS voltage must lie in
+180–250 V, active power must be positive, and active power must fall within ±15%
+of the nameplate rating. The ±15% band is a working allowance for the nominal
+error of the chain plus the spread between a load's nameplate and its actual
+draw; it is a plausibility band, not an accuracy limit. One stable inductive load
+(small fan) is recorded for qualitative V/I/P behavior only. Collect at least five
+minutes per point. No-load behavior uses an absolute noise threshold. Every
+displayed and published value carries the "not validated" label, which the
+server derives from the calibration artifact's kind (`nominal`). Preserve raw
+waveform excerpts, calculated blocks, summaries, coefficients, scripts, and
+hashes.
 
-**Rationale**: Separate calibration and validation data prevent circular evidence.
-On a resistive load, V·I from a true-RMS meter is a valid active-power reference,
-and unity power factor also gives a reference for the phase correction without a
-power analyzer. Claiming active-power accuracy on a non-unity-power-factor load
-would need a reference that the team does not have (constitution II), so that load
-is used for V/I validation and qualitative behavior only. The ACS712 offset drifts
-with temperature, so it is re-zeroed at no load before every session.
+**Rationale**: Without a reference instrument, the honest outcome is a working,
+reproducible demonstration whose readings are plausible but not validated
+(constitution II). Nominal coefficients plus offset zeroing and the polarity check
+need no extra hardware. A nameplate is not a reference (it varies with the actual
+wall voltage and manufacturing spread), so it supports only a plausibility check.
+A team that later obtains a true-RMS meter can add a `reference` calibration
+revision and the original 5% acceptance without changing the hardware.
 
 **Sources**: [ADE7953 calibration guidance](https://www.analog.com/cn/resources/app-notes/an-1118.html),
 [ACS712 datasheet](https://www.allegromicro.com/-/media/files/datasheets/acs712-datasheet.ashx).
@@ -408,7 +402,7 @@ are fixed in implementation lockfiles.
 Verification layers are calculation unit tests with recorded waveform fixtures,
 JSON Schema contract tests, broker/ingestion/storage integration tests, outage and
 clock-fault injection, dashboard provisioning checks, secret scanning, and
-reference-meter hardware acceptance. Hardware-in-the-loop tests are separately
+plausibility checks on real loads (no reference meter, R-004). Hardware-in-the-loop tests are separately
 marked because they require qualified supervision.
 
 **Rationale**: These tools have stable support for the selected device, protocol,

@@ -13,8 +13,9 @@ complete this quickstart.
 - For firmware-only work: ESP-IDF 5.4 LTS toolchain and an ESP32-S3 DevKitC-1.
 - For hardware acceptance: qualified supervision, approved schematic and closed
   ACS712 test box (ACS712 alone in it, never on a breadboard), upstream
-  RCD/GFCI and overcurrent protection, certified AC-AC adapter, true-RMS reference
-  meter with fused current inputs (series connection through the test box), and the signed safety/calibration procedures.
+  RCD/GFCI and overcurrent protection, certified AC-AC adapter, household test loads with known
+  nameplate ratings, and the signed safety procedure (no reference meter;
+  constitution 2.0.0).
 - A trusted-LAN host whose firewall can restrict TCP 443 and 8883 to the lab
   subnets. The host must not have public port forwarding or UPnP exposure.
 
@@ -147,33 +148,31 @@ this stage. Current polarity is checked on the first supervised resistive-load
 run: active power must be positive; if it is negative, the sign is corrected in
 the calibration coefficients, without rewiring.
 
-## 8. Controlled calibration and hardware acceptance
+## 8. Controlled calibration and plausibility check
 
 Hardware work is blocked until the qualified safety review is signed. Then follow
 the versioned documents that implementation will place under `docs/safety/` and
 `docs/calibration/`:
 
-1. Perform de-energized visual, protective-earth/isolation, polarity, enclosure,
-   strain-relief, fuse, and conductor checks.
+1. Perform de-energized visual, protective-earth/isolation, polarity, test-box,
+   strain-relief, and conductor checks.
 2. Energize only through the 30 mA RCD protecting the test outlet (building
    panel or certified portable RCD, tested with its test button) and the
    reviewer-accepted overcurrent protection; never work live or expose terminals.
-3. Warm up 10 minutes and capture a 60-second zero-current record (ACS712 offset).
-4. Calibrate voltage and current gain on resistive loads, and the phase
-   correction on a resistive load (`P = V_RMS*I_RMS`), against the identified
-   true-RMS reference meter; confirm positive active power (polarity).
-5. Freeze a new calibration revision.
-6. Validate on at least three separate resistive loads across the calibrated
-   range, plus one inductive/nonlinear load for V and A only. Require every
-   accepted comparison to meet the 5% (or guard-banded) limit.
-7. Hash and preserve the procedure, wiring/build revisions, raw captures,
-   reference readings, coefficients, software revision, and
-   pass/fail report.
+3. Load the nominal coefficients, warm up 10 minutes, and capture a 60-second
+   zero-current record (ACS712 offset).
+4. Switch on a resistive load and confirm positive active power (polarity);
+   freeze a `nominal` calibration revision.
+5. Plausibility check on at least three resistive loads across the range:
+   V_RMS in 180-250 V, P within ±15% of each nameplate; record one fan
+   qualitatively.
+6. Hash and preserve the procedure, wiring/build revisions, raw captures,
+   coefficients, software revision, and the plausibility table.
 
-The result is an educational prototype measurement claim only for 180–250 V, the
-0.5–5 A range of the ACS712-20A (about 1.1 kW), and the
-tested configurations. It is not a permanent-installation,
-billing, or safety-device approval.
+The result is an educational demonstration with readings labeled "not validated"
+for 180-250 V and the 0.5-5 A range of the ACS712-20A (about 1.1 kW). It makes no
+accuracy claim and is not a permanent-installation, billing, or safety-device
+approval.
 
 ## 9. Stop services and preserve evidence
 

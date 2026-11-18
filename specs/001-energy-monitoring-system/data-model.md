@@ -50,8 +50,8 @@ only its matching node topics.
 | `node_id` | string | Foreign key |
 | `hardware_revision` | string | Exact build calibrated |
 | `firmware_commit` | string | Full VCS revision |
-| `reference_meter_id` | string | Serial or lab asset identity |
-| `reference_uncertainty_percent` | decimal | True-RMS meter's AC uncertainty at the point; <=1 uses the 5% limit, >1 and <=2 uses the guard-banded limit `5 - u_ref`, >2 cannot be acceptance evidence |
+| `calibration_kind` | enum | `nominal` (datasheet coefficients, no reference meter; every value derived from it is shown and exported as "not validated") or `reference` (future, needs a true-RMS meter); the MVP uses `nominal` (constitution 2.0.0) |
+| `reference_meter_id` | string? | Null for `nominal`; serial or asset identity for `reference` |
 | `current_sensor_variant` | string | ACS712 variant from the chip marking (`05B`, `20A`, `30A`) |
 | `voltage_gain` | decimal | Applied after offset correction |
 | `current_gain` | decimal | Applied after offset correction |
@@ -59,7 +59,7 @@ only its matching node topics.
 | `zero_noise_current_A` | decimal | Absolute no-load threshold |
 | `procedure_version` | string | Versioned procedure reference |
 | `dataset_manifest_sha256` | string | Hash of immutable evidence manifest |
-| `accepted_at` | timestamp? | Null until every acceptance point passes |
+| `accepted_at` | timestamp? | Null until every plausibility point passes (`nominal`) or every acceptance point passes (`reference`) |
 | `accepted_by` | string? | Qualified reviewer/operator identity |
 
 Calibration records are append-only. Editing coefficients creates a new revision.

@@ -37,10 +37,8 @@
 \node[hw] (load) at (1.45,-0.1) {Carga\\monofásica};
 \node[hw] (vs) at (3.35,-0.1) {Sensor de\\tensión aislado};
 \node[hw] (cs) at (5.35,-0.1) {Sensor de\\corriente (Hall)};
-\node[ex] (ref) at (7.35,-0.1) {Instrumento\\de referencia};
 \draw[thin] (load) -- (vs);
 \draw[thin] (load.north) |- ++(0,0.3) -| (cs.north);
-\draw[cal] (ref) -- (cs);
 
 % ---- Isolation boundary ----
 \draw[very thick, dash pattern=on 3pt off 2pt] (0.55,-0.9) -- (\R,-0.9);
@@ -87,6 +85,5 @@
   \draw[dashed, rounded corners=1.5pt] (3.55,-0.08) rectangle (3.85,0.08); \node at (3.88,0) {externo};
   \draw[sig] (4.75,0) -- (5.1,0); \node at (5.12,0) {señal};
   \draw[dat] (5.75,0) -- (6.1,0); \node at (6.12,0) {datos};
-  \draw[cal] (6.75,0) -- (7.1,0); \node at (7.12,0) {calibración};
 \end{scope}
 \end{tikzpicture}
