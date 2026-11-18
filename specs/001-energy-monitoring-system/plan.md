@@ -303,8 +303,16 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Calibration temperature log | DHT22, inside the enclosure next to the ACS712 | "sensor DHT22 / AM2302" | 1 | Kit | Available |
 | Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
 | Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | "multímetro True RMS CAT III" | 1 | Buy | To buy (model to choose: must state True RMS, CAT III ≥ 300 V, and AC accuracy in its manual) |
-| Enclosure and protection | Closed flame-retardant enclosure with ACS712 compartment, 30 mA RCD/GFCI, two-pole 10 A protection, rated terminals and cable | "caja de paso plástica / caja estanca"; "interruptor diferencial 30 mA"; "llave termomagnética bipolar 10 A" | 1 set | Lab | Provided or reviewed by the qualified person |
-| Test loads | Resistive loads of about 100 W, 500 W, and 1 kW, plus one stable inductive or nonlinear load | "foco incandescente/halógeno 100 W", "hervidor o calefactor" (resistive) | 3–4 | Lab | To select |
+| Node enclosure | Closed flame-retardant enclosure with a separate ACS712 compartment, cable glands, rated terminals and cable | "caja de paso plástica / caja estanca"; "prensaestopa"; "bornera para riel" | 1 set | Buy | To buy |
+| Portable test panel (mains protection) | Closed DIN enclosure with plug-in cable and output socket, containing a two-pole 10 A circuit breaker and a two-pole 30 mA RCD (or one RCBO 10 A / 30 mA). Assembled and tested by a licensed electrician | "caja para tablero 4 módulos riel DIN"; "llave termomagnética bipolar 10 A"; "interruptor diferencial bipolar 30 mA" (or "interruptor diferencial combinado RCBO 10 A 30 mA"); "tomacorriente de sobreponer"; "cable vulcanizado 2x14 AWG con enchufe" | 1 set | Buy | To buy (no lab protection is available) |
+| Polarity-check DC source (Stage 4, low voltage) | 12 V DC adapter (≥ 2 A) driving a 12 V 21 W car bulb, about 1.75 A | "adaptador 12V DC 2A"; "foco de auto 12V 21W con socket" | 1 each | Buy | To buy (low cost) |
+| Test loads | Household resistive loads: 100 W incandescent or halogen bulb; about 500 W halogen work lamp; about 1 kW iron or heater (nameplate ≤ 1.1 kW). Plus one stable inductive (small fan) or nonlinear load (LED lamp or charger) | "foco halógeno 100 W"; "reflector halógeno 500 W"; "plancha 1000 W" | 3–4 | Team or buy | To select (check nameplates) |
+
+No laboratory infrastructure is assumed: tests run from an ordinary 220 V wall
+outlet, always through the portable test panel. The qualified person is not
+provided by a lab either; the team must engage a licensed electrician (or an
+electrical-engineering professor) to assemble the test panel, review the node
+enclosure, and sign the review before any mains connection.
 
 Not used: ADS131M02, SCT-013-020, ZMPT101B, MB85RC256V FRAM, DS3231 RTC (kept
 as the documented upgrade path), and the kit's relay, Arduino Uno R4, motors,
