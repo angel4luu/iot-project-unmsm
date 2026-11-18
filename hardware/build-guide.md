@@ -32,12 +32,12 @@ permanente.
 ## 2. Reglas de seguridad: leer antes de manipular componentes
 
 1. El ACS712 es el único componente del prototipo cuyos terminales llevan la
-   corriente de la red. Va en su propio compartimento dentro de una envolvente
-   cerrada, que impida el contacto y sea retardante de llama. Solo su conector de
-   baja tensión sale de ese compartimento.
+   corriente de la red. Va solo dentro de la **caja de ensayo**: una caja cerrada,
+   que impida el contacto y sea retardante de llama. Solo sus pines de baja
+   tensión salen de esa caja.
 2. Nunca coloque el camino de red del ACS712 sobre un protoboard ni use cables
    de red sueltos o expuestos. Use terminales y conductores de la capacidad
-   adecuada, terminales cubiertos, sujeción de cables y la envolvente revisada.
+   adecuada, terminales cubiertos, sujeción de cables y la caja de ensayo revisada.
 3. Nunca manipule, cablee, ajuste ni mida el ACS712 o su camino de red con el
    circuito energizado. Desenergice y verifique antes de cualquier cambio físico.
 4. El tomacorriente de prueba debe estar protegido por un interruptor
@@ -49,7 +49,7 @@ permanente.
    de prueba, los terminales y el módulo ACS712 soportan su capacidad.
 5. Una persona calificada debe revisar el esquema, la capacidad de los
    componentes, el aislamiento, las distancias de fuga y de aislamiento en aire,
-   la sección de los conductores, la envolvente, las protecciones y el montaje de
+   la sección de los conductores, la caja de ensayo, las protecciones y el montaje de
    prueba, y firmar el registro de revisión antes de cualquier conexión a la red.
 6. No conecte el USB a una computadora conectada a tierra de la red mientras el
    prototipo esté energizado, salvo que la persona revisora apruebe
@@ -64,7 +64,7 @@ permanente.
    se permite después de la revisión firmada, en el montaje controlado y
    supervisado. Nunca trabaje con tensión ni deje terminales energizados
    expuestos.
-9. Deténgase de inmediato si un componente, conductor, envolvente, barrera de
+9. Deténgase de inmediato si un componente, conductor, caja de ensayo, barrera de
    aislamiento o capacidad de protección es desconocido o está dañado. Regístrelo
    como pendiente y deje que la persona revisora decida el siguiente paso seguro.
 
@@ -89,8 +89,8 @@ estado, no una autorización para sustituir componentes sin revisión.
 | Pantalla local | OLED de 0,96", se asume SSD1306 I²C de 4 pines | `pantalla OLED 0.96 I2C SSD1306` | 1 | Kit; confirmar interfaz |
 | Excitación del zumbador | Transistor NPN 2N2222 o PN2222A y resistencia de base de 1 kΩ | `transistor 2N2222`; `resistencia 1k 1/4 W` | 1 c/u | Comprar; bajo costo |
 | Alimentación del nodo | Cargador USB-C certificado de 5 V, 2 A, y cable | `cargador USB-C 5V 2A certificado` | 1 | Kit; disponible |
-| Instrumento de referencia | Multímetro de verdadero valor eficaz (True RMS), CAT III ≥ 300 V, exactitud en CA documentada ≤ 2 % | `multímetro True RMS CAT III` | 1 | Comprar; modelo por elegir |
-| Envolvente del nodo | Caja cerrada retardante de llama con compartimento separado para el ACS712, prensaestopas, borneras y cable adecuados | `caja de paso plástica / caja estanca`; `prensaestopa`; `bornera para riel` | 1 juego | Comprar |
+| Instrumento de referencia | Multímetro de verdadero valor eficaz (True RMS), CAT III ≥ 300 V, exactitud en CA ≤ 2 % a unos 0,45 A y 4,5 A, entradas de corriente **con fusible** (HRC) y entrada de 10 A apta para ≥ 5 A continuos | `multímetro True RMS CAT III con fusible 10A` | 1 | Comprar; modelo por elegir con estos criterios |
+| Caja de ensayo del ACS712 | Caja plástica cerrada, retardante de llama, **solo para el ACS712**, armada como una extensión de medición: enchufe y cable con prensaestopa, ACS712 en la fase, tomacorriente para la carga, dos bornes de 4 mm de seguridad en serie con la fase para la corriente de referencia (cerrados con un puente de seguridad cuando el multímetro no está en serie) y dos bornes de 4 mm para la tensión de referencia. La arma o revisa la persona calificada | `caja de paso plástica`; `prensaestopa`; `enchufe y tomacorriente`; `borne banana hembra 4 mm de seguridad`; `puente banana de seguridad 4 mm` | 1 juego | Comprar |
 | Protección diferencial | Interruptor diferencial de 30 mA que proteja el tomacorriente de prueba: el del tablero del edificio si existe; si no, un protector diferencial portátil certificado | `protector diferencial portátil 30 mA para enchufe` (solo si el tablero no tiene uno) | 0–1 | Edificio o comprar; revisar el tablero |
 | Cargas de prueba | Cargas resistivas domésticas: foco incandescente o halógeno de 100 W; reflector halógeno de unos 500 W; plancha o calefactor de unos 1000 W (placa ≤ 1,1 kW). Además, una carga inductiva (ventilador pequeño) o no lineal (lámpara LED o cargador) estable | `foco halógeno 100 W`; `reflector halógeno 500 W`; `plancha 1000 W` | 3–4 | Del equipo o comprar; revisar la placa de cada carga |
 
@@ -100,14 +100,14 @@ pruebas con red se hacen desde un tomacorriente común de 220 V, **siempre**
 protegido por un interruptor diferencial de 30 mA. Tampoco hay una persona
 calificada provista por un laboratorio: el equipo debe convocar a un
 electricista con licencia (o a un docente de ingeniería eléctrica) para revisar
-la envolvente del nodo y el montaje de prueba, y firmar la revisión antes de
+la caja de ensayo del ACS712 y el montaje de prueba, y firmar la revisión antes de
 cualquier conexión a la red.
 
 Todo el circuito de baja tensión (polarización, divisores, filtros, excitación
 del zumbador, LED RGB, OLED y ESP32-S3) se arma en un **protoboard** con cables
 jumper, así que no hace falta soldar. El lado de red del ACS712 nunca va en el
-protoboard: solo salen de su compartimento cerrado sus pines de baja tensión
-(5 V, GND y OUT).
+protoboard: solo salen de su caja de ensayo cerrada sus pines de baja tensión
+(5 V, GND y OUT). El protoboard y el ESP32-S3 quedan fuera de esa caja.
 
 No use en este montaje el relé del kit, el Arduino Uno R4, los motores, los
 servos ni los sensores no relacionados. La entrada jack del Arduino Uno R4 no es
@@ -128,7 +128,7 @@ de medición conectada directamente a la red.
 - Protoboard y cables jumper para todo el circuito de baja tensión; no se
   requiere soldar.
 - Destornillador pequeño (bornera del jack) y herramientas para perforar la
-  envolvente (prensaestopas); nada de cableado de red en protoboard ni con
+  caja de ensayo (prensaestopa y bornes); nada de cableado de red en protoboard ni con
   cables expuestos.
 - Bitácora de montaje: fecha, operador, identidad de la placa y los sensores,
   revisión del cableado y del *firmware*, identidad del instrumento, mediciones,
@@ -290,7 +290,7 @@ primera medición supervisada (etapa 6).
 **Aprobado si:** GPIO5 está cerca de 1,70 V sin corriente, estable y dentro del
 rango del ADC. Esta etapa no usa la red eléctrica.
 
-## 8. Etapa 5: envolvente y revisión de seguridad por una persona calificada
+## 8. Etapa 5: caja de ensayo y revisión de seguridad por una persona calificada
 
 No avance a ninguna conexión con la red hasta que el esquema completo y el
 montaje físico se hayan inspeccionado desenergizados y la persona revisora haya
@@ -301,14 +301,16 @@ La persona revisora verifica y registra como mínimo:
 - Identidad y versión del ACS712, construcción de los terminales del módulo,
   distancias de fuga y de aislamiento en aire, capacidad del conductor,
   polaridad y aptitud para el camino propuesto.
-- Que el ACS712 es el único componente con red y está en su propio
-  compartimento, dentro de una envolvente cerrada, que impide el contacto y es
-  retardante de llama.
-- Que solo el conector de baja tensión del ACS712 sale de ese compartimento y
+- Que el ACS712 es el único componente con red y está solo dentro de la caja
+  de ensayo cerrada, que impide el contacto y es retardante de llama.
+- Que los bornes de referencia son de 4 mm de seguridad (protegidos), que el
+  puente de seguridad cierra los bornes de corriente y que el multímetro tiene
+  entradas de corriente con fusible.
+- Que solo el conector de baja tensión del ACS712 sale de esa caja y
   que los terminales de red están cubiertos e inaccesibles en uso normal.
 - Que la entrada de cables, la sección de los conductores, las terminaciones,
   la sujeción, el soporte mecánico, las distancias y la integridad de la
-  envolvente son adecuados para el montaje revisado.
+  caja de ensayo son adecuados para el montaje revisado.
 - Que el adaptador CA-CA tiene aislamiento certificado y es apto, incluida la
   conexión de sus cables de salida al divisor de tensión.
 - Que el tomacorriente de prueba está protegido por un interruptor diferencial
@@ -325,7 +327,7 @@ La persona revisora verifica y registra como mínimo:
   el prototipo esté energizado, salvo que la persona revisora apruebe ese
   arreglo concreto.
 - Que las verificaciones desenergizadas visuales, de protección, polaridad,
-  envolvente, sujeción y conductores pueden completarse antes de la puesta en
+  caja de ensayo, sujeción y conductores pueden completarse antes de la puesta en
   tensión supervisada.
 - Que todos los supuestos pendientes y las capacidades de los componentes están
   resueltos o registrados explícitamente con una decisión segura.
@@ -335,7 +337,7 @@ La persona revisora verifica y registra como mínimo:
 | Campo | Valor |
 |---|---|
 | Revisión del esquema / cableado | Por completar |
-| Identificación de la envolvente y las protecciones | Por completar |
+| Identificación de la caja de ensayo y las protecciones | Por completar |
 | Versión del ACS712 y notas de revisión | Por completar |
 | Nombre y calificación de la persona revisora | Por completar |
 | Fecha de la revisión | Por completar |
@@ -350,10 +352,25 @@ red. Resuelva cada condición con la persona revisora primero.
 ## 9. Etapa 6: conexión supervisada y calibración
 
 Esta etapa se realiza solo cuando la etapa 5 está completa y firmada. La persona
-calificada supervisa el montaje controlado. No abra la envolvente, no toque el
+calificada supervisa el montaje controlado. No abra la caja de ensayo, no toque el
 cableado ni haga ajustes con el circuito energizado. Si hace falta un cambio,
 desenergice y deje que la persona calificada verifique la condición segura
 antes de trabajar.
+
+### Montaje de ensayo
+
+```
+Tomacorriente 220 V (diferencial 30 mA)
+  ├─► Adaptador CA-CA ─► jack ─► protoboard ─► GPIO4
+  └─► Caja de ensayo: enchufe ─► ACS712 (fase) ─► bornes A ─► tomacorriente ─► carga
+            │                     (puente o multímetro en serie)
+            ├─► bornes V ─► multímetro (tensión)
+            └─► 5 V, GND, OUT ─► protoboard ─► GPIO5
+ESP32-S3 (cargador USB-C) ─► Wi-Fi ─► servidor ─► panel
+```
+
+El multímetro se conecta a los bornes A (corriente, en serie) o a los bornes V
+(tensión), nunca a ambos a la vez, y siempre con el circuito desenergizado.
 
 1. Registre la revisión del montaje, el *commit* del *firmware*, la
    configuración del ADC, el adaptador de tensión, el modelo y versión del
@@ -361,7 +378,7 @@ antes de trabajar.
    identidad de las cargas y la identidad e incertidumbre en CA del multímetro
    de referencia.
 2. Pulse el botón de prueba del interruptor diferencial de 30 mA y confirme que
-   dispara; rearme. Confirme que se usan la envolvente cerrada revisada y las
+   dispara; rearme. Confirme que se usan la caja de ensayo cerrada y revisada y las
    conexiones de prueba controladas.
 3. Caliente el sistema al menos 10 minutos según el procedimiento aprobado.
 4. Sin carga, capture 60 segundos de datos de corriente cero y guarde el
@@ -369,7 +386,9 @@ antes de trabajar.
 5. Con el multímetro True RMS de referencia identificado, calcule las ganancias
    de tensión y corriente con cargas resistivas estables. Con un solo
    multímetro, tome lecturas de tensión y corriente alternadamente mientras la
-   carga permanece estable.
+   carga permanece estable: la corriente con el multímetro en serie en los
+   bornes de corriente (en lugar del puente) y la tensión en los bornes de
+   tensión. Desenergice cada vez que mueva las puntas o el puente.
 6. Con una carga resistiva estable, ajuste la corrección de fase fraccionaria
    hasta que la potencia activa medida coincida con `P = V_RMS * I_RMS` (factor
    de potencia unitario). La potencia debe salir positiva: eso confirma la
@@ -420,7 +439,7 @@ facturación ni el uso como dispositivo de seguridad.
 | La potencia activa sale negativa | Sentido del conductor en IP+/IP− | Si la potencia sale negativa en la carga resistiva, corrija el signo en los coeficientes de calibración; no recablee con tensión |
 | Los valores del ADC saltan o se pierden muestras | Ruido de cableado, configuración del ADC, desbordamiento de DMA o conversión faltante | Revise tierras y filtros de baja tensión y el diagnóstico del *firmware*; las ventanas afectadas son inválidas |
 | La calibración deriva | Calentamiento, variación de la alimentación, temperatura, carga inestable o incertidumbre de la referencia | Repita el calentamiento y el cero registrados y use cargas estables y el multímetro identificado |
-| La persona revisora encuentra un tema de seguridad pendiente | Capacidad, envolvente, protección o cableado no establecidos | Deténgase; resuélvalo y obtenga la firma antes de cualquier conexión a la red |
+| La persona revisora encuentra un tema de seguridad pendiente | Capacidad, caja de ensayo, protección o cableado no establecidos | Deténgase; resuélvalo y obtenga la firma antes de cualquier conexión a la red |
 
 ## 11. Temas pendientes y supuestos
 
@@ -434,8 +453,8 @@ facturación ni el uso como dispositivo de seguridad.
   incertidumbre antes de calibrar.
 - El adaptador CA-CA certificado está por comprar. Verifique en el banco su
   certificación, su salida y su aptitud antes de usarlo.
-- El circuito de baja tensión va en protoboard; su ubicación dentro de la
-  envolvente (separado del compartimento del ACS712) está por revisar. Conserve los valores de divisores,
+- El circuito de baja tensión va en protoboard, fuera de la caja de ensayo del
+  ACS712; su ubicación junto a la caja está por revisar. Conserve los valores de divisores,
   polarización y filtros del plan; no sustituya valores no listados.
 - Protección diferencial: revisar si el tablero eléctrico del edificio tiene un
   interruptor diferencial de 30 mA (botón "T") que proteja el tomacorriente de

@@ -61,7 +61,7 @@ because its default/latest image line is not a stable v2 contract.
 
 | Principle or gate | Status | Planned evidence/control |
 |---|---|---|
-| I. Electrical Safety Before Convenience | PASS | Certified isolated adapter for voltage; ACS712 in its own closed enclosure compartment, never on a breadboard; protected range, no relay, de-energized assembly, qualified schematic/PCB/enclosure review, signed safety checklist before hardware test |
+| I. Electrical Safety Before Convenience | PASS | Certified isolated adapter for voltage; ACS712 alone in a closed test box, never on a breadboard; protected range, no relay, de-energized assembly, qualified schematic/PCB/enclosure review, signed safety checklist before hardware test |
 | II. Measurement Integrity and Evidence | PASS | Exact quantities/ranges/units and algorithms; true-RMS reference meter with recorded uncertainty and guard band (research R-004); separate calibration and validation datasets; per-point <=5% acceptance |
 | III. Monitoring MVP Before Optional Complexity | PASS | One-node vertical slice only; LoRa, cutoff, environmental sensing, anomalies, forecasts, and recommendations deferred |
 | IV. Security and Secret Hygiene | PASS | Per-principal mTLS/ACLs, encrypted NVS, ignored runtime secrets, private endpoints absent from tracked examples, secret scan gate |
@@ -215,7 +215,7 @@ flowchart LR
     subgraph ELEC[Hazardous controlled electrical setup]
         LOAD[Single-phase protected test load]
         VS[Certified AC-AC adapter<br/>isolated voltage sensing]
-        CS[ACS712 Hall current sensor<br/>closed enclosure compartment]
+        CS[ACS712 Hall current sensor<br/>closed test box]
         REF[Trusted reference meter]
         LOAD --> VS
         LOAD --> CS
@@ -302,8 +302,8 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Local display | OLED 0.96" module, assumed 4-pin SSD1306 on I²C (**to confirm**; a 7-pin SPI module changes the pin table) | "pantalla OLED 0.96 I2C SSD1306" | 1 | Kit | Available |
 | Buzzer driver | NPN transistor 2N2222 (or PN2222A) + 1 kΩ base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 | Buy | To buy (low cost) |
 | Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
-| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | "multímetro True RMS CAT III" | 1 | Buy | To buy (model to choose: must state True RMS, CAT III ≥ 300 V, and AC accuracy in its manual) |
-| Node enclosure | Closed flame-retardant enclosure with a separate ACS712 compartment, cable glands, rated terminals and cable | "caja de paso plástica / caja estanca"; "prensaestopa"; "bornera para riel" | 1 set | Buy | To buy |
+| Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy ≤ 2% at about 0.45 A and 4.5 A, **fused** current inputs (HRC fuse) with the 10 A input rated for ≥ 5 A continuous. Reference current is read in series through the test box's current sockets, connected only with the circuit de-energized | "multímetro True RMS CAT III con fusible 10A" | 1 | Buy | To buy (model to choose against these criteria) |
+| ACS712 test box | Closed flame-retardant plastic box for the ACS712 **only**, built as a measuring extension cord: plug and cable with gland, ACS712 on the live wire, test socket for the load, two shrouded 4 mm sockets in series with the live wire for the reference current (closed by a safety shorting link when the meter is not in series) and two shrouded 4 mm sockets for the reference voltage. Built or checked by the qualified person | "caja de paso plástica"; "prensaestopa"; "enchufe y tomacorriente"; "borne banana hembra 4 mm de seguridad"; "puente banana de seguridad 4 mm" | 1 set | Buy | To buy |
 | Mains protection | 30 mA RCD protecting the test outlet: the device already in the building's panel (marked 30 mA, with a "T" test button) if present, otherwise a certified plug-in portable RCD. Overcurrent: the outlet's existing breaker, if the reviewer accepts it | "protector diferencial portátil 30 mA para enchufe" (only if the panel has none) | 0–1 | Building or buy | To check the building's panel |
 | Test loads | Household resistive loads: 100 W incandescent or halogen bulb; about 500 W halogen work lamp; about 1 kW iron or heater (nameplate ≤ 1.1 kW). Plus one stable inductive (small fan) or nonlinear load (LED lamp or charger) | "foco halógeno 100 W"; "reflector halógeno 500 W"; "plancha 1000 W" | 3–4 | Team or buy | To select (check nameplates) |
 
@@ -312,13 +312,14 @@ indication, safety, and calibration are listed. No laboratory infrastructure is
 assumed: tests run from an ordinary 220 V wall outlet, always protected by a
 30 mA RCD. The qualified person is not provided by a lab either; the team must
 engage a licensed electrician (or an electrical-engineering professor) to review
-the node enclosure and test setup and sign the review before any mains
+the ACS712 test box and test setup and sign the review before any mains
 connection. All low-voltage circuitry (bias and divider networks, filters, buzzer driver,
 RGB LED, OLED, ESP32-S3) is assembled on a solderless breadboard with jumper
 wires, so no soldering is required; the adapter plugs into a female barrel jack
 with screw terminals whose two jumpers go to the breadboard (2026-11-18). The
 ACS712 mains side never goes on the breadboard: only its low-voltage header
-(5 V, GND, OUT) is jumpered out of its closed compartment. Not used in the
+(5 V, GND, OUT) is jumpered out of its closed test box; the breadboard and the
+ESP32-S3 stay outside the box. Not used in the
 minimal build: DHT22 (temperature logging), bench DC polarity source, and a
 dedicated DIN protection panel.
 
@@ -369,8 +370,8 @@ instead of a relay bench.
   | GND | Common ground of all low-voltage parts | |
   | USB-C | Certified 5 V charger | No PC connection while energized unless the reviewer approves |
 
-- **Mains safety**: the ACS712 is the only part carrying mains. It stays in its
-  own compartment of the closed enclosure, is never on a breadboard, and is not
+- **Mains safety**: the ACS712 is the only part carrying mains. It stays alone in
+  the closed ACS712 test box, is never on a breadboard, and is not
   handled while energized; its module creepage, conductor rating, and the whole
   setup require the qualified review before energization (research R-001).
 
@@ -421,6 +422,10 @@ or billing accuracy.
    fractional phase correction on a resistive load so that `P = V_RMS*I_RMS`.
    Active power must be positive on the resistive load (current polarity); if it
    is negative, correct the sign in the coefficients instead of rewiring.
+   Reference readings: current with the meter in series through the test box's
+   current sockets, voltage at its voltage sockets. With one meter, current and
+   voltage windows alternate on the same stable load; the circuit is
+   de-energized every time the leads or the shorting link are moved.
 6. Write coefficients to a new immutable calibration artifact/NVS revision and
    freeze them before validation.
 7. Validate on at least three separate stable resistive loads across the

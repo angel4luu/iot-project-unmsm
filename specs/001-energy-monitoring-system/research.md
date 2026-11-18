@@ -42,9 +42,10 @@ useful resolution. A certified plug-in AC-AC adapter keeps all custom voltage
 sensing on the low-voltage side and is cheaper and safer than a custom ZMPT board.
 
 **Safety conditions for the ACS712 (non-negotiable)**: the ACS712 is the only
-part whose terminals carry mains, so the module sits in its own compartment of a
-closed, touch-safe, flame-retardant enclosure with strain relief and covered
-terminals; only its low-voltage header leaves that compartment. It is never
+part whose terminals carry mains, so the module sits alone in a closed,
+touch-safe, flame-retardant test box (a measuring extension cord, amended
+2026-11-18) with strain relief and covered terminals; only its low-voltage
+header leaves that box. It is never
 mounted on a solderless breadboard and never handled while energized. The
 low-voltage conditioning and peripherals, by contrast, may be assembled on a
 solderless breadboard (amended 2026-11-18), since they are separated from mains
@@ -176,6 +177,14 @@ cannot support the claim. With one meter, V and I are read alternately on a
 stable load. Record hardware/firmware/calibration revisions, operator, date,
 ambient conditions, wiring, sensor identity and variant,
 ADC configuration, reference evidence, and load identity.
+
+*Amended 2026-11-18 (reference connection)*: the reference current is read with
+the true-RMS multimeter in series through two shrouded sockets of the ACS712
+test box, on fused current inputs, connected only with the circuit de-energized;
+the reference voltage is read at two shrouded sockets of the same box. A plain
+multimeter is kept instead of a clamp meter and line splitter to minimise cost;
+the meter must still meet the 2% limit at about 0.45 A and 4.5 A, and its 10 A
+input must be rated for at least 5 A continuous.
 
 Procedure: warm up for 10 minutes; at no load, measure zero for 60 seconds and
 store the ACS712 offset (auto-zero is repeated before each session); calibrate

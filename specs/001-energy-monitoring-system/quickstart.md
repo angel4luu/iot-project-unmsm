@@ -12,9 +12,9 @@ complete this quickstart.
 - Git, Make, Docker Engine with Compose v2, Python 3.14, and `uv`.
 - For firmware-only work: ESP-IDF 5.4 LTS toolchain and an ESP32-S3 DevKitC-1.
 - For hardware acceptance: qualified supervision, approved schematic and closed
-  enclosure (ACS712 in its own compartment, never on a breadboard), upstream
+  ACS712 test box (ACS712 alone in it, never on a breadboard), upstream
   RCD/GFCI and overcurrent protection, certified AC-AC adapter, true-RMS reference
-  meter, and the signed safety/calibration procedures.
+  meter with fused current inputs (series connection through the test box), and the signed safety/calibration procedures.
 - A trusted-LAN host whose firewall can restrict TCP 443 and 8883 to the lab
   subnets. The host must not have public port forwarding or UPnP exposure.
 

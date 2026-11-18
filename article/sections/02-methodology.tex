@@ -52,7 +52,8 @@ Acondi\-cio\-na\-mien\-to & Divisores, polarización y filtros RC en protoboard 
 Pantalla & OLED \SI{0,96}{''} SSD1306 (I\textsuperscript{2}C) & Valores y estado locales & K \\
 Indicación & LED RGB; zumbador con 2N2222 & Estado y aviso local & K/C \\
 Protección & Interruptor diferencial de \SI{30}{mA} (del tablero o portátil) & Seguridad del lado de red & K/C \\
-Referencia & Multímetro de verdadero valor eficaz & Calibración y validación & C \\
+Caja de ensayo & Caja cerrada con ACS712, tomacorriente y bornes de referencia & Aislamiento de la red y conexión de la referencia & C \\
+Referencia & Multímetro de verdadero valor eficaz con entradas de corriente con fusible & Calibración y validación & C \\
 Servidor & Computadora del equipo con Docker Compose & Corredor, ingesta, almacenamiento y panel & K \\
 \bottomrule
 \multicolumn{4}{@{}l}{\scriptsize Or.: origen; K, disponible (kit o equipo propio); C, compra.}
@@ -77,7 +78,7 @@ La señal recorre el circuito en este orden:
   \item Cada \SI{5}{s} publica un resumen por Wi-Fi hacia el servidor.
 \end{enumerate}
 Una cola en RAM retiene \num{256} resúmenes (más de \SI{21}{min}), la energía se guarda cada \SI{60}{s} en memoria no volátil y, tras un reinicio, el intervalo sin punto de control se marca como incierto.
-El ACS712 es el único componente con terminales a tensión de red: va en un compartimento cerrado de la envolvente, nunca sobre protoboard, y una persona calificada revisa el conjunto con el equipo desenergizado antes de cualquier prueba con tensión.
+El ACS712 es el único componente con terminales a tensión de red: va solo en una caja de ensayo cerrada, nunca sobre protoboard, y una persona calificada revisa el conjunto con el equipo desenergizado antes de cualquier prueba con tensión.
 El prototipo no incluye relé ni corte automático de carga.
 
 \subsection{Modelo de adquisición de variables eléctricas}
@@ -131,11 +132,29 @@ La implementación avanza por etapas, cada una condicionada a superar la anterio
 \begin{enumerate}
   \item \emph{Simulación}: servidor, panel y alertas con un simulador que emite mensajes conformes con los esquemas JSON del contrato.
   \item \emph{Banco de baja tensión}: periféricos, canal de tensión con el adaptador y \textit{offset} del ACS712 sin corriente, sin red.
-  \item \emph{Revisión de seguridad}: una persona calificada revisa y firma el esquema, el aislamiento del ACS712, la envolvente y la protección diferencial.
+  \item \emph{Revisión de seguridad}: una persona calificada revisa y firma el esquema, el aislamiento del ACS712, la caja de ensayo y la protección diferencial.
   \item \emph{Calibración supervisada}: tras \SI{10}{min} de calentamiento y \SI{60}{s} sin corriente, se fijan las ganancias con cargas resistivas y $\delta$ hasta que $P=V_{\mathrm{RMS}}I_{\mathrm{RMS}}$ en una carga resistiva, donde $P>0$ confirma la polaridad; los coeficientes se congelan.
   \item \emph{Validación}: escenarios de la Tabla~\ref{tab:scenarios} con cargas distintas de las de calibración.
 \end{enumerate}
 La referencia es un multímetro de verdadero valor eficaz con incertidumbre documentada~\todo{definir el modelo del multímetro a adquirir y su exactitud en CA}; si esta supera el \SI{1}{\percent}, el límite de aceptación se reduce en ese valor.
+La corriente de referencia se lee con el multímetro en serie en los bornes A de la caja de ensayo y la tensión en sus bornes V (Fig.~\ref{fig:testsetup}); con un solo instrumento, ambas se leen de forma alternada sobre la misma carga estable.
+
+\begin{figure}[t]
+  \centering
+  \input{figures/fig04-testsetup}
+  \caption{Montaje de ensayo. Las líneas gruesas llevan tensión de red; el ACS712 es el único elemento del nodo en ese camino y está dentro de la caja de ensayo. El multímetro de referencia se conecta en serie (A) o en paralelo (V), nunca a la vez.}
+  \label{fig:testsetup}
+\end{figure}
+
+Cada sesión de ensayo sigue el mismo flujo:
+\begin{enumerate}
+  \item se comprueba el disparo del interruptor diferencial con su botón de prueba;
+  \item con el circuito desenergizado, se conectan la carga al tomacorriente de la caja y el multímetro a los bornes A;
+  \item se energiza, se esperan \SI{10}{min} de calentamiento y, con la carga apagada, se mide durante \SI{60}{s} el \textit{offset} del ACS712;
+  \item se enciende la carga y, ya estable, se registran a la vez la corriente del multímetro y los resúmenes del nodo durante la ventana del punto;
+  \item se desenergiza, se cierra A con el puente, se pasa el multímetro a los bornes V y se repite la ventana para la tensión;
+  \item se guardan las lecturas de referencia, los resúmenes y las versiones, y se calcula el error con~\eqref{eq:error}.
+\end{enumerate}
 En E1--E3 la potencia de referencia es $V_rI_r$ y la energía, esa potencia por el tiempo; en E4 solo se validan $V$ e $I$, pues sin un medidor de potencia no puede afirmarse la exactitud de $P$ con factor de potencia distinto de la unidad, como en otros trabajos con cargas variadas~\cite{cardenas2026residential}.
 Cada punto se mide al menos \SI{5}{min} (\SI{15}{min} para la energía), y se registran las versiones y el cableado; el \textit{offset} del ACS712, que varía con la temperatura, se mide de nuevo antes de cada sesión.
 El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el método de incertidumbre (GUM, tipos A y B) y el número de repeticiones.}
@@ -145,16 +164,16 @@ El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el 
 \caption{Escenarios, métricas y criterios de aceptación}
 \label{tab:scenarios}
 \footnotesize
-\begin{tabular}{@{}l p{2.6cm} p{4.2cm}@{}}
+\begin{tabular}{@{}l >{\raggedright}p{3.3cm} >{\raggedright\arraybackslash}p{3.55cm}@{}}
 \toprule
-ID & Condición & Métrica y criterio \\
+ID & Carga o maniobra & Métrica y criterio \\
 \midrule
-E1--E3 & Resistivas de unos \SI{100}{W}, \SI{500}{W} y \SI{1}{kW} & $\varepsilon_X\leq\SI{5}{\percent}$ en cada punto para $V$, $I$, $P$ y $E$ (SC-001) \\
-E4 & Inductiva o no lineal estable & $\varepsilon_X\leq\SI{5}{\percent}$ en $V$ e $I$; $P$ solo observada \\
-E5 & Perfiles bajo y sobre el umbral; arranques breves & Alertas correctas; aviso local $\leq\SI{2}{s}$ y remoto $\leq\SI{10}{s}$ (SC-004) \\
-E6 & \SI{1}{h} con red sana & $\geq\SI{95}{\percent}$ de $L_k\leq\SI{10}{s}$; cero duplicados (SC-002) \\
-E7 & Interrupción de \SI{10}{min} & $R\geq\SI{99}{\percent}$ en $\leq\SI{5}{min}$ (SC-003) \\
-E8 & Siete días de mediciones & Hallar $h^{*}$ en $<\SI{2}{min}$ (SC-005) \\
+E1--E3 & Resistivas: foco halógeno (\SI{100}{W}), reflector (\SI{500}{W}) y plancha (\SI{1}{kW}) & $\varepsilon_X\leq\SI{5}{\percent}$ en cada punto para $V$, $I$, $P$ y $E$ (SC-001) \\
+E4 & Ventilador o lámpara LED estable & $\varepsilon_X\leq\SI{5}{\percent}$ en $V$ e $I$; $P$ solo observada \\
+E5 & Perfiles del simulador; carga real bajo y sobre el umbral; arranques breves & Alertas correctas; aviso local $\leq\SI{2}{s}$ y remoto $\leq\SI{10}{s}$ (SC-004) \\
+E6 & \SI{1}{h} con carga resistiva y red sana & $\geq\SI{95}{\percent}$ de $L_k\leq\SI{10}{s}$; cero duplicados (SC-002) \\
+E7 & Nodo sin enlace con el corredor durante \SI{10}{min} & $R\geq\SI{99}{\percent}$ en $\leq\SI{5}{min}$ (SC-003) \\
+E8 & Conjunto de siete días de mediciones & Hallar $h^{*}$ en $<\SI{2}{min}$ (SC-005) \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -62,7 +62,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | # | Question | Blocks |
 |---|---|---|
 | 0 | Who is the qualified person (licensed electrician or electrical-engineering teacher) who reviews the setup and signs the safety review? | Any 220 V test |
-| 1 | Reference meter: which true-RMS multimeter to buy (must say True RMS and CAT III, with AC accuracy in its manual) | Calibration, accuracy results |
+| 1 | Reference meter: which true-RMS multimeter to buy (must say True RMS and CAT III, with fused current inputs, AC accuracy ≤ 2% at about 0.45 A and 4.5 A, and a 10 A input rated for 5 A continuous) | Calibration, accuracy results |
 | 2 | How to calculate measurement uncertainty, and how many repetitions per test | Methodology text, experiments |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |
@@ -72,7 +72,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 ## Key decisions made
 
 - Wi-Fi, not LoRa. No automatic power cut-off (safety).
-- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer. All low-voltage wiring on a breadboard (no soldering). Minimal purchases: certified AC adapter with a female barrel jack with screw terminals, resistors and capacitors, a transistor for the buzzer, a small box for the ACS712, a true-RMS multimeter, and a portable 30 mA RCD only if the home panel has none. The ACS712 always goes in a closed box, never on the breadboard.
+- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer. All low-voltage wiring on a breadboard (no soldering). Minimal purchases: certified AC adapter with a female barrel jack with screw terminals, resistors and capacitors, a transistor for the buzzer, a small test box for the ACS712 only (a measuring extension cord with sockets for the multimeter), a true-RMS multimeter, and a portable 30 mA RCD only if the home panel has none. The ACS712 always goes in a closed box, never on the breadboard.
 - The specs win over the article proposal; differences are listed in [article/README.md](article/README.md#decisions).
 - Article in Spanish, IEEE conference format, decimal comma.
 - No power-factor claims; anomaly detection and forecasting are future work.
@@ -81,6 +81,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Article: new test-setup figure (Fig. 4), step-by-step test session, and the load or action for each test in Table II. The enclosure is now a test box for the ACS712 only; the multimeter (not a clamp meter) reads current in series through its sockets |
 | 2026-11-18 | Low-voltage circuit goes on a breadboard (no soldering); the AC adapter plugs into a female barrel jack with screw terminals instead of cutting its cable (jack drawn in Fig. 2 and listed in Table I) |
 | 2026-11-18 | Minimal MVP: temperature sensor (DHT22), barrel socket, 12 V polarity bulb and dedicated test panel dropped; LEDs, buzzer and OLED kept. Protection is the 30 mA RCD from the home panel (or a portable one) plus the outlet's existing breaker, if the reviewer accepts it |
 | 2026-11-18 | No lab available: protection (30 mA RCD + 10 A breaker) becomes a portable test panel to buy, assembled by an electrician; household test loads; 12 V bulb for the polarity check |
