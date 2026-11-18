@@ -14,6 +14,7 @@ about it.
 | What | Where |
 |---|---|
 | System specification (the source of truth) | [specs/001-energy-monitoring-system/](specs/001-energy-monitoring-system/) |
+| Prototype build guide (wiring, checks, safety) | [hardware/build-guide.md](hardware/build-guide.md) |
 | Article (LaTeX) and its tracker | [article/](article/) · [article/README.md](article/README.md) |
 | Rules for AI assistants | [CLAUDE.md](CLAUDE.md), [AGENTS.md](AGENTS.md) |
 
@@ -24,7 +25,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Track | Where we are | Next |
 |---|---|---|
 | System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Confirm the multimeter model, then break the plan into tasks (`/speckit.tasks`) |
-| Article | Introduction, Methodology and Figures 1–4 done and updated to the new hardware (7 pages; Results still empty) | Trim to fit the page limit |
+| Article | Introduction and Methodology done and trimmed (5 pages; about 1–1.3 pages left for Results and Conclusions in a 6-page paper) | Results, once the experiments run |
 
 *Last updated: 2026-11-18*
 
@@ -50,8 +51,8 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Setup and requirements | ✅ Oct 28 |
 | Introduction (with literature review) | ✅ draft Oct 28 |
 | Methodology | ✅ draft Nov 11 |
-| Page budget and trimming | ⏳ |
-| Figures 1–4 (architecture, wiring, circuit schematic, flowchart) | ✅ Nov 18 (schematic values to check at the bench; add a prototype photo once built) |
+| Page budget and trimming | ✅ Nov 18 (7 → 5 pages; components table and signal-flow list added) |
+| Figures 1–3 (architecture, full circuit, flowchart) | ✅ Nov 18 (old wiring figure dropped; circuit values to check at the bench; add a prototype photo once built) |
 | Results and Discussion | ⬜ needs the experiments |
 | Conclusions and abstract | ⬜ |
 | Review and submission | ⬜ |
@@ -79,6 +80,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Article trimmed from 7 to 5 pages: shorter Introduction, components table, step-by-step signal flow through the circuit, implementation stages, one merged test table. Build guide for the team added (`hardware/build-guide.md`) |
 | 2026-11-18 | Fig. 3 is now the complete circuit with every ESP32-S3 pin (OLED assumed 4-pin I²C); pin table added to the plan; transistor for the buzzer added to the parts list. Circuit schematic added to the article (Fig. 3). Parts list now has Spanish search terms for buying in Peru. We don't own a multimeter: borrow one from a lab |
 | 2026-11-18 | Hardware adapted to the parts we own (ACS712, ESP32-S3, OLED). Specs, Methodology and Figures 1–2 updated. Relay bench idea dropped. ACS712 confirmed as the 20 A version |
 | 2026-11-11 | Figures 1–3 drawn (TikZ); Fig. 1 redone as a layered diagram with a legend. Methodology draft merged (`METODOLOGIA` branch). README simplified |

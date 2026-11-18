@@ -313,9 +313,10 @@ instead of a relay bench.
 
 ### Front end and pin allocation
 
-- **Voltage**: the certified AC-AC adapter output feeds a divider of about 1/30,
-  AC-coupled onto a mid-supply bias (two equal resistors of about 10 kΩ and a
-  10 µF capacitor), then an RC anti-alias filter into an ADC1 input.
+- **Voltage**: one wire of the floating AC-AC adapter output is tied to a
+  mid-supply bias (two equal resistors of about 10 kΩ and a 10 µF capacitor);
+  the other goes through a divider of about 1/22 back to that bias, then an RC
+  anti-alias filter into an ADC1 input. No series coupling capacitor is used.
 - **Current**: the ACS712 is powered from 5 V; its output (VCC/2 at zero current)
   goes through a divider with at least 4.7 kΩ total load into the 3.3 V-safe
   range, then an RC filter into an ADC1 input. The output is ratiometric to its
