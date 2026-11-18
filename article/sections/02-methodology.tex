@@ -10,7 +10,7 @@
 \label{sec:design}
 Este estudio es una investigación aplicada de desarrollo tecnológico, con enfoque cuantitativo y evaluación experimental.
 No se plantea una hipótesis formal: el propósito es construir el sistema y caracterizar su desempeño frente a un instrumento de referencia.
-El escenario es un único circuito monofásico de baja tensión de un laboratorio, o una carga de prueba aislada, con un rango calibrado de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz} y una corriente de hasta \SI{5}{A} RMS (unos \SI{1,1}{kW}), según la variante del sensor de corriente~\todo{confirmar la variante del ACS712 (05B, 20A o 30A) y su rango}.
+El escenario es un único circuito monofásico de baja tensión de un laboratorio, o una carga de prueba aislada, con un rango calibrado de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz} \SIrange{0,5}{5,0}{A} RMS y hasta unos \SI{1,1}{kW}.
 Se trata de un prototipo educativo construido principalmente con componentes ya disponibles, por lo que el rango se ajusta a la resolución útil de ese \textit{hardware}.
 El prototipo es un sistema controlado; no está destinado a instalación permanente, facturación ni protección de equipos.
 
@@ -51,7 +51,7 @@ El tiempo sigue UTC mediante SNTP y cada medición declara el estado de su reloj
 \end{figure}
 
 El nodo se basa en una placa ESP32-S3 DevKitC-1 programada en C/C++ con ESP-IDF~5.4 LTS (Fig.~\ref{fig:prototype}).
-La corriente se mide con un sensor de efecto Hall ACS712, por cuyo circuito interno pasa el conductor de la carga; es el único componente con terminales a tensión de red y se instala en un compartimento cerrado propio, nunca sobre protoboard.
+La corriente se mide con un sensor de efecto Hall ACS712 en su versión de \SI{20}{A} (\SI{100}{mV/A}), por cuyo circuito interno pasa el conductor de la carga; es el único componente con terminales a tensión de red y se instala en un compartimento cerrado propio, nunca sobre protoboard.
 Un sensor equivalente se ha usado con errores RMS inferiores al \SI{5}{\percent} en condiciones controladas~\cite{marin2026rmsbenchmark}.
 La tensión se mide con un adaptador de CA a CA (\SIrange{9}{12}{V}) aislado y certificado, de modo que todo el acondicionamiento de tensión queda en el lado de baja tensión.
 
@@ -159,8 +159,8 @@ Se registran la versión de \textit{hardware} y \textit{firmware}, el cableado, 
 ID & Condición & Propósito (criterio) \\
 \midrule
 E1 & Resistiva baja, cerca de \SI{100}{W} & Exactitud (SC-001) \\
-E2 & Resistiva media, cerca de \SI{300}{W} & Exactitud (SC-001) \\
-E3 & Resistiva en el extremo superior del rango & Exactitud (SC-001) \\
+E2 & Resistiva media, cerca de \SI{500}{W} & Exactitud (SC-001) \\
+E3 & Resistiva alta, cerca de \SI{1}{kW} & Exactitud (SC-001) \\
 E4 & Inductiva o no lineal estable & $V$ e $I$; $P$ solo observada \\
 E5 & Escalones bajo y sobre el umbral; arranques breves y sostenidos & Alertas (SC-004) \\
 E6 & Operación continua de \SI{1}{h}, red sana & Latencia y entrega (SC-002) \\

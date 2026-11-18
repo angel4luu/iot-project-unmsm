@@ -168,7 +168,7 @@ the versioned documents that implementation will place under `docs/safety/` and
    pass/fail report.
 
 The result is an educational prototype measurement claim only for 180–250 V, the
-confirmed ACS712 variant's current range (at most 5 A, about 1.1 kW), and the
+0.5–5 A range of the ACS712-20A (about 1.1 kW), and the
 tested configurations. It is not a permanent-installation,
 billing, or safety-device approval.
 

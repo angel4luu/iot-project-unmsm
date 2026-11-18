@@ -43,7 +43,7 @@ blocks; one summary/5 seconds; 95% dashboard visibility <=10 seconds; local aler
 <=2 seconds and healthy-server alert <=10 seconds; drain recovery queue >=2
 records/s; recover >=99% of a 10-minute outage within five minutes  
 **Constraints**: Controlled educational prototype only; calibrated claim limited to
-180–250 V RMS, the ACS712-variant current range (at most 5 A RMS, about 1.1 kW; see
+180–250 V RMS, 0.5–5.0 A RMS (ACS712-20A), about 0–1,100 W (see
 Hardware) and tested loads; no relay; qualified safety review
 before mains energization; dashboard LAN-only; outbound notifications HTTPS only;
 no committed secrets; 16 KiB maximum MQTT payload; at least 256 offline records in RAM  
@@ -292,7 +292,7 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Function | Part (model) | Qty | Source | Status |
 |---|---|---|---|---|
 | Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | 1 | Kit | Available |
-| Current sensor | Allegro ACS712 module (variant 05B/20A/30A **to confirm**) | 1 | Kit | Available |
+| Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | 1 | Kit | Available |
 | Voltage sensor | Certified isolated 220 V AC to 9–12 V **AC** plug-in adapter | 1 | Buy | To buy |
 | Signal conditioning | Resistor assortment 10 kΩ–100 kΩ, 1/4 W; 10 µF and 100 nF capacitors | 1 set | Buy | To buy (low cost) |
 | Local alert | Buzzer | 1 | Kit | Available |
@@ -352,8 +352,8 @@ keep working with the network down.
 | Field | Exact meaning | Wire unit | Valid calibrated range |
 |---|---|---|---|
 | `voltage_rms` | Square root of mean squared calibrated instantaneous voltage across a 5 s window | V | 180–250 V RMS |
-| `current_rms` | Square root of mean squared calibrated instantaneous current across the same paired window | A | ACS712-variant range (05B: 0.25–3.0 A; 20A/30A: 0.5–5.0 A RMS) |
-| `active_power` | Mean instantaneous `v*i` after offset, gain, and phase correction; not `Vrms*Irms` | W | 0 W to the variant maximum (about 650 W or 1,100 W) consumption claim; signed diagnostic value |
+| `current_rms` | Square root of mean squared calibrated instantaneous current across the same paired window | A | 0.5–5.0 A RMS (ACS712-20A) |
+| `active_power` | Mean instantaneous `v*i` after offset, gain, and phase correction; not `Vrms*Irms` | W | 0–1,100 W consumption claim; signed diagnostic value |
 | `active_energy_import_total` | Monotonic sum of `max(active_power,0)*monotonic_dt/3600` for one counter continuity ID | Wh | Accuracy claimed only across accepted test intervals |
 
 The firmware maintains 1-second calculation/quality blocks and combines five
@@ -362,7 +362,7 @@ min/max and internal diagnostic counts locally, but the v1 wire contract carries
 the contractually required values, sample count, valid ratio, calibration
 revision, and flags. Schema 1.0.0 limits (for example the 2,500 W threshold
 maximum) are wire bounds; the node and `energyctl` reject thresholds above the
-calibrated maximum for the confirmed ACS712 variant. No field claims apparent power, reactive power, power factor,
+calibrated maximum (1,100 W). No field claims apparent power, reactive power, power factor,
 or billing accuracy.
 
 ### Calibration and acceptance procedure

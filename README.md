@@ -23,7 +23,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Track | Where we are | Next |
 |---|---|---|
-| System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Confirm ACS712 version and multimeter, then break the plan into tasks (`/speckit.tasks`) |
+| System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Confirm the multimeter model, then break the plan into tasks (`/speckit.tasks`) |
 | Article | Introduction, Methodology and Figures 1–3 done and updated to the new hardware (6 pages; Results still empty) | Trim to fit the page limit |
 
 *Last updated: 2026-11-18*
@@ -60,8 +60,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | # | Question | Blocks |
 |---|---|---|
-| 1 | Which ACS712 version do we have (5 A, 20 A or 30 A)? Sets the measurable range | Hardware, Methodology text |
-| 1b | Multimeter model: is it true-RMS, and how accurate on AC? It is our reference | Calibration, Methodology text |
+| 1 | Multimeter model: is it true-RMS, and how accurate on AC? It is our reference | Calibration, Methodology text |
 | 2 | How to calculate measurement uncertainty, and how many repetitions per test | Methodology text, experiments |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |
@@ -71,7 +70,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 ## Key decisions made
 
 - Wi-Fi, not LoRa. No automatic power cut-off (safety).
-- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor, OLED, RGB LED, buzzer, DHT22 (calibration only). Only a certified AC adapter and resistors are bought. The ACS712 always goes in a closed box, never on the breadboard.
+- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer, DHT22 (calibration only). Only a certified AC adapter and resistors are bought. The ACS712 always goes in a closed box, never on the breadboard.
 - The specs win over the article proposal; differences are listed in [article/README.md](article/README.md#decisions).
 - Article in Spanish, IEEE conference format, decimal comma.
 - No power-factor claims; anomaly detection and forecasting are future work.
@@ -80,7 +79,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
-| 2026-11-18 | Hardware adapted to the parts we own (ACS712, ESP32-S3, OLED). Specs, Methodology and Figures 1–2 updated. Relay bench idea dropped |
+| 2026-11-18 | Hardware adapted to the parts we own (ACS712, ESP32-S3, OLED). Specs, Methodology and Figures 1–2 updated. Relay bench idea dropped. ACS712 confirmed as the 20 A version |
 | 2026-11-11 | Figures 1–3 drawn (TikZ); Fig. 1 redone as a layered diagram with a legend. Methodology draft merged (`METODOLOGIA` branch). README simplified |
 | 2026-11-04 | Repo published on GitHub (private) |
 | 2026-10-28 | Article set up; Introduction drafted with 15 verified references; authors added |

@@ -38,8 +38,8 @@ only its matching node topics.
 | `nominal_voltage_V` | decimal | Default 220; informational, not a substitute for measured voltage |
 | `calibrated_voltage_min_V` | decimal | Default 180 |
 | `calibrated_voltage_max_V` | decimal | Default 250 |
-| `calibrated_current_min_A` | decimal | Set from the confirmed ACS712 variant: 0.25 (05B) or 0.5 (20A/30A) |
-| `calibrated_current_max_A` | decimal | Set from the confirmed ACS712 variant: 3.0 (05B) or 5.0 (20A/30A) |
+| `calibrated_current_min_A` | decimal | Default 0.5 (ACS712-20A) |
+| `calibrated_current_max_A` | decimal | Default 5.0 (ACS712-20A) |
 | `active` | boolean | Inactive circuits do not create consumption alerts |
 
 ### CalibrationArtifact
@@ -71,7 +71,7 @@ Calibration records are append-only. Editing coefficients creates a new revision
 |---|---|---|
 | `config_version` | integer | Monotonically increasing per node |
 | `node_id`, `circuit_id` | string | Must match the target node/circuit |
-| `active_power_limit_W` | decimal | `>0` and `<=` the calibrated maximum power for the confirmed sensor variant (schema wire bound 2,500) |
+| `active_power_limit_W` | decimal | `>0` and `<=1100` for the calibrated MVP (schema wire bound 2,500) |
 | `confirm_ms` | integer | 1,000–300,000; default 10,000 |
 | `clear_below_W` | decimal | `>=0` and `< active_power_limit_W`; default 95% of limit |
 | `clear_ms` | integer | 1,000–300,000 |

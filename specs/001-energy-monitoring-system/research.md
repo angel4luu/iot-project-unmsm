@@ -19,8 +19,9 @@ load conductor passes through the module). Voltage is sensed with a certified,
 isolated 220 V-to-9–12 V **AC-AC** plug-in adapter (AC output, not a DC charger);
 it is the only sensing part bought. Bare or exposed ZMPT101B modules remain
 rejected. The calibrated claim is narrowed to `180–250 V RMS`, `55–65 Hz`, and a
-current range that depends on the ACS712 variant (to confirm from the chip
-marking):
+current range set by the ACS712 variant. The team's module is the
+**`ACS712ELCTR-20A`** (confirmed 2026-11-18), so the claim is `0.5–5.0 A RMS`
+and about `0–1,100 W`; the other rows are kept for reference:
 
 | ACS712 variant | Sensitivity | Calibrated current | Calibrated power (approx.) |
 |---|---|---|---|
@@ -177,8 +178,8 @@ resistive load by adjusting it until `P = V_RMS * I_RMS` (unity power factor);
 freeze coefficients before acceptance testing.
 
 Acceptance uses a separate dataset with at least three stable resistive loads
-spread across the calibrated range (for example about 100 W, 300 W, and the top
-of the range from R-001), where the reference power is `V_ref * I_ref` and the
+spread across the calibrated range (for example about 100 W, 500 W, and 1 kW for
+the 20 A module), where the reference power is `V_ref * I_ref` and the
 reference energy is that power times the monotonic interval. One stable inductive
 or nonlinear load is also recorded: its V and I are validated against the
 true-RMS meter, but its W/Wh are reported as observations only, without an
