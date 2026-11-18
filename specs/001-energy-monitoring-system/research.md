@@ -90,8 +90,12 @@ Conditioning (final values set at the bench and in the schematic review):
 - The team's 470 Ω and 1 kΩ resistors are too low for these networks; a low-cost
   resistor assortment (10 kΩ–100 kΩ) and a few 10 µF capacitors are bought.
 
-The energized prototype requires an upstream 30 mA RCD/GFCI, two-pole 10 A
-overcurrent protection, the certified isolated adapter for voltage, a certified
+*Amended 2026-11-18 (minimal MVP, no laboratory available)*: the energized
+prototype requires a 30 mA RCD/GFCI protecting the test outlet (the device already in the building's
+electrical panel if present, otherwise a certified plug-in portable RCD) and the
+outlet's existing branch-circuit breaker as overcurrent protection, accepted
+only if the qualified reviewer confirms that the test cable, terminals, and
+ACS712 module are rated for that breaker, the certified isolated adapter for voltage, a certified
 low-voltage supply for the node, the enclosure conditions in R-001, and no mains
 wiring on breadboards or flying leads. A qualified person MUST review the
 schematic, parts' ratings, creepage/clearance, conductor sizing, enclosure, and
@@ -167,8 +171,7 @@ to confirm). Its documented AC uncertainty `u_ref` at each point is recorded. If
 is guard-banded to `|error| <= 5% - u_ref`; a meter above 2% or without true-RMS
 cannot support the claim. With one meter, V and I are read alternately on a
 stable load. Record hardware/firmware/calibration revisions, operator, date,
-ambient temperature (read by a DHT22 placed inside the enclosure next to the
-ACS712, logged as calibration metadata only), wiring, sensor identity and variant,
+ambient conditions, wiring, sensor identity and variant,
 ADC configuration, reference evidence, and load identity.
 
 Procedure: warm up for 10 minutes; at no load, measure zero for 60 seconds and
@@ -188,7 +191,7 @@ available. Collect at least five minutes per point and 15 minutes for energy.
 Every required quantity at every accepted point—not merely the mean—must meet the
 acceptance limit. No-load behavior uses an absolute noise threshold. Preserve
 reference readings, raw waveform excerpts, calculated blocks, summaries,
-coefficients, temperatures, scripts, hashes, and pass/fail tables.
+coefficients, scripts, hashes, and pass/fail tables.
 
 **Rationale**: Separate calibration and validation data prevent circular evidence.
 On a resistive load, V·I from a true-RMS meter is a valid active-power reference,
@@ -196,7 +199,7 @@ and unity power factor also gives a reference for the phase correction without a
 power analyzer. Claiming active-power accuracy on a non-unity-power-factor load
 would need a reference that the team does not have (constitution II), so that load
 is used for V/I validation and qualitative behavior only. The ACS712 offset drifts
-with temperature, so enclosure temperature is evidence for interpreting errors.
+with temperature, so it is re-zeroed at no load before every session.
 
 **Sources**: [ADE7953 calibration guidance](https://www.analog.com/cn/resources/app-notes/an-1118.html),
 [ACS712 datasheet](https://www.allegromicro.com/-/media/files/datasheets/acs712-datasheet.ashx).

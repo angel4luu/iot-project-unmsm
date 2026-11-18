@@ -141,9 +141,11 @@ threshold timing, queue replay, config rollback rejection, sample-gap detection,
 and the LED/OLED state mapping.
 
 Then a low-voltage bench stage: the certified AC-AC adapter (plugged into a
-protected outlet) drives the voltage channel; the ACS712 offset and polarity are
-checked with a low-voltage DC current. No mains conductor passes through the
-ACS712 at this stage.
+protected outlet) drives the voltage channel, and the ACS712 zero-current offset
+is checked with no current. No mains conductor passes through the ACS712 at
+this stage. Current polarity is checked on the first supervised resistive-load
+run: active power must be positive; if it is negative, the sign is corrected in
+the calibration coefficients, without rewiring.
 
 ## 8. Controlled calibration and hardware acceptance
 
@@ -153,18 +155,19 @@ the versioned documents that implementation will place under `docs/safety/` and
 
 1. Perform de-energized visual, protective-earth/isolation, polarity, enclosure,
    strain-relief, fuse, and conductor checks.
-2. Energize only inside the controlled setup with RCD/GFCI and two-pole 10 A
-   protection; never work live or expose terminals.
+2. Energize only through the 30 mA RCD protecting the test outlet (building
+   panel or certified portable RCD, tested with its test button) and the
+   reviewer-accepted overcurrent protection; never work live or expose terminals.
 3. Warm up 10 minutes and capture a 60-second zero-current record (ACS712 offset).
 4. Calibrate voltage and current gain on resistive loads, and the phase
    correction on a resistive load (`P = V_RMS*I_RMS`), against the identified
-   true-RMS reference meter; log the enclosure temperature.
+   true-RMS reference meter; confirm positive active power (polarity).
 5. Freeze a new calibration revision.
 6. Validate on at least three separate resistive loads across the calibrated
    range, plus one inductive/nonlinear load for V and A only. Require every
    accepted comparison to meet the 5% (or guard-banded) limit.
 7. Hash and preserve the procedure, wiring/build revisions, raw captures,
-   reference readings, temperatures, coefficients, software revision, and
+   reference readings, coefficients, software revision, and
    pass/fail report.
 
 The result is an educational prototype measurement claim only for 180–250 V, the

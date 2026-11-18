@@ -61,7 +61,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | # | Question | Blocks |
 |---|---|---|
-| 0 | Who is the qualified person (licensed electrician or electrical-engineering teacher) who builds the test panel and signs the safety review? | Any 220 V test |
+| 0 | Who is the qualified person (licensed electrician or electrical-engineering teacher) who reviews the setup and signs the safety review? | Any 220 V test |
 | 1 | Reference meter: which true-RMS multimeter to buy (must say True RMS and CAT III, with AC accuracy in its manual) | Calibration, accuracy results |
 | 2 | How to calculate measurement uncertainty, and how many repetitions per test | Methodology text, experiments |
 | 3 | Parts list and total cost | Comparison table in Results |
@@ -72,7 +72,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 ## Key decisions made
 
 - Wi-Fi, not LoRa. No automatic power cut-off (safety).
-- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer, DHT22 (calibration only). Only a certified AC adapter and resistors are bought. The ACS712 always goes in a closed box, never on the breadboard.
+- Educational prototype built from our own kit: ESP32-S3, ACS712 current sensor (20 A version: measures up to 5 A, about 1.1 kW), OLED, RGB LED, buzzer. Minimal purchases: certified AC adapter, resistors and capacitors, a transistor for the buzzer, a small box for the ACS712, a true-RMS multimeter, and a portable 30 mA RCD only if the home panel has none. The ACS712 always goes in a closed box, never on the breadboard.
 - The specs win over the article proposal; differences are listed in [article/README.md](article/README.md#decisions).
 - Article in Spanish, IEEE conference format, decimal comma.
 - No power-factor claims; anomaly detection and forecasting are future work.
@@ -81,6 +81,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Minimal MVP: temperature sensor (DHT22), barrel socket, 12 V polarity bulb and dedicated test panel dropped; LEDs, buzzer and OLED kept. Protection is the 30 mA RCD from the home panel (or a portable one) plus the outlet's existing breaker, if the reviewer accepts it |
 | 2026-11-18 | No lab available: protection (30 mA RCD + 10 A breaker) becomes a portable test panel to buy, assembled by an electrician; household test loads; 12 V bulb for the polarity check |
 | 2026-11-18 | Build guide translated to Spanish. Reference multimeter will be bought (not borrowed) |
 | 2026-11-18 | Article trimmed from 7 to 5 pages: shorter Introduction, components table, step-by-step signal flow through the circuit, implementation stages, one merged test table. Build guide for the team added (`hardware/build-guide.md`) |

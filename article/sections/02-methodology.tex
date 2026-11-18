@@ -10,7 +10,7 @@
 \subsection{Diseño de la investigación}
 \label{sec:design}
 Es una investigación aplicada de desarrollo tecnológico, cuantitativa y experimental, sin hipótesis formal: se construye el sistema y se caracteriza su desempeño frente a un instrumento de referencia.
-El escenario es una carga monofásica alimentada desde un tomacorriente común de \SI{220}{V} a través de un tablero de protección portátil, con un rango calibrado de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz}, \SIrange{0,5}{5,0}{A} RMS y hasta unos \SI{1,1}{kW}.
+El escenario es una carga monofásica alimentada desde un tomacorriente común de \SI{220}{V} protegido por un interruptor diferencial de \SI{30}{mA}, con un rango calibrado de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz}, \SIrange{0,5}{5,0}{A} RMS y hasta unos \SI{1,1}{kW}.
 Es un prototipo educativo construido sobre todo con componentes disponibles, no destinado a instalación permanente, facturación ni protección de equipos.
 La unidad de análisis es el resumen de \SI{5}{s} emparejado con la lectura de referencia del mismo intervalo; las variables independientes son la carga y el estado de la red, y las dependientes, las magnitudes eléctricas, su error, la latencia, la entrega y recuperación de registros y la activación de alertas.
 
@@ -51,8 +51,7 @@ Tensión & Adaptador CA-CA certificado, \SIrange{9}{15}{V} & Réplica aislada de
 Acondi\-cio\-na\-mien\-to & Divisores, polarización y filtros RC & Escalado a \SIrange{0}{3,3}{V} y antialias & C \\
 Pantalla & OLED \SI{0,96}{''} SSD1306 (I\textsuperscript{2}C) & Valores y estado locales & K \\
 Indicación & LED RGB; zumbador con 2N2222 & Estado y aviso local & K/C \\
-Temperatura & DHT22 & Temperatura de la envolvente en la calibración & K \\
-Protección & Tablero portátil: diferencial \SI{30}{mA} y termomagnética bipolar \SI{10}{A} & Seguridad del lado de red & C \\
+Protección & Interruptor diferencial de \SI{30}{mA} (del tablero o portátil) & Seguridad del lado de red & K/C \\
 Referencia & Multímetro de verdadero valor eficaz & Calibración y validación & C \\
 Servidor & Computadora del equipo con Docker Compose & Corredor, ingesta, almacenamiento y panel & K \\
 \bottomrule
@@ -69,13 +68,13 @@ Servidor & Computadora del equipo con Docker Compose & Corredor, ingesta, almace
 
 La señal recorre el circuito en este orden:
 \begin{enumerate}
-  \item La carga se alimenta desde un tomacorriente común a través del tablero portátil (diferencial de \SI{30}{mA} y termomagnética bipolar de \SI{10}{A}), y su conductor atraviesa el ACS712.
+  \item La carga se alimenta desde un tomacorriente común protegido por un interruptor diferencial de \SI{30}{mA}, y su conductor atraviesa el ACS712.
   \item El ACS712 entrega \SI{100}{mV/A} centrados en \SI{2,5}{V}, aislados de la red; el divisor $R_3$--$R_4$, con carga mayor que el mínimo de \SI{4,7}{k\ohm} del sensor, lo lleva a $\SI{1,70}{V}\pm\SI{0,48}{V}$ a \SI{5}{A}.
   \item El adaptador, conectado al mismo circuito, entrega una réplica aislada de la tensión de red, que $R_1$--$R_2$ reduce a unos \SI{\pm 1,1}{V} de pico sobre una polarización de \SI{1,65}{V}.
   \item Un condensador de \SI{22}{nF} en cada entrada actúa como filtro antialias antes de GPIO4 y GPIO5.
   \item El ADC1 del ESP32-S3 muestrea ambos canales en alternancia a \num{8000} conversiones por segundo (\num{4000} pares) y el \textit{firmware} aplica la calibración y la corrección de desfase de la Sección~\ref{sec:acquisition}.
   \item Con cada bloque de \SI{1}{s}, el nodo actualiza la pantalla y el LED RGB y, si se confirma un umbral, activa el zumbador a través del transistor.
-  \item Cada \SI{5}{s} publica un resumen por Wi-Fi; el DHT22 solo registra la temperatura de la envolvente durante la calibración.
+  \item Cada \SI{5}{s} publica un resumen por Wi-Fi hacia el servidor.
 \end{enumerate}
 Una cola en RAM retiene \num{256} resúmenes (más de \SI{21}{min}), la energía se guarda cada \SI{60}{s} en memoria no volátil y, tras un reinicio, el intervalo sin punto de control se marca como incierto.
 El ACS712 es el único componente con terminales a tensión de red: va en un compartimento cerrado de la envolvente, nunca sobre protoboard, y una persona calificada revisa el conjunto con el equipo desenergizado antes de cualquier prueba con tensión.
@@ -131,14 +130,14 @@ El servidor convierte cada evento del nodo en una alerta abierta, reconocida o r
 La implementación avanza por etapas, cada una condicionada a superar la anterior:
 \begin{enumerate}
   \item \emph{Simulación}: servidor, panel y alertas con un simulador que emite mensajes conformes con los esquemas JSON del contrato.
-  \item \emph{Banco de baja tensión}: periféricos, canal de tensión con el adaptador y \textit{offset} y polaridad del ACS712 con corriente continua de baja tensión, sin red.
-  \item \emph{Revisión de seguridad}: un electricista calificado arma el tablero portátil y revisa y firma el esquema, el aislamiento del ACS712 y la envolvente.
-  \item \emph{Calibración supervisada}: tras \SI{10}{min} de calentamiento y \SI{60}{s} sin corriente, se fijan las ganancias con cargas resistivas y $\delta$ hasta que $P=V_{\mathrm{RMS}}I_{\mathrm{RMS}}$ en una carga resistiva; los coeficientes se congelan.
+  \item \emph{Banco de baja tensión}: periféricos, canal de tensión con el adaptador y \textit{offset} del ACS712 sin corriente, sin red.
+  \item \emph{Revisión de seguridad}: una persona calificada revisa y firma el esquema, el aislamiento del ACS712, la envolvente y la protección diferencial.
+  \item \emph{Calibración supervisada}: tras \SI{10}{min} de calentamiento y \SI{60}{s} sin corriente, se fijan las ganancias con cargas resistivas y $\delta$ hasta que $P=V_{\mathrm{RMS}}I_{\mathrm{RMS}}$ en una carga resistiva, donde $P>0$ confirma la polaridad; los coeficientes se congelan.
   \item \emph{Validación}: escenarios de la Tabla~\ref{tab:scenarios} con cargas distintas de las de calibración.
 \end{enumerate}
 La referencia es un multímetro de verdadero valor eficaz con incertidumbre documentada~\todo{definir el modelo del multímetro a adquirir y su exactitud en CA}; si esta supera el \SI{1}{\percent}, el límite de aceptación se reduce en ese valor.
 En E1--E3 la potencia de referencia es $V_rI_r$ y la energía, esa potencia por el tiempo; en E4 solo se validan $V$ e $I$, pues sin un medidor de potencia no puede afirmarse la exactitud de $P$ con factor de potencia distinto de la unidad, como en otros trabajos con cargas variadas~\cite{cardenas2026residential}.
-Cada punto se mide al menos \SI{5}{min} (\SI{15}{min} para la energía), y se registran las versiones, el cableado y la temperatura de la envolvente, pues el \textit{offset} del ACS712 varía con ella.
+Cada punto se mide al menos \SI{5}{min} (\SI{15}{min} para la energía), y se registran las versiones y el cableado; el \textit{offset} del ACS712, que varía con la temperatura, se mide de nuevo antes de cada sesión.
 El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el método de incertidumbre (GUM, tipos A y B) y el número de repeticiones.}
 
 \begin{table}[t]

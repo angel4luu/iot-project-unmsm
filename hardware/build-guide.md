@@ -7,7 +7,7 @@
 ## 1. Propósito y estado
 
 Esta guía describe, por etapas, el montaje de un prototipo educativo: un nodo
-ESP32-S3 que monitorea una carga monofásica conectada a un tomacorriente común a través de un tablero de protección portátil.
+ESP32-S3 que monitorea una carga monofásica conectada a un tomacorriente común protegido por un interruptor diferencial de 30 mA.
 
 | Elemento | Objetivo del prototipo |
 |---|---|
@@ -40,9 +40,13 @@ permanente.
    adecuada, terminales cubiertos, sujeción de cables y la envolvente revisada.
 3. Nunca manipule, cablee, ajuste ni mida el ACS712 o su camino de red con el
    circuito energizado. Desenergice y verifique antes de cualquier cambio físico.
-4. El montaje de prueba requiere aguas arriba un interruptor diferencial de
-   30 mA y una llave termomagnética bipolar de 10 A. Su capacidad e instalación
-   deben revisarse.
+4. El tomacorriente de prueba debe estar protegido por un interruptor
+   diferencial de 30 mA: el del tablero eléctrico del edificio (marcado "30 mA",
+   con botón de prueba "T"), si existe, o un protector diferencial portátil
+   certificado que se enchufa en la pared. Pruébelo con su botón antes de cada
+   sesión. La protección contra sobrecorriente es la llave termomagnética
+   existente de ese circuito, solo si la persona revisora confirma que el cable
+   de prueba, los terminales y el módulo ACS712 soportan su capacidad.
 5. Una persona calificada debe revisar el esquema, la capacidad de los
    componentes, el aislamiento, las distancias de fuga y de aislamiento en aire,
    la sección de los conductores, la envolvente, las protecciones y el montaje de
@@ -53,8 +57,8 @@ permanente.
    USB-C certificado.
 7. El adaptador CA-CA tiene salida de corriente **alterna** y se usa para medir.
    Nunca lo enchufe en una entrada de alimentación de CC, incluida la entrada
-   jack del Arduino Uno R4. Su salida se conecta solo al jack hembra y a la red
-   de medición de tensión de baja tensión descrita aquí.
+   jack del Arduino Uno R4. Se corta su conector y sus dos cables se sueldan o
+   atornillan a la red de medición de tensión de baja tensión descrita aquí.
 8. Las etapas 1 a 4 son trabajo desenergizado o en baja tensión. La etapa 6 solo
    se permite después de la revisión firmada, en el montaje controlado y
    supervisado. Nunca trabaje con tensión ni deje terminales energizados
@@ -75,27 +79,26 @@ estado, no una autorización para sustituir componentes sin revisión.
 | Controlador y ADC | Espressif ESP32-S3 DevKitC-1, ADC1 interno | `ESP32-S3 DevKitC-1` | 1 | Kit; disponible |
 | Sensor de corriente | Módulo Allegro ACS712ELCTR-20A, 100 mV/A | `módulo sensor de corriente ACS712 20A` | 1 | Kit; disponible |
 | Sensor de tensión | Adaptador enchufable certificado y aislado, 220 V CA a 9–15 V CA | `adaptador transformador 220V a 12V AC (salida alterna ~)` | 1 | Comprar |
-| Conexión del adaptador | Jack DC hembra 5,5 × 2,1 mm con bornera | `jack DC hembra 5.5x2.1 con bornera` | 1 | Comprar; bajo costo |
-| Resistencias de divisores y polarización | 1/4 W: 100 kΩ, 4,7 kΩ ×2, 10 kΩ ×4 (una 10 kΩ es el pull-up del DHT22, salvo que el módulo ya lo tenga) | `resistencias 1/4 W 100k, 10k, 4.7k` | 1 juego | Comprar; bajo costo |
+| Resistencias de divisores y polarización | 1/4 W: 100 kΩ, 4,7 kΩ ×2, 10 kΩ ×3 | `resistencias 1/4 W 100k, 10k, 4.7k` | 1 juego | Comprar; bajo costo |
 | Condensadores de polarización y filtro | 10 µF ×1 y 22 nF ×2 | `condensador electrolítico 10uF 25V`; `condensador cerámico 22nF` | 1 juego | Comprar; bajo costo |
 | Aviso local | Zumbador activo de 5 V | `buzzer activo 5V` | 1 | Kit; disponible |
 | Luz de estado | LED RGB, se asume cátodo común, con 3 × 470 Ω | `LED RGB cátodo común 5 mm` | 1 | Kit; confirmar tipo |
 | Pantalla local | OLED de 0,96", se asume SSD1306 I²C de 4 pines | `pantalla OLED 0.96 I2C SSD1306` | 1 | Kit; confirmar interfaz |
 | Excitación del zumbador | Transistor NPN 2N2222 o PN2222A y resistencia de base de 1 kΩ | `transistor 2N2222`; `resistencia 1k 1/4 W` | 1 c/u | Comprar; bajo costo |
-| Registro de temperatura | DHT22 / AM2302, dentro de la envolvente junto al ACS712 | `sensor DHT22 / AM2302` | 1 | Kit; disponible |
 | Alimentación del nodo | Cargador USB-C certificado de 5 V, 2 A, y cable | `cargador USB-C 5V 2A certificado` | 1 | Kit; disponible |
 | Instrumento de referencia | Multímetro de verdadero valor eficaz (True RMS), CAT III ≥ 300 V, exactitud en CA documentada ≤ 2 % | `multímetro True RMS CAT III` | 1 | Comprar; modelo por elegir |
 | Envolvente del nodo | Caja cerrada retardante de llama con compartimento separado para el ACS712, prensaestopas, borneras y cable adecuados | `caja de paso plástica / caja estanca`; `prensaestopa`; `bornera para riel` | 1 juego | Comprar |
-| Tablero portátil de pruebas (protección) | Caja para riel DIN con cable y enchufe de entrada y un tomacorriente de salida; dentro, llave termomagnética bipolar de 10 A e interruptor diferencial bipolar de 30 mA (o un solo interruptor combinado RCBO de 10 A / 30 mA). Lo arma y prueba un electricista | `caja para tablero 4 módulos riel DIN`; `llave termomagnética bipolar 10 A`; `interruptor diferencial bipolar 30 mA` (o `interruptor diferencial combinado RCBO 10 A 30 mA`); `tomacorriente de sobreponer`; `cable vulcanizado 2x14 AWG con enchufe` | 1 juego | Comprar (no hay protección de laboratorio) |
-| Fuente para la prueba de polaridad (etapa 4) | Adaptador de 12 V CC (≥ 2 A) con un foco de auto de 12 V 21 W como carga, unos 1,75 A | `adaptador 12V DC 2A`; `foco de auto 12V 21W con socket` | 1 c/u | Comprar; bajo costo |
+| Protección diferencial | Interruptor diferencial de 30 mA que proteja el tomacorriente de prueba: el del tablero del edificio si existe; si no, un protector diferencial portátil certificado | `protector diferencial portátil 30 mA para enchufe` (solo si el tablero no tiene uno) | 0–1 | Edificio o comprar; revisar el tablero |
 | Cargas de prueba | Cargas resistivas domésticas: foco incandescente o halógeno de 100 W; reflector halógeno de unos 500 W; plancha o calefactor de unos 1000 W (placa ≤ 1,1 kW). Además, una carga inductiva (ventilador pequeño) o no lineal (lámpara LED o cargador) estable | `foco halógeno 100 W`; `reflector halógeno 500 W`; `plancha 1000 W` | 3–4 | Del equipo o comprar; revisar la placa de cada carga |
 
-No se asume ningún laboratorio: las pruebas con red se hacen desde un
-tomacorriente común de 220 V, **siempre** a través del tablero portátil de
-pruebas. Tampoco hay una persona calificada provista por un laboratorio: el
-equipo debe contratar o convocar a un electricista con licencia (o a un docente
-de ingeniería eléctrica) para armar el tablero, revisar la envolvente del nodo y
-firmar la revisión antes de cualquier conexión a la red.
+Montaje mínimo (MVP): solo se listan los componentes necesarios para medir,
+indicar localmente, proteger y calibrar. No se asume ningún laboratorio: las
+pruebas con red se hacen desde un tomacorriente común de 220 V, **siempre**
+protegido por un interruptor diferencial de 30 mA. Tampoco hay una persona
+calificada provista por un laboratorio: el equipo debe convocar a un
+electricista con licencia (o a un docente de ingeniería eléctrica) para revisar
+la envolvente del nodo y el montaje de prueba, y firmar la revisión antes de
+cualquier conexión a la red.
 
 No use en este montaje el relé del kit, el Arduino Uno R4, los motores, los
 servos ni los sensores no relacionados. La entrada jack del Arduino Uno R4 no es
@@ -113,8 +116,6 @@ de medición conectada directamente a la red.
 - No se asume un osciloscopio: las formas de onda se capturan con el propio ADC
   del ESP32-S3 (registro de muestras crudas por USB en el banco, antes de
   cualquier etapa con red).
-- Para la prueba de polaridad de la etapa 4: el adaptador de 12 V CC y el foco
-  de auto de 12 V 21 W de la lista (unos 1,75 A, todo en baja tensión).
 - Protoboard y cables jumper solo para pruebas de periféricos de baja tensión.
 - Herramientas de soldadura y para mecanizar la envolvente;
   nada de cableado de red en protoboard ni con cables expuestos.
@@ -170,18 +171,6 @@ etapa 2 no tiene conexión a la red ni conductor de red en el ACS712.
 **Aprobado si:** se detecta la pantalla I²C esperada y muestra texto estable y
 legible.
 
-### DHT22: GPIO15
-
-1. Conecte VCC del DHT22 a 3V3, GND a la tierra común y DATA a GPIO15.
-2. Coloque una pull-up de 10 kΩ de DATA a 3V3, salvo que el módulo DHT22 ya la
-   incluya. La resistencia de 10 kΩ de la lista puede cumplir esta función.
-3. Lea temperatura y humedad repetidamente. Ubique el sensor en su posición
-   prevista dentro de la envolvente, junto al ACS712, para el registro posterior
-   de temperatura; no use estas lecturas como evidencia de medición eléctrica.
-
-**Aprobado si:** las lecturas llegan repetidamente sin errores y son plausibles
-para la sala. Anote el tipo de sensor o módulo y su ubicación.
-
 ### Zumbador activo: GPIO16 mediante 2N2222
 
 1. No excite el zumbador de 5 V directamente desde un GPIO del ESP32.
@@ -220,9 +209,9 @@ conductor de carga ni de red por el ACS712 en esta etapa.
 
 ### Circuito nominal
 
-- Enchufe la salida de 5,5 × 2,1 mm del adaptador en el jack hembra con bornera.
-  Mantenga el adaptador desenchufado de su tomacorriente protegido mientras
-  cablea.
+- Corte el conector de salida del adaptador y suelde o atornille sus dos cables
+  a la placa. Mantenga el adaptador desenchufado de su tomacorriente protegido
+  mientras cablea.
 - Arme el nodo de polarización de 1,65 V (Vb): dos resistencias iguales de
   10 kΩ en serie entre 3V3 y GND, con 10 µF de Vb a GND.
 - Conecte un cable de salida del adaptador directamente a Vb. La salida del
@@ -265,11 +254,9 @@ forma de onda y la polarización medida.
 
 ## 7. Etapa 4: canal de corriente sin red eléctrica
 
-Esta etapa verifica solo la salida de baja tensión del ACS712. Ningún conductor
-de red pasa por IP+/IP−. Use una fuente de CC de baja tensión con límite de
-corriente y mantenga la corriente dentro de los límites de la fuente, el sensor
-y el cableado. La fuente y el arreglo de medición deben revisarse antes de
-usarse.
+Esta etapa verifica solo la salida de baja tensión del ACS712, sin corriente.
+Ningún conductor pasa por IP+/IP−. La polaridad se comprueba después, en la
+primera medición supervisada (etapa 6).
 
 ### Circuito nominal y verificaciones
 
@@ -286,20 +273,10 @@ usarse.
    nominal esperado es de unos 1,70 V, que corresponde al punto medio de unos
    2,5 V del ACS712 reducido al rango seguro del ESP32. Anote el *offset* medido;
    no sustituye la captura de cero de 60 s de cada sesión posterior.
-5. Con el montaje desenergizado mientras cablea, arme en serie el adaptador de
-   12 V CC, el foco de auto de 21 W e IP+/IP− del ACS712, y haga circular la
-   corriente (unos 1,75 A, unos 175 mV a la salida del sensor) en el sentido
-   documentado. No use la
-   red ni una carga de 220 V para esta prueba de polaridad.
-6. Observe que GPIO5 se aparta del *offset* de cero de forma coherente con la
-   magnitud y el sentido de la corriente. Invierta el sentido de la corriente
-   solo con la fuente apagada y el montaje en condición segura.
-7. Anote la convención de polaridad y los valores del ADC o de la forma de onda.
-   Deténgase si GPIO5 sale del rango seguro del ADC o el resultado es inestable.
+5. Deténgase si GPIO5 sale del rango seguro del ADC o el valor es inestable.
 
-**Aprobado si:** GPIO5 está cerca de 1,70 V sin corriente, la corriente continua
-de baja tensión produce un cambio con signo repetible alrededor de ese *offset*
-y la entrada del ADC permanece en rango. Esta etapa no usa la red eléctrica.
+**Aprobado si:** GPIO5 está cerca de 1,70 V sin corriente, estable y dentro del
+rango del ADC. Esta etapa no usa la red eléctrica.
 
 ## 8. Etapa 5: envolvente y revisión de seguridad por una persona calificada
 
@@ -320,11 +297,12 @@ La persona revisora verifica y registra como mínimo:
 - Que la entrada de cables, la sección de los conductores, las terminaciones,
   la sujeción, el soporte mecánico, las distancias y la integridad de la
   envolvente son adecuados para el montaje revisado.
-- Que el adaptador CA-CA tiene aislamiento certificado y es apto, incluida su
-  conexión de salida al jack y al divisor de tensión.
-- Que el tablero portátil está bien armado: interruptor diferencial de 30 mA
-  aguas arriba de la carga (probado con su botón de prueba), protección de
-  sobrecorriente bipolar de 10 A, cable y enchufe adecuados y caja cerrada.
+- Que el adaptador CA-CA tiene aislamiento certificado y es apto, incluida la
+  conexión de sus cables de salida al divisor de tensión.
+- Que el tomacorriente de prueba está protegido por un interruptor diferencial
+  de 30 mA (del tablero del edificio o portátil certificado) que dispara con su
+  botón de prueba, y que la llave termomagnética existente del circuito es
+  aceptable para el cable de prueba, los terminales y el ACS712.
 - Que el nodo se alimenta con el cargador USB-C certificado de baja tensión.
 - Que no hay cableado de red en protoboards, cables jumper sueltos ni cables
   expuestos.
@@ -367,12 +345,12 @@ antes de trabajar.
 
 1. Registre la revisión del montaje, el *commit* del *firmware*, la
    configuración del ADC, el adaptador de tensión, el modelo y versión del
-   ACS712, el cableado, el operador, la temperatura de la envolvente (DHT22), la
+   ACS712, el cableado, el operador, las condiciones ambientales, la
    identidad de las cargas y la identidad e incertidumbre en CA del multímetro
    de referencia.
-2. Confirme que el interruptor diferencial de 30 mA y la protección bipolar de
-   10 A están instalados aguas arriba y que se usan la envolvente cerrada
-   revisada y las conexiones de prueba controladas.
+2. Pulse el botón de prueba del interruptor diferencial de 30 mA y confirme que
+   dispara; rearme. Confirme que se usan la envolvente cerrada revisada y las
+   conexiones de prueba controladas.
 3. Caliente el sistema al menos 10 minutos según el procedimiento aprobado.
 4. Sin carga, capture 60 segundos de datos de corriente cero y guarde el
    *offset* del ACS712. Repita el autocero antes de cada sesión de calibración.
@@ -382,7 +360,9 @@ antes de trabajar.
    carga permanece estable.
 6. Con una carga resistiva estable, ajuste la corrección de fase fraccionaria
    hasta que la potencia activa medida coincida con `P = V_RMS * I_RMS` (factor
-   de potencia unitario). Esta relación vale solo para el punto resistivo de
+   de potencia unitario). La potencia debe salir positiva: eso confirma la
+   polaridad del ACS712. Si sale negativa, corrija el signo en los coeficientes
+   de calibración; no recablee. Esta relación vale solo para el punto resistivo de
    calibración; en operación, la potencia activa se calcula con los productos
    instantáneos `v*i`.
 7. Guarde los coeficientes como un nuevo artefacto de calibración inmutable o
@@ -404,7 +384,7 @@ antes de trabajar.
     True RMS no puede sustentar la afirmación. Sin carga o por debajo del rango,
     la corriente usa un límite absoluto de ruido, no un error porcentual.
 11. Conserve extractos de la forma de onda cruda, resúmenes, lecturas de
-    referencia, temperaturas, *scripts*, entorno, coeficientes, revisiones de
+    referencia, *scripts*, entorno, coeficientes, revisiones de
     *firmware* y cableado, *hashes* y resultados de aprobación. Marque los datos
     fuera de rango; no sustentan la afirmación.
 
@@ -419,14 +399,13 @@ facturación ni el uso como dispositivo de seguridad.
 | El ESP32-S3 no arranca | Destino o compilación incorrectos, alimentación o grabación | Revise la identidad de la placa, el cargador y cable USB-C, la salida de compilación y el registro de arranque |
 | El Wi-Fi no se conecta | Credenciales locales o configuración de la red Wi-Fi local | Verifique el aprovisionamiento localmente; nunca copie secretos en registros ni en esta guía |
 | El OLED no muestra nada | Módulo SPI, SDA/SCL invertidos, alimentación o dirección/configuración | Confirme el supuesto de I²C de 4 pines; revise GPIO8/9, 3V3, GND y la configuración del *firmware* |
-| Errores de lectura del DHT22 | Falta la pull-up, cableado o módulo defectuoso | Revise GPIO15, la pull-up de 10 kΩ (salvo que esté en el módulo), 3V3, GND y la identidad del sensor |
 | El zumbador no suena o no se apaga | Orden de pines del transistor, resistencia de base o cableado | Apague; verifique el orden de pines del 2N2222, GPIO16–1 kΩ–base, emisor a GND y el camino zumbador/colector |
 | Falta un color del RGB | Tipo de LED u orden de pines, o falta la resistencia en serie | Confirme el supuesto de cátodo común y el mapa GPIO17/18/21; verifique cada resistencia de 470 Ω |
 | Vb no está cerca de 1,65 V | Error en el divisor de polarización, la tierra o el condensador de 10 µF | Con el adaptador desenchufado, mida Vb y revise el divisor de dos 10 kΩ |
 | La señal en GPIO4 se recorta | El divisor o la salida del adaptador difieren del valor nominal | Deténgase; anote la forma de onda y el adaptador; cambie solo mediante revisión del esquema |
-| No hay oscilación en GPIO4 | Adaptador desconectado, jack incompatible o error en R1/R2/Vb | Confirme que el adaptador es de salida CA, que está conectado al jack y revise el esquema de baja tensión |
+| No hay oscilación en GPIO4 | Adaptador desenchufado, cable mal soldado o error en R1/R2/Vb | Confirme que el adaptador es de salida CA, revise sus soldaduras y el esquema de baja tensión |
 | El *offset* en GPIO5 está lejos de ~1,70 V | Alimentación del ACS712, divisor, tierra o versión del sensor | Verifique 5 V, tierra común, R3 = 4,7 kΩ, R4 = 10 kΩ y que el módulo sea el de 20 A |
-| La polaridad en GPIO5 parece invertida | Sentido IP+/IP− o convención de signo del *software* | Repita solo la prueba en CC de baja tensión, con la fuente apagada al recablear; anote el sentido |
+| La potencia activa sale negativa | Sentido del conductor en IP+/IP− | Si la potencia sale negativa en la carga resistiva, corrija el signo en los coeficientes de calibración; no recablee con tensión |
 | Los valores del ADC saltan o se pierden muestras | Ruido de cableado, configuración del ADC, desbordamiento de DMA o conversión faltante | Revise tierras y filtros de baja tensión y el diagnóstico del *firmware*; las ventanas afectadas son inválidas |
 | La calibración deriva | Calentamiento, variación de la alimentación, temperatura, carga inestable o incertidumbre de la referencia | Repita el calentamiento y el cero registrados y use cargas estables y el multímetro identificado |
 | La persona revisora encuentra un tema de seguridad pendiente | Capacidad, envolvente, protección o cableado no establecidos | Deténgase; resuélvalo y obtenga la firma antes de cualquier conexión a la red |
@@ -441,15 +420,15 @@ facturación ni el uso como dispositivo de seguridad.
 - El multímetro True RMS CAT III de referencia se va a comprar. Elija un modelo
   cuyo manual indique la exactitud en CA, y registre su identidad e
   incertidumbre antes de calibrar.
-- El adaptador CA-CA certificado y el jack hembra están por comprar. Verifique en
-  el banco su certificación, su salida, la continuidad del conector y su aptitud
-  antes de usarlos.
+- El adaptador CA-CA certificado está por comprar. Verifique en el banco su
+  certificación, su salida y su aptitud antes de usarlo.
 - La disposición final de los componentes (placa perforada o montaje en la
   envolvente) está por definir y revisar. Conserve los valores de divisores,
   polarización y filtros del plan; no sustituya valores no listados.
-- Tablero portátil de pruebas: comprar sus componentes y encargar su armado y
-  prueba (incluido el botón de prueba del diferencial) a un electricista con
-  licencia. Sin este tablero no se conecta nada a la red.
+- Protección diferencial: revisar si el tablero eléctrico del edificio tiene un
+  interruptor diferencial de 30 mA (botón "T") que proteja el tomacorriente de
+  prueba; si no, comprar un protector diferencial portátil certificado. Sin
+  diferencial no se conecta nada a la red.
 - Persona calificada: identificar al electricista o docente que hará la
   revisión y firmará el registro de la etapa 5.
 - Los pines propuestos del ADC, la atenuación y configuración del ADC y los

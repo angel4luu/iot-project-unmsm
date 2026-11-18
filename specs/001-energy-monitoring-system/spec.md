@@ -22,7 +22,7 @@
 
 - Q: Must the prototype be built from new metrology-grade parts? → A: No. It is an educational demonstration built mostly from the team's available kit with minimal purchases; the calibrated range is narrowed to what that hardware supports (see plan › Hardware).
 - Q: Should the node show readings locally? → A: Yes. The node shows its latest values and state on a local display and status light, and keeps doing so when the network is unavailable (FR-018).
-- Q: Does recording ambient temperature during calibration count as the deferred environmental-sensing feature? → A: No. Temperature recorded only as calibration evidence metadata is not product environmental sensing; it is not published, stored as telemetry, or shown on the dashboard.
+- Q: Which parts are in the minimal MVP build? → A: Only those needed for measurement, local indication (status LED, buzzer, display, which the team already owns), safety, and calibration; non-essential extras (temperature logging, bench polarity source, dedicated protection panel) are left out (see plan › Hardware list).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -172,6 +172,6 @@ flowchart LR
 - The first release has one operator role and restricts dashboard access to the trusted laboratory/local network; public dashboard access, multi-user access, billing, and tenant isolation are outside scope, while outbound remote threshold notifications are permitted.
 - Thirty days is a practical initial retention period and may be adjusted after measuring storage usage.
 - Threshold detection is the only consumption-alert method in the first release; historical anomaly detection, forecasting, and recommendations require separate future specifications after sufficient validated history exists.
-- Environmental sensing and automatic load switching remain separate future features so that they do not block validation of the core monitoring path. Ambient temperature recorded only as calibration evidence is not environmental sensing.
+- Environmental sensing and automatic load switching remain separate future features so that they do not block validation of the core monitoring path.
 - The prototype is an educational demonstration built mostly from hardware the team already owns; its accuracy claim applies only to the narrowed calibrated range stated in the plan.
 

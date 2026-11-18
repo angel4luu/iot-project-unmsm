@@ -53,7 +53,6 @@ only its matching node topics.
 | `reference_meter_id` | string | Serial or lab asset identity |
 | `reference_uncertainty_percent` | decimal | True-RMS meter's AC uncertainty at the point; <=1 uses the 5% limit, >1 and <=2 uses the guard-banded limit `5 - u_ref`, >2 cannot be acceptance evidence |
 | `current_sensor_variant` | string | ACS712 variant from the chip marking (`05B`, `20A`, `30A`) |
-| `enclosure_temperature_C` | decimal? | DHT22 reading during calibration; evidence metadata only |
 | `voltage_gain` | decimal | Applied after offset correction |
 | `current_gain` | decimal | Applied after offset correction |
 | `phase_correction_samples` | decimal | Signed fractional sample correction |

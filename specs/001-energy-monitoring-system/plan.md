@@ -23,7 +23,7 @@ environmental sensing, and production anomaly/forecast models are not included.
 
 **Language/Version**: Firmware C/C++17 with ESP-IDF 5.4 LTS; server Python 3.14.8;
 Compose YAML; Flux; JSON Schema Draft 2020-12  
-**Primary Dependencies**: ESP-IDF ADC continuous/calibration drivers, OLED driver (controller to confirm), DHT22 driver (calibration logging only), ESP-MQTT/Mbed TLS, ESP-IDF NVS/SNTP/Unity;
+**Primary Dependencies**: ESP-IDF ADC continuous/calibration drivers, OLED driver (controller to confirm), ESP-MQTT/Mbed TLS, ESP-IDF NVS/SNTP/Unity;
 Paho MQTT, Pydantic and `jsonschema`, InfluxDB Python client, SQLAlchemy/Alembic,
 FastAPI health/management endpoint, pytest; Eclipse Mosquitto 2.1.2, InfluxDB OSS
 2.9.1, Grafana OSS 13.2.3, Caddy 2  
@@ -294,25 +294,26 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | "ESP32-S3 DevKitC-1" | 1 | Kit | Available |
 | Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | "módulo sensor de corriente ACS712 20A" | 1 | Kit | Available |
 | Voltage sensor | Certified isolated 220 V AC to 9–15 V **AC** plug-in adapter | "adaptador transformador 220V a 12V AC (salida alterna ~)" | 1 | Buy | To buy |
-| Adapter connection | Female DC barrel socket 5.5 × 2.1 mm with screw terminals | "jack DC hembra 5.5x2.1 con bornera" | 1 | Buy | To buy (low cost) |
-| Signal conditioning | Resistors 1/4 W: 100 kΩ, 4.7 kΩ ×2, 10 kΩ ×4 (one is the DHT22 pull-up, unless the module has one); capacitors 10 µF ×1, 22 nF ×2 | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 1 set | Buy | To buy (low cost) |
+| Signal conditioning | Resistors 1/4 W: 100 kΩ, 4.7 kΩ ×2, 10 kΩ ×3; capacitors 10 µF ×1, 22 nF ×2 | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 1 set | Buy | To buy (low cost) |
 | Local alert | Buzzer | "buzzer activo 5V" | 1 | Kit | Available |
 | Status light | Kit RGB LED (assumed common cathode, **to confirm**) with 3 × 470 Ω | "LED RGB cátodo común 5 mm" | 1 | Kit | Available |
 | Local display | OLED 0.96" module, assumed 4-pin SSD1306 on I²C (**to confirm**; a 7-pin SPI module changes the pin table) | "pantalla OLED 0.96 I2C SSD1306" | 1 | Kit | Available |
 | Buzzer driver | NPN transistor 2N2222 (or PN2222A) + 1 kΩ base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 | Buy | To buy (low cost) |
-| Calibration temperature log | DHT22, inside the enclosure next to the ACS712 | "sensor DHT22 / AM2302" | 1 | Kit | Available |
 | Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
 | Reference instrument | True-RMS multimeter, CAT III ≥ 300 V, documented AC accuracy (≤ 2%) | "multímetro True RMS CAT III" | 1 | Buy | To buy (model to choose: must state True RMS, CAT III ≥ 300 V, and AC accuracy in its manual) |
 | Node enclosure | Closed flame-retardant enclosure with a separate ACS712 compartment, cable glands, rated terminals and cable | "caja de paso plástica / caja estanca"; "prensaestopa"; "bornera para riel" | 1 set | Buy | To buy |
-| Portable test panel (mains protection) | Closed DIN enclosure with plug-in cable and output socket, containing a two-pole 10 A circuit breaker and a two-pole 30 mA RCD (or one RCBO 10 A / 30 mA). Assembled and tested by a licensed electrician | "caja para tablero 4 módulos riel DIN"; "llave termomagnética bipolar 10 A"; "interruptor diferencial bipolar 30 mA" (or "interruptor diferencial combinado RCBO 10 A 30 mA"); "tomacorriente de sobreponer"; "cable vulcanizado 2x14 AWG con enchufe" | 1 set | Buy | To buy (no lab protection is available) |
-| Polarity-check DC source (Stage 4, low voltage) | 12 V DC adapter (≥ 2 A) driving a 12 V 21 W car bulb, about 1.75 A | "adaptador 12V DC 2A"; "foco de auto 12V 21W con socket" | 1 each | Buy | To buy (low cost) |
+| Mains protection | 30 mA RCD protecting the test outlet: the device already in the building's panel (marked 30 mA, with a "T" test button) if present, otherwise a certified plug-in portable RCD. Overcurrent: the outlet's existing breaker, if the reviewer accepts it | "protector diferencial portátil 30 mA para enchufe" (only if the panel has none) | 0–1 | Building or buy | To check the building's panel |
 | Test loads | Household resistive loads: 100 W incandescent or halogen bulb; about 500 W halogen work lamp; about 1 kW iron or heater (nameplate ≤ 1.1 kW). Plus one stable inductive (small fan) or nonlinear load (LED lamp or charger) | "foco halógeno 100 W"; "reflector halógeno 500 W"; "plancha 1000 W" | 3–4 | Team or buy | To select (check nameplates) |
 
-No laboratory infrastructure is assumed: tests run from an ordinary 220 V wall
-outlet, always through the portable test panel. The qualified person is not
-provided by a lab either; the team must engage a licensed electrician (or an
-electrical-engineering professor) to assemble the test panel, review the node
-enclosure, and sign the review before any mains connection.
+Minimal MVP build (2026-11-18): only parts needed for measurement, local
+indication, safety, and calibration are listed. No laboratory infrastructure is
+assumed: tests run from an ordinary 220 V wall outlet, always protected by a
+30 mA RCD. The qualified person is not provided by a lab either; the team must
+engage a licensed electrician (or an electrical-engineering professor) to review
+the node enclosure and test setup and sign the review before any mains
+connection. Not used in the minimal build: DHT22 (temperature logging), DC
+barrel socket (the adapter cable is cut and soldered or screwed to the board),
+bench DC polarity source, and a dedicated DIN protection panel.
 
 Not used: ADS131M02, SCT-013-020, ZMPT101B, MB85RC256V FRAM, DS3231 RTC (kept
 as the documented upgrade path), and the kit's relay, Arduino Uno R4, motors,
@@ -354,10 +355,9 @@ instead of a relay bench.
   | GPIO5 (ADC1_CH4) | Current channel (R3/R4 junction) | 22 nF to GND |
   | GPIO8 | OLED SDA (I²C) | Module has its own pull-ups |
   | GPIO9 | OLED SCL (I²C) | |
-  | GPIO15 | DHT22 DATA | 10 kΩ pull-up to 3.3 V |
   | GPIO16 | Buzzer driver (1 kΩ to 2N2222 base) | Active 5 V buzzer between 5 V and collector |
   | GPIO17 / GPIO18 / GPIO21 | RGB LED red / green / blue | 470 Ω in series each; common cathode to GND |
-  | 3V3 | Bias divider, OLED VCC, DHT22 VCC, pull-up | |
+  | 3V3 | Bias divider, OLED VCC | |
   | 5V | ACS712 VCC (module has its own decoupling), buzzer | From the USB-C supply |
   | GND | Common ground of all low-voltage parts | |
   | USB-C | Certified 5 V charger | No PC connection while energized unless the reviewer approves |
@@ -404,15 +404,16 @@ or billing accuracy.
 1. Complete and sign a de-energized schematic/enclosure/protection review,
    including the ACS712 module's creepage and conductor rating.
 2. Bench stage without mains: verify the node with the AC-AC adapter output only
-   (voltage channel), recorded waveforms, and a low-voltage DC current check of the
-   ACS712 offset and polarity.
+   (voltage channel), recorded waveforms, and the ACS712 zero-current offset.
 3. Record build revision, firmware commit, ADC settings, sensors and ACS712
-   variant, wiring, operator, enclosure temperature (DHT22), load identities, and
+   variant, wiring, operator, ambient conditions, load identities, and
    the true-RMS reference meter's identity and AC uncertainty.
 4. Warm up at least ten minutes; capture 60 seconds at zero current and store the
    ACS712 offset.
 5. Calculate voltage and current gain on stable resistive loads; set the
    fractional phase correction on a resistive load so that `P = V_RMS*I_RMS`.
+   Active power must be positive on the resistive load (current polarity); if it
+   is negative, correct the sign in the coefficients instead of rewiring.
 6. Write coefficients to a new immutable calibration artifact/NVS revision and
    freeze them before validation.
 7. Validate on at least three separate stable resistive loads across the
@@ -423,7 +424,7 @@ or billing accuracy.
    guard-banded limit when the meter's uncertainty is above 1%, research R-004).
    Below-range/no-load current uses an absolute noise limit, not percentage error.
 9. Hash and preserve raw waveform excerpts, summaries, reference readings,
-   temperatures, scripts, environment, coefficients, and pass/fail output.
+   scripts, environment, coefficients, and pass/fail output.
    Outside-range data is flagged and cannot support the claim.
 
 ## Telemetry, Delivery, and Clock Design
