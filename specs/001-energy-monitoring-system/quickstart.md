@@ -151,8 +151,8 @@ the calibration coefficients, without rewiring.
 ## 8. Controlled calibration and plausibility check
 
 Hardware work is blocked until the qualified safety review is signed. Then follow
-the versioned documents that implementation will place under `docs/safety/` and
-`docs/calibration/`:
+the versioned documents that implementation will place under `guides/safety/` and
+`guides/calibration/`:
 
 1. Perform de-energized visual, protective-earth/isolation, polarity, test-box,
    strain-relief, and conductor checks.

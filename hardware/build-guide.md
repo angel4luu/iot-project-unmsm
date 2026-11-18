@@ -134,7 +134,85 @@ de medición conectada directamente a la red.
   revisión del cableado y del *firmware*, identidad del instrumento, mediciones,
   temperatura e incidencias.
 
-## 4. Etapa 1: ESP32-S3 por sí solo
+## 4. Trabajo en paralelo: hardware, firmware e integración
+
+El montaje físico, el *firmware* y el servidor no tienen que esperar uno al otro.
+Se trabajan en **tres frentes en paralelo**, cada uno con su propia prueba de
+salida, y solo después se integran. Los números T### son las tareas de
+`specs/001-energy-monitoring-system/tasks.md`.
+
+```
+Frente A: hardware (protoboard)      Frente B: firmware            Frente C: servidor
+  Etapas 1–4 con apps de prueba        Código de medición probado     Simulador, MQTT, base de
+  (sin red eléctrica)                  con señales grabadas           datos y Grafana
+        │                                    │                              │
+        └──────────── Integración 1: firmware completo en la placa ─────────┤
+                      (banco, sin red eléctrica)                            │
+                                     └──── Integración 2: nodo real ─► servidor
+                                                      │
+                                     Etapa 5: revisión de seguridad firmada
+                                                      │
+                                     Etapa 6: sesión supervisada con red
+```
+
+### Frente A: hardware en el protoboard (persona A)
+
+| Paso | Qué se hace | Programa que se usa | Prueba de salida |
+|---|---|---|---|
+| A1 | Etapa 1: placa sola | App de prueba de la etapa 1 (T027) | La placa arranca, se une al Wi-Fi y el LED RGB cambia de color |
+| A2 | Etapa 2: pantalla, zumbador y LED | App de prueba de la etapa 2 (T028) | Texto en el OLED, pitido del zumbador, cada color del LED |
+| A3 | Etapas 3 y 4: canales de tensión y corriente | Registrador del ADC (T029) | Vb ≈ 1,65 V con el adaptador desenchufado; *offset* del ACS712 ≈ 1,70 V sin corriente; onda alterna centrada en GPIO4 con el adaptador enchufado |
+| A4 | Grabar señales reales | Registrador del ADC (T029), modo captura | Archivos de captura entregados al frente B |
+
+Este frente **no** conecta nada a la red eléctrica: el ACS712 se prueba sin
+corriente y el adaptador solo alimenta el canal de tensión.
+
+### Frente B: firmware sin la placa (persona B)
+
+El código de medición se escribe y se prueba con **señales grabadas o
+sintéticas**, sin necesitar el protoboard armado: las pruebas corren en un
+ESP32-S3 suelto conectado por USB (los cálculos puros también pueden probarse en
+la computadora):
+
+- T033: señales de prueba sintéticas (senoidal en fase, desfasada, con
+  *offset*, recortada, con huecos, sin corriente).
+- T035–T038: pruebas unitarias de RMS, potencia activa como media de v·i,
+  corrección de desfase, energía, calidad y estados de la pantalla y el LED.
+- T043–T051: los módulos del *firmware* (adquisición, calibración nominal,
+  medición, calidad, punto de control en NVS, cola, MQTT y pantalla).
+
+**Prueba de salida:** `make firmware-test` pasa con todas las señales de prueba,
+y también con las capturas reales del paso A4 cuando estén disponibles.
+
+### Frente C: servidor con datos simulados (persona C, o B cuando termine)
+
+- T009–T025 y T052–T058: contratos, simulador, MQTT con mTLS, base de datos,
+  servicio de ingesta y Grafana.
+
+**Prueba de salida:** `make acceptance-simulated` muestra en Grafana valores con
+unidad, hora, calidad y la etiqueta «no validado», y al menos el 95 % llega en
+10 s o menos.
+
+### Integración, en este orden
+
+1. **Integración 1, firmware en la placa (banco, sin red eléctrica).** Requiere
+   A3 y la prueba de salida de B. Se graba el *firmware* completo en el ESP32-S3
+   del protoboard: la pantalla debe mostrar V cerca del valor esperado con el
+   adaptador enchufado, corriente cercana a cero y el estado correcto del LED.
+2. **Integración 2, nodo real con el servidor (T062).** Requiere la Integración 1
+   y la prueba de salida de C. El nodo usa su propio certificado y sus datos
+   deben aparecer en Grafana con la etiqueta «no validado». Se prueba también
+   apagar el Wi-Fi unos minutos y comprobar que la cola se vacía al volver.
+3. **Etapa 5, revisión de seguridad (T063).** La persona calificada arma o
+   revisa la caja de ensayo y firma. Sin firma no hay paso 4.
+4. **Etapa 6, sesión supervisada (T064).** Calibración nominal y prueba de
+   plausibilidad con cargas reales (sección 10).
+
+Si una integración falla, se vuelve al frente que corresponde (por ejemplo, un
+valor raro de tensión vuelve al frente A o B) y se repite su prueba de salida
+antes de integrar de nuevo. Nunca se depura con la red eléctrica conectada.
+
+## 5. Etapa 1: ESP32-S3 por sí solo
 
 Mantenga la placa desconectada de todos los sensores y de todo lo relacionado
 con la red.
@@ -162,7 +240,7 @@ correcto, el Wi-Fi se conecta sin exponer credenciales y el LED parpadea cuando
 está conectado. Resuelva los problemas de arranque o de aprovisionamiento antes
 de añadir periféricos.
 
-## 5. Etapa 2: periféricos de baja tensión, uno a la vez
+## 6. Etapa 2: periféricos de baja tensión, uno a la vez
 
 Use el ESP32-S3, el cargador USB-C certificado y una tierra común de baja
 tensión. Añada un periférico, pruébelo y apague antes de cambiar el cableado. La
@@ -212,7 +290,7 @@ distinguen y ningún canal está conectado sin su resistencia de 470 Ω.
 Anote el resultado de cada periférico antes de continuar. Si una prueba falla,
 retire ese periférico y vuelva a la última configuración que funcionaba.
 
-## 6. Etapa 3: canal de tensión en el banco de baja tensión
+## 7. Etapa 3: canal de tensión en el banco de baja tensión
 
 Esta etapa usa solo la salida del adaptador CA-CA certificado y aislado. El
 adaptador no se conecta a ninguna entrada de alimentación de CC. No pase ningún
@@ -264,7 +342,7 @@ adaptador produce en GPIO4 una forma de onda periódica centrada y no se observa
 recortes ni tensiones inseguras. Anote la identidad del adaptador, su salida, la
 forma de onda y la polarización medida.
 
-## 7. Etapa 4: canal de corriente sin red eléctrica
+## 8. Etapa 4: canal de corriente sin red eléctrica
 
 Esta etapa verifica solo la salida de baja tensión del ACS712, sin corriente.
 Ningún conductor pasa por IP+/IP−. La polaridad se comprueba después, en la
@@ -290,7 +368,7 @@ primera medición supervisada (etapa 6).
 **Aprobado si:** GPIO5 está cerca de 1,70 V sin corriente, estable y dentro del
 rango del ADC. Esta etapa no usa la red eléctrica.
 
-## 8. Etapa 5: caja de ensayo y revisión de seguridad por una persona calificada
+## 9. Etapa 5: caja de ensayo y revisión de seguridad por una persona calificada
 
 No avance a ninguna conexión con la red hasta que el esquema completo y el
 montaje físico se hayan inspeccionado desenergizados y la persona revisora haya
@@ -346,7 +424,7 @@ La persona revisora verifica y registra como mínimo:
 Una revisión sin firma, incompleta o condicionada no autoriza la conexión a la
 red. Resuelva cada condición con la persona revisora primero.
 
-## 9. Etapa 6: conexión supervisada y calibración
+## 10. Etapa 6: conexión supervisada y calibración
 
 Esta etapa se realiza solo cuando la etapa 5 está completa y firmada. La persona
 calificada supervisa el montaje controlado. No abra la caja de ensayo, no toque el
@@ -401,7 +479,7 @@ La prueba de plausibilidad describe solo la configuración probada del prototipo
 educativo; no es una afirmación de exactitud. No aprueba una instalación permanente, la
 facturación ni el uso como dispositivo de seguridad.
 
-## 10. Solución de problemas
+## 11. Solución de problemas
 
 | Síntoma | Causa probable | Verificación |
 |---|---|---|
@@ -419,7 +497,7 @@ facturación ni el uso como dispositivo de seguridad.
 | La calibración deriva | Calentamiento, variación de la alimentación, temperatura, carga inestable o coeficientes nominales | Repita el calentamiento y el cero registrados y use cargas estables y el multímetro identificado |
 | La persona revisora encuentra un tema de seguridad pendiente | Capacidad, caja de ensayo, protección o cableado no establecidos | Deténgase; resuélvalo y obtenga la firma antes de cualquier conexión a la red |
 
-## 11. Temas pendientes y supuestos
+## 12. Temas pendientes y supuestos
 
 - Se asume que el OLED es un módulo SSD1306 I²C de 4 pines. Confirme el módulo
   real; una pantalla SPI de 7 pines cambia la asignación de pines y requiere una
