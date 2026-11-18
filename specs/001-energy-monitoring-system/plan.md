@@ -292,7 +292,6 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Function | Part (model) | Qty | Source | Status |
 |---|---|---|---|---|
 | Node microcontroller and ADC | Espressif ESP32-S3 DevKitC-1 (internal ADC1) | 1 | Kit | Available |
-| Spare (backup if the main board fails) | ESP32-S3 DevKitC-1 | 1 | Kit | Available |
 | Current sensor | Allegro ACS712 module (variant 05B/20A/30A **to confirm**) | 1 | Kit | Available |
 | Voltage sensor | Certified isolated 220 V AC to 9–12 V **AC** plug-in adapter | 1 | Buy | To buy |
 | Signal conditioning | Resistor assortment 10 kΩ–100 kΩ, 1/4 W; 10 µF and 100 nF capacitors | 1 set | Buy | To buy (low cost) |
