@@ -60,7 +60,7 @@ only its matching node topics.
 | `procedure_version` | string | Versioned procedure reference |
 | `dataset_manifest_sha256` | string | Hash of immutable evidence manifest |
 | `accepted_at` | timestamp? | Null until every plausibility point passes (`nominal`) or every acceptance point passes (`reference`) |
-| `accepted_by` | string? | Qualified reviewer/operator identity |
+| `accepted_by` | string? | Operator identity (team member who accepted the calibration; a qualified reviewer only in a future mains session) |
 
 Calibration records are append-only. Editing coefficients creates a new revision.
 

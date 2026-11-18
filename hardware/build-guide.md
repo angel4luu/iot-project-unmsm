@@ -63,22 +63,40 @@ ensayo cerrada del ACS712 y la revisión firmada por una persona calificada
 
 ### Componentes
 
-| Función | Componente y detalle nominal | Cómo pedirlo | Cant. | Estado / origen |
-|---|---|---|---:|---|
-| Controlador y ADC | Espressif ESP32-S3 DevKitC-1, ADC1 interno | `ESP32-S3 DevKitC-1` | 1 | Kit; disponible |
-| Sensor de corriente | Módulo Allegro ACS712ELCTR-20A, 100 mV/A | `módulo sensor de corriente ACS712 20A` | 1 | Kit; disponible |
-| Alimentación del lazo y sensor de tensión | Adaptador enchufable certificado, **con protección térmica**, de núcleo de hierro, 220 V CA a 12 V **CA**, 2 A o más | `adaptador transformador 220V a 12V AC 2A con protección térmica (salida alterna ~)` | 1 | Comprar |
-| Conector del adaptador | Jack DC hembra con bornera de tornillos, del mismo tamaño que el conector del adaptador (normalmente 5,5 × 2,1 mm; **revise el conector**). De sus tornillos salen los jumpers de tensión y el cable del lazo | `jack DC hembra con bornera 5.5x2.1` | 1 | Comprar; bajo costo |
-| Carga de prueba | Foco halógeno G4 12 V 20 W (o un foco de auto de 12 V, unos 21 W) | `foco halógeno G4 12V 20W` | 1 | Comprar si no hay en casa; bajo costo |
-| Cableado del lazo | Cable de casa (dos tramos cortos, de un cable viejo) y cables con pinzas cocodrilo del kit; una regleta de bornes solo si no hay pinzas | `regleta de bornes 12 polos` (solo si no hay pinzas) | 1 juego | Casa o kit |
-| Montaje de baja tensión | Protoboard y cables jumper macho-macho (solo señales de baja tensión) | `protoboard 830 puntos`; `cables jumper macho-macho` | 1 juego | Kit; disponible |
-| Resistencias de divisores y polarización | 1/4 W: 100 kΩ, 4,7 kΩ ×2, 10 kΩ ×3 | `resistencias 1/4 W 100k, 10k, 4.7k` | 1 juego | Comprar; bajo costo |
-| Condensadores de polarización y filtro | 10 µF ×1 y 22 nF ×2 | `condensador electrolítico 10uF 25V`; `condensador cerámico 22nF` | 1 juego | Comprar; bajo costo |
-| Aviso local | Zumbador activo de 5 V | `buzzer activo 5V` | 1 | Kit; disponible |
-| Luz de estado | LED RGB, se asume cátodo común, con 3 × 470 Ω | `LED RGB cátodo común 5 mm` | 1 | Kit; confirmar tipo |
-| Pantalla local | OLED de 0,96", se asume SSD1306 I²C de 4 pines | `pantalla OLED 0.96 I2C SSD1306` | 1 | Kit; confirmar interfaz |
-| Excitación del zumbador | Transistor NPN 2N2222 o PN2222A y resistencia de base de 1 kΩ | `transistor 2N2222`; `resistencia 1k 1/4 W` | 1 c/u | Comprar; bajo costo |
-| Alimentación del nodo | Cargador USB-C certificado de 5 V, 2 A, y cable | `cargador USB-C 5V 2A certificado` | 1 | Kit; disponible |
+Cada fila es una pieza o un valor, con su cantidad exacta. «Kit» significa que el
+equipo ya lo tiene; confirme la cantidad antes de la compra.
+
+| # | Función | Componente y especificación | Cómo pedirlo | Cant. | Origen |
+|---:|---|---|---|---:|---|
+| 1 | Controlador y ADC | Espressif ESP32-S3 DevKitC-1, ADC1 interno | `ESP32-S3 DevKitC-1` | 1 | Kit |
+| 2 | Sensor de corriente | Módulo Allegro ACS712ELCTR-20A, 100 mV/A, con bornera de tornillos IP+/IP− y pines VCC, OUT, GND | `módulo sensor de corriente ACS712 20A` | 1 | Kit |
+| 3 | Alimentación del lazo y sensor de tensión | Adaptador enchufable certificado, **con protección térmica**, de núcleo de hierro; entrada 220 V CA, 60 Hz; salida **12 V CA** (símbolo «~» o «AC OUTPUT»), 2 A o más (24 VA o más); conector cilíndrico, normalmente 5,5 × 2,1 mm. No sirve un cargador de CC ni una fuente conmutada | `adaptador transformador 220V a 12V AC 2A con protección térmica (salida alterna ~)` | 1 | Comprar |
+| 4 | Conector del adaptador | Jack DC hembra con bornera de 2 tornillos, del mismo tamaño que el conector del adaptador (**revise el conector antes de comprar**). Rotúlelo «CA» | `jack DC hembra con bornera 5.5x2.1` | 1 | Comprar |
+| 5 | Carga de prueba | Foco halógeno G4 de 12 V y 20 W (≈ 1,7 A). Alternativa: foco de auto de 12 V y 21 W (P21W) | `foco halógeno G4 12V 20W` | 1 | Comprar si no hay en casa |
+| 6 | Cable del lazo | Cable de casa de cobre de 0,75 mm² (18 AWG) o más, por ejemplo cable mellizo de lámpara: dos tramos de unos 30 cm | — | 2 tramos | Casa |
+| 7 | Conexión del foco | Cables cortos con pinzas cocodrilo | `cables con pinzas cocodrilo` | 2 | Kit (confirmar) |
+| 8 | Conexión del foco (solo si no hay pinzas) | Regleta de bornes; se usan 2 bornes cortados de la tira | `regleta de bornes 12 polos` | 1 | Comprar solo si falta la fila 7 |
+| 9 | Montaje de baja tensión | Protoboard de 830 puntos | `protoboard 830 puntos` | 1 | Kit |
+| 10 | Conexiones en el protoboard | Cables jumper macho-macho | `cables jumper macho-macho` | unos 20 | Kit |
+| 11 | Conexión del ACS712 y del OLED | Cables jumper macho-hembra (VCC, OUT, GND del ACS712; 4 del OLED si no se inserta en el protoboard) | `cables jumper macho-hembra` | 3–7 | Kit (confirmar) |
+| 12 | R1, divisor de tensión | Resistencia 100 kΩ, 1/4 W, 1 % o 5 % | `resistencia 100k 1/4W` | 1 | Comprar |
+| 13 | R2 (divisor de tensión) y R3 (divisor de corriente) | Resistencia 4,7 kΩ, 1/4 W | `resistencia 4.7k 1/4W` | 2 | Comprar |
+| 14 | Polarización Vb (2) y R4 (divisor de corriente) | Resistencia 10 kΩ, 1/4 W | `resistencia 10k 1/4W` | 3 | Comprar |
+| 15 | Resistencias del LED RGB | Resistencia 470 Ω, 1/4 W | `resistencia 470 ohm 1/4W` | 3 | Kit (comprar si faltan) |
+| 16 | Resistencia de base del transistor | Resistencia 1 kΩ, 1/4 W | `resistencia 1k 1/4W` | 1 | Kit (comprar si falta) |
+| 17 | Condensador de la polarización Vb | Electrolítico 10 µF, 25 V o más (tiene polaridad) | `condensador electrolítico 10uF 25V` | 1 | Comprar |
+| 18 | Filtros antialias de GPIO4 y GPIO5 | Cerámico 22 nF (código «223»), 50 V | `condensador cerámico 22nF` | 2 | Comprar |
+| 19 | Excitación del zumbador | Transistor NPN 2N2222 o PN2222A (TO-92) | `transistor 2N2222` | 1 | Comprar |
+| 20 | Aviso local | Zumbador activo de 5 V (suena solo con tensión continua) | `buzzer activo 5V` | 1 | Kit |
+| 21 | Luz de estado | LED RGB de 4 patas, se asume cátodo común | `LED RGB cátodo común 5 mm` | 1 | Kit (confirmar tipo) |
+| 22 | Pantalla local | OLED de 0,96", se asume SSD1306 I²C de 4 pines (GND, VCC, SCL, SDA) | `pantalla OLED 0.96 I2C SSD1306` | 1 | Kit (confirmar interfaz) |
+| 23 | Alimentación del nodo | Cargador certificado de 5 V y 2 A, y cable con el conector de la placa (USB-C o micro-USB, según su versión) | `cargador USB-C 5V 2A certificado` | 1 | Kit |
+
+**Resumen de compra** (lo que no tiene el kit): adaptador (fila 3) ×1, jack
+(fila 4) ×1, foco (fila 5) ×1 si no hay en casa, resistencias 100 kΩ ×1,
+4,7 kΩ ×2 y 10 kΩ ×3, condensadores 10 µF ×1 y 22 nF ×2, transistor 2N2222 ×1,
+y la regleta solo si no hay pinzas. Las resistencias y condensadores cuestan
+céntimos: conviene comprar uno o dos de repuesto de cada valor.
 
 Montaje mínimo (MVP, plan B): solo se listan los componentes necesarios para
 medir, indicar localmente y calibrar. No se asume laboratorio ni electricista.
@@ -102,7 +120,9 @@ servos ni los sensores no relacionados.
 
 - Entorno ESP-IDF 5.4 LTS y las instrucciones de compilación y grabación del
   *firmware* del proyecto.
-- Destornillador pequeño (bornera del jack y tornillos del ACS712).
+- Destornillador pequeño de punta plana (bornera del jack y tornillos del ACS712).
+- Pelacables o, con cuidado, una tijera o cuchilla para pelar los extremos del
+  cable del lazo; cinta aislante para cubrir cualquier extremo que sobre.
 - No se usa multímetro de referencia (constitución 2.0.0): las tensiones del
   banco (polarización y *offset*) se leen con el propio ADC del ESP32-S3, y las
   lecturas del prototipo se rotulan como «no validadas». Un multímetro básico
@@ -228,7 +248,8 @@ etapa 2 no tiene conexión a la red ni conductor de red en el ACS712.
 1. Confirme que el módulo es el SSD1306 I²C de 4 pines asumido. Un OLED SPI de
    7 pines no coincide con esta asignación: deténgase y corrija el plan de pines
    antes de cablear.
-2. Conecte SDA a GPIO8, SCL a GPIO9, VCC a 3V3 y GND a la tierra común.
+2. Conecte SDA a GPIO8, SCL a GPIO9, VCC a 3V3 y GND a la tierra común. Lea las
+   etiquetas del módulo: el orden de GND y VCC cambia entre fabricantes.
 3. El plan asume que el módulo tiene sus propias resistencias pull-up de I²C. No
    añada pull-ups no previstas sin revisar el módulo y el esquema.
 4. Ejecute la prueba de pantalla y muestre una pantalla de estado simple con
@@ -241,8 +262,9 @@ legible.
 
 1. No excite el zumbador de 5 V directamente desde un GPIO del ESP32.
 2. Conecte GPIO16 a la base del 2N2222 a través de una resistencia de 1 kΩ.
-   Conecte el emisor a la tierra común y el zumbador entre 5 V y el colector,
-   como en el esquema de baja tensión revisado.
+   Conecte el emisor a la tierra común y el zumbador entre el pin 5V de la placa
+   y el colector: la pata «+» (la más larga) del zumbador va a 5V y la «−», al
+   colector.
 3. Confirme el orden de pines real del transistor en su hoja de datos antes de
    cablear; no es igual en todos los encapsulados.
 4. Active brevemente el zumbador desde el *firmware* y confirme que lo conmuta el
@@ -253,8 +275,10 @@ caso y el GPIO solo está conectado a través de la resistencia de base.
 
 ### LED RGB: GPIO17 / GPIO18 / GPIO21
 
-1. Confirme que el LED es de cátodo común (asumido). Conecte el cátodo común a
-   GND.
+1. Confirme que el LED es de cátodo común (asumido). En el de cátodo común, la
+   pata más larga es el cátodo y va a GND. Si al probar no enciende ningún color,
+   puede ser de ánodo común: deténgase y anótelo (cambia el cableado y el
+   *firmware*).
 2. Conecte rojo a GPIO17, verde a GPIO18 y azul a GPIO21, cada uno con su propia
    resistencia en serie de 470 Ω.
 3. Pruebe cada color por separado y luego las indicaciones normal, advertencia,
@@ -279,8 +303,12 @@ conductor por el ACS712 en esta etapa: el foco todavía no se conecta.
   dos cables jumper desde sus tornillos al protoboard; no se corta ningún cable.
   Mantenga el adaptador desenchufado del tomacorriente mientras
   cablea.
+- Lleve el pin 3V3 y un pin GND de la placa a las líneas de alimentación del
+  protoboard.
 - Arme el nodo de polarización de 1,65 V (Vb): dos resistencias iguales de
-  10 kΩ en serie entre 3V3 y GND, con 10 µF de Vb a GND.
+  10 kΩ en serie entre 3V3 y GND, con el condensador de 10 µF de Vb a GND. El
+  electrolítico tiene polaridad: la pata «+» (la larga) va a Vb y la marcada
+  con la franja «−», a GND.
 - Conecte un cable de salida del adaptador directamente a Vb. La salida del
   adaptador está aislada (flotante), así que esto solo referencia la señal
   alterna a 1,65 V. Este diseño no lleva condensador de acoplamiento en serie.
@@ -306,8 +334,8 @@ conductor por el ACS712 en esta etapa: el foco todavía no se conecta.
 3. Enchufe el adaptador certificado en un tomacorriente común solo después
    de revisar el cableado de baja tensión. Capture la forma de onda en GPIO4 y
    confirme una oscilación alterna centrada.
-4. Para el adaptador de 12 V CA, el plan estima como máximo unos ±1,1 V de pico
-   en GPIO4 aun si en vacío entrega unos 15–18 V RMS. Tómelo solo como una
+4. Para el adaptador de 12 V CA, el plan estima unos ±0,76 V de pico en GPIO4 con
+   12 V RMS y como máximo unos ±1,1 V aun si en vacío entrega unos 18 V RMS. Tómelo solo como una
    oscilación esperada aproximada; verifique en el banco el adaptador real y la
    forma de onda del ADC.
 5. Confirme que la forma de onda permanece en el rango lineal del ADC y no se
@@ -327,9 +355,9 @@ primera medición con el foco (etapa 6).
 
 ### Circuito nominal y verificaciones
 
-1. Alimente el módulo ACS712 con 5 V del cargador USB-C certificado. El módulo
-   tiene su propio condensador de desacoplo. Conecte su tierra de baja tensión a
-   la tierra común.
+1. Con tres jumpers macho-hembra, conecte VCC del módulo ACS712 al pin 5V de la
+   placa (que recibe los 5 V del cargador), GND a la tierra común y OUT al
+   divisor del paso 2. El módulo tiene su propio condensador de desacoplo.
 2. Pase la salida OUT del módulo por el divisor propuesto R3 = 4,7 kΩ y
    R4 = 10 kΩ. La carga total es de 14,7 kΩ, mayor que el mínimo de 4,7 kΩ del
    ACS712. El divisor lleva la salida del sensor a un rango seguro de 3,3 V para
@@ -355,8 +383,11 @@ pero la revisión la hacen dos integrantes del equipo y se anota.
 2. Tramo 1: del tornillo 1 del jack al tornillo IP+ del ACS712. Ajuste ambos
    tornillos.
 3. Del tornillo IP− del ACS712 a una pata del foco, con una pinza cocodrilo (o
-   con un borne de la regleta).
+   con un borne de la regleta). Las patas del G4 son finas: muerda cada pata
+   con su pinza sin que las dos pinzas se toquen. Con un foco de auto, una
+   pinza va al contacto de la base y la otra al casquillo metálico.
 4. Tramo 2: de la otra pata del foco (pinza o regleta) al tornillo 2 del jack.
+   Como el lazo es de CA, da igual qué tornillo del jack es el 1 o el 2.
 5. Los dos jumpers de tensión siguen saliendo de los mismos tornillos del jack
    hacia el protoboard, como en la etapa 3.
 
@@ -412,7 +443,8 @@ nominales y sus lecturas se rotulan como «no validadas» (constitución 2.0.0).
    sesión.
 4. Desenchufe, conecte la pinza del foco y vuelva a enchufar. La potencia debe
    salir positiva: eso confirma la polaridad del ACS712. Si sale negativa,
-   corrija el signo en los coeficientes; no recablee. Guarde el resultado como
+   corrija el signo en los coeficientes; no recablee. Con el foco de 20 W, GPIO5
+   oscila unos ±0,16 V de pico alrededor de 1,70 V. Guarde el resultado como
    revisión de calibración `nominal`, congélela y regístrela en el servidor.
 5. Prueba de plausibilidad (E1): con el foco encendido, la tensión debe estar
    entre 10 y 16 V, la potencia debe ser positiva y quedar dentro de ±20 % de
@@ -461,8 +493,13 @@ educativo; no es una afirmación de exactitud.
   cambiar el circuito.
 - Adaptador y foco por comprar. Verifique la certificación, la salida CA, la
   protección térmica y que la corriente nominal sea de 2 A o más.
-- Confirme si el kit tiene cables con pinzas cocodrilo; si no, compre una
-  regleta de bornes pequeña.
+- Confirme en el kit: 2 cables con pinzas cocodrilo, 3–7 jumpers macho-hembra,
+  3 resistencias de 470 Ω y 1 de 1 kΩ. Compre solo lo que falte (la regleta
+  reemplaza a las pinzas).
+- El ESP32-S3 DevKitC-1 es ancho y en un protoboard de 830 puntos puede dejar
+  libre una sola fila de agujeros por lado (o ninguna). Si no quedan agujeros
+  libres para un pin que se necesita, conecte ese pin con un jumper
+  macho-hembra directo al pin de la placa.
 - Los pines del ADC, la atenuación y los parámetros exactos de calibración del
   *firmware* se confirman en el banco.
 - La calibración nominal y la tabla de plausibilidad deben completarse antes de

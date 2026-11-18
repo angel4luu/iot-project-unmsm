@@ -39,7 +39,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Task list | Turn the design into an ordered to-do list (95 tasks, hardware and software tracks in parallel) | ✅ Nov 18 |
 | Simulated version | Server, database and dashboard working with fake data | ⏳ |
 | Device software | Measuring and calculating on the ESP32 | ⬜ |
-| Safety review and calibration | Qualified review **before** connecting to mains; nominal calibration and plausibility check (no reference meter) | ⬜ |
+| Loop check and calibration | Team checks the 12 V bulb loop (adapter unplugged); nominal calibration and plausibility check against the bulb's label (no reference meter) | ⬜ |
 | Full system tests | Real device end to end, network-outage recovery, security | ⬜ |
 | Alerts | Local LED/buzzer and remote notifications | ⬜ |
 | Final acceptance | Check all success criteria | ⬜ |
@@ -83,6 +83,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Parts list checked: the build guide now lists every part with an exact quantity (23 rows: 100 kΩ ×1, 4.7 kΩ ×2, 10 kΩ ×3, 470 Ω ×3, 1 kΩ ×1, 10 µF ×1, 22 nF ×2, male-to-female jumpers, 18 AWG loop cable, wire stripper) and a short shopping summary; polarity notes for the capacitor, buzzer and RGB LED. Leftover 220 V details removed from the plan's pin table, research, data model, task T033 and the contract examples (now 12.6 V, 1.62 A, 20.4 W) |
 | 2026-11-18 | Plan B: no electrician available, so the demo measures a 12 V halogen bulb fed by a thermally protected 12 V AC adapter. RCD, test box, household loads and the qualified review leave the MVP (kept for a future 220 V test). Tests are now E1 (bulb vs. its label, ±20 %), E2 alerts (bulb on/off, ~15 W limit), E3 latency, E4 recovery, E5 busiest hour with the simulator. Specs, tasks (+2: calibration registration, retention test), build guide, article (Fig. 4 redrawn, Tables I–II) updated |
 | 2026-11-18 | Consistency check (`/speckit.analyze`): no critical issues; 3 high to fix before the first 220 V session (who builds the test box, a circular rule on "accepted" calibration, how the dashboard learns the "not validated" label). Build guide: new section 4 on building hardware, firmware and server in parallel, then integrating |
 | 2026-11-18 | Task list created (`specs/.../tasks.md`, 93 tasks): setup, shared foundations, then live monitoring (the MVP), history, alerts. Breadboard tests and the server with fake data can run at the same time. Project guides go in `guides/` because `docs/` is not tracked |

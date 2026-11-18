@@ -104,7 +104,7 @@ that every story needs. **No user story work starts before this phase is done.**
 - [ ] T030 [P] Implement encrypted-NVS credential provisioning from an ignored per-device manifest in `firmware/components/telemetry/provisioning.c` and `scripts/provision-node.py`
 - [ ] T031 [P] Implement the clock module (SNTP UTC, `sntp`/`holdover`/`unsynchronized`, monotonic uptime) in `firmware/components/telemetry/clock.c`
 - [ ] T032 [P] Implement the Unity test runner and waveform-fixture loader in `firmware/test/main/test_main.c` and `firmware/test/fixtures/README.md`; wire `make firmware-test` and `make firmware-build`
-- [ ] T033 [P] Generate synthetic waveform fixtures (pure sine at 220 V/2.3 A in phase, 60° lag, DC offset, clipping, sample gap, no current) in `tests/fixtures/waveforms/generate.py` with outputs in `tests/fixtures/waveforms/*.csv`
+- [ ] T033 [P] Generate synthetic waveform fixtures (pure sine at 12 V/1.7 A in phase as on the plan B loop, 60° lag, DC offset, clipping, sample gap, no current) in `tests/fixtures/waveforms/generate.py` with outputs in `tests/fixtures/waveforms/*.csv`
 - [ ] T034 Annotate build guide stages 1–4 with the bring-up app each stage uses (T027–T029) in `hardware/build-guide.md`
 
 **Checkpoint**: `make contracts-test`, `make infra-up`/`infra-health`, `make simulate SCENARIO=normal` run; bring-up apps pass build guide stages 1–4 on the breadboard (no mains).

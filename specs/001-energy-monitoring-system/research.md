@@ -29,7 +29,8 @@ is ever done.
 **Amended 2026-11-18** (hardware adapted to the team's available kit; supersedes
 the 2026-10-14 SCT-013-020/ZMPT101B decision).
 
-**Decision**: Current is sensed with the team's `ACS712` Hall-effect module (the
+**Mains decision (kept for the future 220 V session; the MVP uses the plan B
+ranges above)**: Current is sensed with the team's `ACS712` Hall-effect module (the
 load conductor passes through the module). Voltage is sensed with a certified,
 isolated 220 V-to-9–12 V **AC-AC** plug-in adapter (AC output, not a DC charger);
 it is the only sensing part bought. Bare or exposed ZMPT101B modules remain
@@ -429,8 +430,8 @@ are fixed in implementation lockfiles.
 Verification layers are calculation unit tests with recorded waveform fixtures,
 JSON Schema contract tests, broker/ingestion/storage integration tests, outage and
 clock-fault injection, dashboard provisioning checks, secret scanning, and
-plausibility checks on real loads (no reference meter, R-004). Hardware-in-the-loop tests are separately
-marked because they require qualified supervision.
+plausibility checks on the 12 V bulb loop (no reference meter, R-004). Hardware-in-the-loop tests are separately
+marked because they need the physical prototype.
 
 **Rationale**: These tools have stable support for the selected device, protocol,
 storage, and reproducible local deployment, while keeping the repository split

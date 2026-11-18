@@ -296,15 +296,15 @@ demonstration, with minimal purchases. Rationale and safety conditions are in
 | Current sensor | Allegro ACS712ELCTR-20A module (100 mV/A, confirmed) | "módulo sensor de corriente ACS712 20A" | 1 | Kit | Available |
 | Voltage sensor and loop supply | Certified, **thermally protected**, iron-core plug-in adapter, 220 V AC to 12 V **AC**, rated ≥ 2 A (plan B, 2026-11-18). Feeds both the voltage channel and the 12 V test loop | "adaptador transformador 220V a 12V AC 2A con protección térmica (salida alterna ~)" | 1 | Buy | To buy |
 | Adapter connector | Female DC barrel jack with screw terminals, matching the adapter's plug (usually 5.5 × 2.1 mm; **check the plug**). Its two terminals feed the voltage jumpers to the breadboard and the load-loop cable; label it "AC" | "jack DC hembra con bornera 5.5x2.1" | 1 | Buy | To buy (low cost) |
-| Low-voltage assembly | Solderless breadboard and male-to-male jumper wires (low-voltage circuitry only) | "protoboard 830 puntos"; "cables jumper macho-macho" | 1 set | Kit | Available |
-| Signal conditioning | Resistors 1/4 W: 100 kΩ, 4.7 kΩ ×2, 10 kΩ ×3; capacitors 10 µF ×1, 22 nF ×2 | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 1 set | Buy | To buy (low cost) |
-| Local alert | Buzzer | "buzzer activo 5V" | 1 | Kit | Available |
-| Status light | Kit RGB LED (assumed common cathode, **to confirm**) with 3 × 470 Ω | "LED RGB cátodo común 5 mm" | 1 | Kit | Available |
+| Low-voltage assembly | Solderless 830-point breadboard; about 20 male-to-male jumpers; 3–7 male-to-female jumpers (ACS712 VCC/OUT/GND, and the OLED or any ESP32 pin left without a free breadboard hole) | "protoboard 830 puntos"; "cables jumper macho-macho"; "cables jumper macho-hembra" | 1 set | Kit | Available (confirm male-to-female count) |
+| Signal conditioning | Resistors 1/4 W: 100 kΩ ×1 (R1), 4.7 kΩ ×2 (R2, R3), 10 kΩ ×3 (bias ×2, R4); capacitors 10 µF ≥ 25 V electrolytic ×1 (bias), 22 nF ceramic ×2 (anti-alias) | "resistencias 1/4 W 100k, 10k, 4.7k"; "condensador electrolítico 10uF 25V"; "condensador cerámico 22nF" | 6 R + 3 C | Buy | To buy (low cost; one or two spares per value) |
+| Local alert | Active 5 V buzzer | "buzzer activo 5V" | 1 | Kit | Available |
+| Status light | Kit RGB LED (assumed common cathode, **to confirm**) with 3 × 470 Ω 1/4 W series resistors | "LED RGB cátodo común 5 mm"; "resistencia 470 ohm" | 1 LED + 3 R | Kit | Available (buy resistors only if missing) |
 | Local display | OLED 0.96" module, assumed 4-pin SSD1306 on I²C (**to confirm**; a 7-pin SPI module changes the pin table) | "pantalla OLED 0.96 I2C SSD1306" | 1 | Kit | Available |
-| Buzzer driver | NPN transistor 2N2222 (or PN2222A) + 1 kΩ base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 | Buy | To buy (low cost) |
-| Node power | Certified USB-C charger and cable | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
+| Buzzer driver | NPN transistor 2N2222 (or PN2222A, TO-92) + 1 kΩ 1/4 W base resistor | "transistor 2N2222", "resistencia 1k 1/4 W" | 1 + 1 R | Buy transistor; resistor from kit | To buy (low cost) |
+| Node power | Certified 5 V 2 A charger and a cable matching the board's connector (USB-C or micro-USB, depending on board revision) | "cargador USB-C 5V 2A certificado" | 1 | Kit | Available |
 | Test load | One 12 V halogen bulb: G4 12 V 20 W (or a 12 V car bulb, about 21 W); stable resistive load of about 1.7 A | "foco halógeno G4 12V 20W" | 1 | Team or buy | To buy (low cost) |
-| Load-loop wiring | Household cable (about 1 m, two short pieces) from old stock plus the kit's alligator-clip leads; a small terminal strip only if no alligator leads are available. Carries the bulb current from the jack terminals through the ACS712 to the bulb, never through the breadboard | "regleta de bornes 12 polos" (only if no alligator leads) | 1 set | Team or buy | Available (check clips) |
+| Load-loop wiring | Household copper cable ≥ 0.75 mm² (18 AWG), e.g. lamp cord, two pieces of about 30 cm, from old stock; 2 short alligator-clip leads from the kit; a terminal strip (2 positions used) only if no alligator leads are available. Carries the bulb current from the jack terminals through the ACS712 to the bulb, never through the breadboard | "regleta de bornes 12 polos" (only if no alligator leads) | 1 set | Team or buy | Available (check clips) |
 
 Minimal MVP build, plan B (2026-11-18): only parts needed for measurement, local
 indication, safety, and calibration are listed. No laboratory and no electrician
@@ -344,7 +344,9 @@ instead of a relay bench.
   R1 = 100 kΩ, R2 = 4.7 kΩ referenced to a 1.65 V bias (2 × 10 kΩ from 3.3 V,
   10 µF), giving about ±1.1 V peak for an unloaded 15 V adapter (about 18 V RMS);
   current divider R3 = 4.7 kΩ, R4 = 10 kΩ (14.7 kΩ load, above the ACS712's
-  4.7 kΩ minimum), mapping 2.5 V ± 0.71 V at 5 A RMS to about 1.70 V ± 0.48 V;
+  4.7 kΩ minimum), mapping 2.5 V ± 0.71 V at 5 A RMS to about 1.70 V ± 0.48 V
+  (on the plan B loop, about 1.7 A RMS gives about ±0.16 V peak at GPIO5, and
+  12 V RMS gives about ±0.76 V peak at GPIO4);
   22 nF from each ADC input to ground (anti-alias corner about 1.6–2.3 kHz;
   the small phase shift is absorbed by the phase correction); the ACS712 module
   already carries its supply decoupling capacitor. Proposed ADC pins: GPIO4 (ADC1_CH3) voltage, GPIO5
@@ -369,7 +371,7 @@ instead of a relay bench.
   | 3V3 | Bias divider, OLED VCC | |
   | 5V | ACS712 VCC (module has its own decoupling), buzzer | From the USB-C supply |
   | GND | Common ground of all low-voltage parts | |
-  | USB-C | Certified 5 V charger | No PC connection while energized unless the reviewer approves |
+  | USB | Certified 5 V charger | A PC USB link is acceptable in plan B (everything is extra-low voltage) |
 
 - **Mains safety (plan B)**: the team does no mains wiring; the ACS712 carries
   only the 12 V loop current. Rewire only with the adapter unplugged, keep the
