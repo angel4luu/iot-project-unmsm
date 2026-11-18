@@ -35,11 +35,11 @@ only its matching node topics.
 | `circuit_id` | string | Primary key; same identifier rules as `node_id` |
 | `node_id` | string | Unique foreign key to `MonitoringNode` |
 | `display_name` | string | 1–80 characters |
-| `nominal_voltage_V` | decimal | Default 220; informational, not a substitute for measured voltage |
-| `calibrated_voltage_min_V` | decimal | Default 180 |
-| `calibrated_voltage_max_V` | decimal | Default 250 |
+| `nominal_voltage_V` | decimal | Default 12 (plan B 12 V AC loop); informational, not a substitute for measured voltage |
+| `calibrated_voltage_min_V` | decimal | Default 10 |
+| `calibrated_voltage_max_V` | decimal | Default 16 |
 | `calibrated_current_min_A` | decimal | Default 0.5 (ACS712-20A) |
-| `calibrated_current_max_A` | decimal | Default 5.0 (ACS712-20A) |
+| `calibrated_current_max_A` | decimal | Default 2.0 (ACS712-20A, 12 V loop) |
 | `active` | boolean | Inactive circuits do not create consumption alerts |
 
 ### CalibrationArtifact
@@ -70,7 +70,7 @@ Calibration records are append-only. Editing coefficients creates a new revision
 |---|---|---|
 | `config_version` | integer | Monotonically increasing per node |
 | `node_id`, `circuit_id` | string | Must match the target node/circuit |
-| `active_power_limit_W` | decimal | `>0` and `<=1100` for the calibrated MVP (schema wire bound 2,500) |
+| `active_power_limit_W` | decimal | `>0` and `<=25` for the plan B MVP range (schema wire bound 2,500) |
 | `confirm_ms` | integer | 1,000–300,000; default 10,000 |
 | `clear_below_W` | decimal | `>=0` and `< active_power_limit_W`; default 95% of limit |
 | `clear_ms` | integer | 1,000–300,000 |

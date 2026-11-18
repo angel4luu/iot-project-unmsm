@@ -10,7 +10,8 @@
 \subsection{Diseño de la investigación}
 \label{sec:design}
 Es una investigación aplicada de desarrollo tecnológico, cuantitativa y experimental, sin hipótesis formal: se construye el sistema y se caracteriza su desempeño; al no disponerse de un instrumento de referencia, las mediciones se verifican solo por plausibilidad y no se afirma su exactitud.
-El escenario es una carga monofásica alimentada desde un tomacorriente común de \SI{220}{V} protegido por un interruptor diferencial de \SI{30}{mA}, con un rango de operación de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz}, \SIrange{0,5}{5,0}{A} RMS y hasta unos \SI{1,1}{kW}.
+El escenario es un lazo monofásico de \SI{12}{V} CA con un foco halógeno, alimentado por un adaptador enchufable certificado con protección térmica, con un rango de operación de \SIrange{10}{16}{V} RMS, \SIrange{55}{65}{Hz}, \SIrange{0,5}{2,0}{A} RMS y hasta unos \SI{25}{W}.
+Solo el adaptador se conecta a la red de \SI{220}{V}, de modo que el equipo no realiza cableado de red; la medición de una carga de \SI{220}{V} queda como trabajo futuro.
 Es un prototipo educativo construido sobre todo con componentes disponibles, no destinado a instalación permanente, facturación ni protección de equipos.
 La unidad de análisis es el resumen de \SI{5}{s}; las variables independientes son la carga y el estado de la red, y las dependientes, las magnitudes eléctricas, su desviación respecto de la potencia de placa, la latencia, la entrega y recuperación de registros y la activación de alertas.
 
@@ -47,12 +48,11 @@ Función & Modelo & Papel en el sistema & Or. \\
 \midrule
 Micro\-con\-tro\-la\-dor & ESP32-S3 DevKitC-1 & ADC interno, cálculo y Wi-Fi & K \\
 Corriente & ACS712-20A (\SI{100}{mV/A}) & Conductor de la carga; aislamiento Hall & K \\
-Tensión & Adaptador CA-CA certificado, \SIrange{9}{15}{V}, con jack hembra de bornera & Réplica aislada de la tensión de red & C \\
+Tensión & Adaptador \SI{220}{V}/\SI{12}{V} CA certificado, con protección térmica, y jack hembra de bornera & Alimenta el lazo y su tensión & C \\
 Acondi\-cio\-na\-mien\-to & Divisores, polarización y filtros RC en protoboard & Escalado a \SIrange{0}{3,3}{V} y antialias & C \\
 Pantalla & OLED \SI{0,96}{''} SSD1306 (I\textsuperscript{2}C) & Valores y estado locales & K \\
 Indicación & LED RGB; zumbador con 2N2222 & Estado y aviso local & K/C \\
-Protección & Interruptor diferencial de \SI{30}{mA} (del tablero o portátil) & Seguridad del lado de red & K/C \\
-Caja de ensayo & Caja cerrada con ACS712 y tomacorriente & Aislamiento del camino de red & C \\
+Carga & Foco halógeno \SI{12}{V}, \SI{20}{W}, con pinzas cocodrilo & Carga resistiva del lazo & C \\
 Servidor & Computadora del equipo con Docker Compose & Corredor, ingesta, almacenamiento y panel & K \\
 \bottomrule
 \multicolumn{4}{@{}l}{\scriptsize Or.: origen; K, disponible (kit o equipo propio); C, compra.}
@@ -62,22 +62,23 @@ Servidor & Computadora del equipo con Docker Compose & Corredor, ingesta, almace
 \begin{figure*}[t]
   \centering
   \input{figures/fig02b-circuit}
-  \caption{Circuito de baja tensión del nodo con la conexión de cada componente a los pines del ESP32-S3 DevKitC-1, agrupados por función y no por su posición física. Valores nominales y pines propuestos, a verificar en el banco de pruebas. La red no se dibuja: el adaptador y el ACS712 forman la barrera de aislamiento.}
+  \caption{Circuito de baja tensión del nodo con la conexión de cada componente a los pines del ESP32-S3 DevKitC-1, agrupados por función y no por su posición física. Valores nominales y pines propuestos, a verificar en el banco de pruebas. La red no se dibuja: el adaptador certificado aísla el lazo de \SI{12}{V}.}
   \label{fig:circuit}
 \end{figure*}
 
 La señal recorre el circuito en este orden:
 \begin{enumerate}
-  \item La carga se alimenta desde un tomacorriente común protegido por un interruptor diferencial de \SI{30}{mA}, y su conductor atraviesa el ACS712.
-  \item El ACS712 entrega \SI{100}{mV/A} centrados en \SI{2,5}{V}, aislados de la red; el divisor $R_3$--$R_4$, con carga mayor que el mínimo de \SI{4,7}{k\ohm} del sensor, lo lleva a $\SI{1,70}{V}\pm\SI{0,48}{V}$ a \SI{5}{A}.
-  \item El adaptador, conectado al mismo circuito, entrega una réplica aislada de la tensión de red, que $R_1$--$R_2$ reduce a unos \SI{\pm 1,1}{V} de pico sobre una polarización de \SI{1,65}{V}.
+  \item El adaptador alimenta el lazo del foco, cuyo cable atraviesa el ACS712 fuera del protoboard.
+  \item El ACS712 entrega \SI{100}{mV/A} centrados en \SI{2,5}{V}, aislados del lazo; el divisor $R_3$--$R_4$, con carga mayor que el mínimo de \SI{4,7}{k\ohm} del sensor, lo lleva a $\SI{1,70}{V}\pm\SI{0,48}{V}$ a \SI{5}{A}.
+  \item Los mismos bornes del adaptador entregan la tensión del lazo, que $R_1$--$R_2$ reduce a unos \SI{\pm 1,1}{V} de pico sobre una polarización de \SI{1,65}{V}.
   \item Un condensador de \SI{22}{nF} en cada entrada actúa como filtro antialias antes de GPIO4 y GPIO5.
   \item El ADC1 del ESP32-S3 muestrea ambos canales en alternancia a \num{8000} conversiones por segundo (\num{4000} pares) y el \textit{firmware} aplica la calibración y la corrección de desfase de la Sección~\ref{sec:acquisition}.
   \item Con cada bloque de \SI{1}{s}, el nodo actualiza la pantalla y el LED RGB y, si se confirma un umbral, activa el zumbador a través del transistor.
   \item Cada \SI{5}{s} publica un resumen por Wi-Fi hacia el servidor.
 \end{enumerate}
 Una cola en RAM retiene \num{256} resúmenes (más de \SI{21}{min}), la energía se guarda cada \SI{60}{s} en memoria no volátil y, tras un reinicio, el intervalo sin punto de control se marca como incierto.
-El ACS712 es el único componente con terminales a tensión de red: va solo en una caja de ensayo cerrada, nunca sobre protoboard, y una persona calificada revisa el conjunto con el equipo desenergizado antes de cualquier prueba con tensión.
+Ningún elemento del montaje supera \SI{12}{V} CA: la protección térmica del adaptador limita un cortocircuito, el cableado se cambia solo con el adaptador desenchufado y dos integrantes revisan el lazo antes de cada sesión.
+Una sesión futura con carga de \SI{220}{V} exigiría interruptor diferencial, caja de ensayo cerrada para el ACS712 y la revisión firmada de una persona calificada.
 El prototipo no incluye relé ni corte automático de carga.
 
 \subsection{Modelo de adquisición de variables eléctricas}
@@ -130,30 +131,29 @@ El servidor convierte cada evento del nodo en una alerta abierta, reconocida o r
 La implementación avanza por etapas, cada una condicionada a superar la anterior:
 \begin{enumerate}
   \item \emph{Simulación}: servidor, panel y alertas con un simulador que emite mensajes conformes con los esquemas JSON del contrato.
-  \item \emph{Banco de baja tensión}: periféricos, canal de tensión con el adaptador y \textit{offset} del ACS712 sin corriente, sin red.
-  \item \emph{Revisión de seguridad}: una persona calificada revisa y firma el esquema, el aislamiento del ACS712, la caja de ensayo y la protección diferencial.
-  \item \emph{Calibración nominal supervisada}: se cargan los coeficientes de las hojas de datos y de los divisores, se mide durante \SI{60}{s} el \textit{offset} sin corriente tras \SI{10}{min} de calentamiento y se confirma la polaridad con $P>0$ en una carga resistiva; los coeficientes se congelan.
+  \item \emph{Banco}: periféricos, canal de tensión con el adaptador y \textit{offset} del ACS712 sin corriente, con el foco desconectado.
+  \item \emph{Revisión del lazo}: con el adaptador desenchufado, dos integrantes revisan el cableado del lazo de \SI{12}{V} con una lista de verificación.
+  \item \emph{Calibración nominal}: se cargan los coeficientes de las hojas de datos y de los divisores, se mide durante \SI{60}{s} el \textit{offset} sin corriente tras \SI{10}{min} de calentamiento y se confirma la polaridad con $P>0$ en una carga resistiva; los coeficientes se congelan.
   \item \emph{Evaluación}: escenarios de la Tabla~\ref{tab:scenarios}.
 \end{enumerate}
-No se dispone de un instrumento de referencia, por lo que el prototipo opera con coeficientes nominales, cada valor se muestra rotulado como no validado y E1--E4 son una verificación de plausibilidad frente a la potencia de placa de cargas domésticas, no una medida de exactitud (Fig.~\ref{fig:testsetup}).
+No se dispone de un instrumento de referencia, por lo que el prototipo opera con coeficientes nominales, cada valor se muestra rotulado como no validado y E1 es una verificación de plausibilidad frente a la potencia de placa del foco, no una medida de exactitud (Fig.~\ref{fig:testsetup}).
 
 \begin{figure}[t]
   \centering
   \input{figures/fig04-testsetup}
-  \caption{Montaje de ensayo. Las líneas gruesas llevan tensión de red; el ACS712 es el único elemento del nodo en ese camino y está dentro de la caja de ensayo. El adaptador, conectado al mismo circuito, recibe la misma tensión que la carga.}
+  \caption{Montaje de ensayo. Solo el adaptador certificado se conecta a la red; las líneas gruesas forman el lazo de \SI{12}{V} CA, que pasa por el ACS712 y el foco sin tocar el protoboard. El nodo mide la tensión en los mismos bornes que alimentan el foco.}
   \label{fig:testsetup}
 \end{figure}
 
 Cada sesión de ensayo sigue el mismo flujo:
 \begin{enumerate}
-  \item se comprueba el disparo del interruptor diferencial con su botón de prueba;
-  \item con el circuito desenergizado, se conecta la carga al tomacorriente de la caja de ensayo y se anota su potencia de placa;
-  \item se energiza, se esperan \SI{10}{min} de calentamiento y, con la carga apagada, se mide durante \SI{60}{s} el \textit{offset} del ACS712;
-  \item se enciende la carga y, ya estable, se registran los resúmenes del nodo durante al menos \SI{5}{min};
+  \item con el adaptador desenchufado, se revisa el lazo y se anota la potencia de placa del foco;
+  \item con el foco desconectado de una pinza, se enchufa el adaptador, se esperan \SI{10}{min} de calentamiento y se mide durante \SI{60}{s} el \textit{offset} del ACS712;
+  \item se desenchufa, se conecta el foco, se vuelve a enchufar y se registran los resúmenes del nodo durante al menos \SI{5}{min} encendido y \SI{1}{min} apagado;
   \item se guardan los resúmenes y las versiones, y se calcula la desviación con~\eqref{eq:error}.
 \end{enumerate}
-En E1--E3 la tensión debe estar entre \SI{180}{V} y \SI{250}{V} y la potencia debe ser positiva y quedar dentro de \SI{\pm 15}{\percent} de la de placa; esa banda cubre el error de los coeficientes nominales y la diferencia entre la placa y el consumo real, por lo que no es un límite de exactitud.
-En E4, un ventilador, $V$, $I$ y $P$ solo se observan, pues con factor de potencia distinto de la unidad no puede juzgarse $P$ sin un medidor de potencia, como en otros trabajos con cargas variadas~\cite{cardenas2026residential}.
+En E1 la tensión debe estar entre \SI{10}{V} y \SI{16}{V} y la potencia debe ser positiva y quedar dentro de \SI{\pm 20}{\percent} de la de placa; esa banda cubre el error de los coeficientes nominales y la diferencia entre la placa y el consumo real, que en un foco halógeno crece con la tensión del adaptador bajo carga, por lo que no es un límite de exactitud.
+No se ensayan cargas inductivas ni no lineales, pues con factor de potencia distinto de la unidad no puede juzgarse $P$ sin un medidor de potencia, como en otros trabajos con cargas variadas~\cite{cardenas2026residential}.
 Se registran las versiones y el cableado, y el \textit{offset} del ACS712, que varía con la temperatura, se mide de nuevo antes de cada sesión.
 El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el número de repeticiones por escenario.}
 
@@ -166,12 +166,11 @@ El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el 
 \toprule
 ID & Carga o maniobra & Métrica y criterio \\
 \midrule
-E1--E3 & Resistivas: foco halógeno (\SI{100}{W}), reflector (\SI{500}{W}) y plancha (\SI{1}{kW}) & $V$ en \SIrange{180}{250}{V}; $P>0$ y $|d_P|\leq\SI{15}{\percent}$ (SC-001, plausibilidad) \\
-E4 & Ventilador estable & $V$, $I$ y $P$ solo observadas \\
-E5 & Perfiles del simulador; carga real bajo y sobre el umbral; arranques breves & Alertas correctas; aviso local $\leq\SI{2}{s}$ y remoto $\leq\SI{10}{s}$ (SC-004) \\
-E6 & \SI{1}{h} con carga resistiva y red sana & $\geq\SI{95}{\percent}$ de $L_k\leq\SI{10}{s}$; cero duplicados (SC-002) \\
-E7 & Nodo sin enlace con el corredor durante \SI{10}{min} & $R\geq\SI{99}{\percent}$ en $\leq\SI{5}{min}$ (SC-003) \\
-E8 & Conjunto de siete días de mediciones & Hallar $h^{*}$ en $<\SI{2}{min}$ (SC-005) \\
+E1 & Foco halógeno de \SI{12}{V} y \SI{20}{W}, encendido y apagado & $V$ en \SIrange{10}{16}{V}; $P>0$ y $|d_P|\leq\SI{20}{\percent}$; apagado, $I$ en el límite de ruido (SC-001, plausibilidad) \\
+E2 & Perfiles del simulador; foco encendido y apagado con umbral de \SI{15}{W}; arranque en frío & Alertas correctas; aviso local $\leq\SI{2}{s}$ y remoto $\leq\SI{10}{s}$ (SC-004) \\
+E3 & \SI{1}{h} con el foco encendido y red sana & $\geq\SI{95}{\percent}$ de $L_k\leq\SI{10}{s}$; cero duplicados (SC-002) \\
+E4 & Nodo sin enlace con el corredor durante \SI{10}{min} & $R\geq\SI{99}{\percent}$ en $\leq\SI{5}{min}$ (SC-003) \\
+E5 & Conjunto de siete días generado por el simulador & Hallar $h^{*}$ en $<\SI{2}{min}$ (SC-005) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -183,6 +182,6 @@ d_{P}\,(\%)=\frac{P_m-P_n}{P_n}\times100,
 \end{equation}
 y sin carga se usa un límite absoluto de ruido.
 La latencia de cada resumen es $L_k=t_k^{\mathrm{vis}}-t_k^{\mathrm{obs}}$ (media y percentil~95), y la recuperación, $R=n_{\mathrm{rec}}/n_{\mathrm{ret}}\times100$ sobre los registros retenidos.
-E5 usa perfiles repetibles del simulador y maniobras manuales con cargas reales, y su exactitud es $(\mathrm{VP}+\mathrm{VN})/(\mathrm{VP}+\mathrm{VN}+\mathrm{FP}+\mathrm{FN})$.
+E2 usa perfiles repetibles del simulador y maniobras manuales con el foco, y su exactitud es $(\mathrm{VP}+\mathrm{VN})/(\mathrm{VP}+\mathrm{VN}+\mathrm{FP}+\mathrm{FN})$.
 También se reportan la desviación estándar de las repeticiones, la disponibilidad del nodo, el tiempo de cálculo de un bloque y el porcentaje de lecturas con marca de tiempo, unidad y estado (SC-006).
 Los datos brutos, coeficientes y \textit{scripts} se conservan con su \textit{hash}, y las tablas de resultados se generan a partir de esa evidencia.

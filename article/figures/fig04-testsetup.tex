@@ -1,43 +1,40 @@
-% Test setup (single column): mains path through the ACS712 test box, low-voltage
-% node and server. No reference meter (constitution 2.0.0).
-% Source: plan.md › Hardware list (ACS712 test box, reference instrument) and
-% Calibration and acceptance procedure; research R-001, R-002, R-004.
+% Test setup (single column), plan B: only the certified adapter touches the
+% 220 V outlet; the 12 V AC loop runs jack -> ACS712 -> bulb -> jack, off the
+% breadboard. No reference meter (constitution 2.0.0).
+% Source: plan.md › Hardware list and Calibration and plausibility procedure;
+% research R-001, R-004.
 \begin{tikzpicture}[
   font=\scriptsize,
   every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
   mn/.style={draw, rounded corners=1pt, fill=gray!12, align=center,
     text width=20mm, minimum height=7mm, inner sep=2pt},
   lv/.style={draw, rounded corners=1pt, fill=white, align=center,
+    text width=20mm, minimum height=7mm, inner sep=2pt},
+  rt/.style={draw, rounded corners=1pt, fill=white, align=center,
     text width=22mm, minimum height=7mm, inner sep=2pt},
-  rf/.style={draw, rounded corners=1pt, fill=white, align=center,
-    text width=17mm, minimum height=7mm, inner sep=2pt},
   arr/.style={-{Latex[length=1.5mm]}, semithick},
   pw/.style={line width=1.1pt},
-  ref/.style={{Latex[length=1.5mm]}-{Latex[length=1.5mm]}, densely dashed, semithick},
   lbl/.style={font=\tiny, inner sep=1pt, align=center},
 ]
-% --- Mains path (thick lines) ---
-\node[mn] (out) at (0,0) {Tomacorriente \SI{220}{V}\\diferencial \SI{30}{mA}};
-\node[mn] (acs) at (0,-1.25) {ACS712 en la fase};
-\node[mn] (tom) at (0,-2.45) {Tomacorriente de la caja};
-\node[mn, fill=white] (car) at (0,-3.75) {Carga de ensayo (E1--E4)};
-\draw[pw] (out) -- (acs);
-\draw[pw] (acs) -- (tom);
-\draw[pw] (tom) -- (car);
-\begin{scope}[on background layer]
-  \node[draw, dashed, rounded corners=2pt, fit=(acs)(tom), inner sep=1.6mm] (box) {};
-\end{scope}
-\node[lbl, anchor=north east] at (box.south west) {\textbf{Caja de ensayo}};
+% --- Power path: outlet, adapter, 12 V loop (thick) ---
+\node[mn] (out) at (0,0) {Tomacorriente \SI{220}{V}};
+\node[lv] (adp) at (0,-0.95) {Adaptador \SI{12}{V}$\sim$, protección térmica};
+\node[lv] (jck) at (0,-1.9) {Jack con bornera};
+\node[lv] (acs) at (0,-2.85) {ACS712 (IP+/IP$-$)};
+\node[lv] (bul) at (0,-3.8) {Foco halógeno \SI{12}{V}, \SI{20}{W}};
+\draw (out) -- (adp);
+\draw[pw] (adp) -- (jck);
+\draw[pw] (jck) -- (acs);
+\draw[pw] (acs) -- (bul);
+\draw[pw] (bul.west) -- ++(-0.35,0) |- (jck.west);
+\node[lbl, rotate=90, anchor=south] at (-1.5,-2.85) {lazo de \SI{12}{V} CA};
 
 % --- Low-voltage node and server ---
-\node[lv] (adp) at (3.6,0) {Adaptador CA-CA y jack};
-\node[lv] (esp) at (3.6,-1.55) {Protoboard (divisores y filtros) y ESP32-S3, cargador USB-C};
-\node[lv] (srv) at (3.6,-3.05) {Servidor: MQTT, ingesta, InfluxDB, Grafana};
-\node[lv] (usr) at (3.6,-4.2) {Panel, alertas y registros};
-\draw[pw] (out) -- (adp);
-\draw[arr] (adp) -- node[lbl, right] {GPIO4} (esp);
-\draw (acs.east) -- (acs.east -| box.east);
-\draw[arr] (acs.east -| box.east) -- node[lbl, above, pos=0.5] {5 V, GND,\\OUT: GPIO5} (acs.east -| esp.west);
+\node[rt, minimum height=12mm] (esp) at (3.6,-2.375) {Protoboard (divisores y filtros) y ESP32-S3, cargador USB-C};
+\node[rt] (srv) at (3.6,-3.75) {Servidor: MQTT, ingesta, InfluxDB, Grafana};
+\node[rt] (usr) at (3.6,-4.75) {Panel, alertas y registros};
+\draw[arr] (jck.east) -- node[lbl, above] {GPIO4} (jck.east -| esp.west);
+\draw[arr] (acs.east) -- node[lbl, above] {5 V, GND,\\OUT: GPIO5} (acs.east -| esp.west);
 \draw[arr] (esp) -- node[lbl, right] {Wi-Fi, MQTT/TLS} (srv);
 \draw[arr] (srv) -- (usr);
 \end{tikzpicture}

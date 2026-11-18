@@ -11,13 +11,15 @@ complete this quickstart.
 
 - Git, Make, Docker Engine with Compose v2, Python 3.14, and `uv`.
 - For firmware-only work: ESP-IDF 5.4 LTS toolchain and an ESP32-S3 DevKitC-1.
-- For hardware acceptance: qualified supervision, approved schematic and closed
-  ACS712 test box (ACS712 alone in it, never on a breadboard), upstream
-  RCD/GFCI and overcurrent protection, certified AC-AC adapter, household test loads with known
-  nameplate ratings, and the signed safety procedure (no reference meter;
-  constitution 2.0.0).
+- For hardware acceptance (plan B, 12 V AC loop): a certified, thermally
+  protected 220 V → 12 V AC plug-in adapter (≥ 2 A), one 12 V halogen bulb with
+  a known nameplate rating (about 20 W), household cable and alligator leads (or
+  a terminal strip), and the completed low-voltage wiring checklist (no
+  reference meter; constitution 2.0.0). No mains wiring is done, so no RCD,
+  test box, or qualified review is needed; all three return for any future
+  220 V session.
 - A trusted-LAN host whose firewall can restrict TCP 443 and 8883 to the lab
-  subnets. The host must not have public port forwarding or UPnP exposure.
+  subnets (lab or home LAN). The host must not have public port forwarding or UPnP exposure.
 
 ## 2. Create local configuration without committing secrets
 
@@ -141,36 +143,34 @@ monotonic-time Wh integration, NVS checkpoint recovery, quality classification,
 threshold timing, queue replay, config rollback rejection, sample-gap detection,
 and the LED/OLED state mapping.
 
-Then a low-voltage bench stage: the certified AC-AC adapter (plugged into a
-protected outlet) drives the voltage channel, and the ACS712 zero-current offset
-is checked with no current. No mains conductor passes through the ACS712 at
-this stage. Current polarity is checked on the first supervised resistive-load
-run: active power must be positive; if it is negative, the sign is corrected in
+Then a low-voltage bench stage: the certified AC-AC adapter drives the voltage
+channel, and the ACS712 zero-current offset is checked with no current (the bulb
+loop is not yet connected). Current polarity is checked on the first bulb run: active power must be positive; if it is negative, the sign is corrected in
 the calibration coefficients, without rewiring.
 
-## 8. Controlled calibration and plausibility check
+## 8. Controlled 12 V loop calibration and plausibility check
 
-Hardware work is blocked until the qualified safety review is signed. Then follow
-the versioned documents that implementation will place under `guides/safety/` and
-`guides/calibration/`:
+The loop session is blocked until the team's low-voltage wiring checklist is
+complete. Then follow the versioned documents that implementation will place
+under `guides/safety/` and `guides/calibration/`:
 
-1. Perform de-energized visual, protective-earth/isolation, polarity, test-box,
-   strain-relief, and conductor checks.
-2. Energize only through the 30 mA RCD protecting the test outlet (building
-   panel or certified portable RCD, tested with its test button) and the
-   reviewer-accepted overcurrent protection; never work live or expose terminals.
+1. With the adapter unplugged, check the loop: jack terminal → ACS712 IP+/IP− →
+   bulb → jack terminal, tight screws, no bare crossing conductors, loop off the
+   breadboard, adapter certified and unmodified.
+2. Plug the adapter into an ordinary wall outlet only after the check; rewire
+   only with it unplugged, and do not touch the hot bulb.
 3. Load the nominal coefficients, warm up 10 minutes, and capture a 60-second
    zero-current record (ACS712 offset).
 4. Switch on a resistive load and confirm positive active power (polarity);
    freeze a `nominal` calibration revision.
-5. Plausibility check on at least three resistive loads across the range:
-   V_RMS in 180-250 V, P within ±15% of each nameplate; record one fan
-   qualitatively.
+5. Plausibility check on the 12 V halogen bulb: V_RMS in 10-16 V, P positive
+   and within ±20% of its nameplate; with the bulb off, current within the
+   absolute noise limit.
 6. Hash and preserve the procedure, wiring/build revisions, raw captures,
    coefficients, software revision, and the plausibility table.
 
 The result is an educational demonstration with readings labeled "not validated"
-for 180-250 V and the 0.5-5 A range of the ACS712-20A (about 1.1 kW). It makes no
+for 10-16 V and 0.5-2 A on the 12 V AC loop (about 25 W). It makes no
 accuracy claim and is not a permanent-installation, billing, or safety-device
 approval.
 
@@ -199,5 +199,5 @@ before the 30-day raw-retention boundary.
 | Integrated path | `make test-integration` | Broker-to-dashboard report |
 | Outage recovery | `make test-recovery OUTAGE=10m` | Delivery/latency table |
 | Secret/network posture | `make secrets-scan test-security` | Scanner and reachability report |
-| Measurement claim | supervised acceptance command defined later | Signed calibration report |
+| Measurement claim | supervised acceptance command defined later | Calibration and plausibility report |
 | User outcomes | `make acceptance-simulated` plus supervised hardware run | SC-001–SC-006 checklist |

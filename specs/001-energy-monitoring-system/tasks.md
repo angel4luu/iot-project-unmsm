@@ -18,16 +18,19 @@ and acceptance evidence, so each story starts with its tests.
 from Phase 2 onward and meet in the integration tasks of each story:
 
 - **Hardware track** (build guide stages 1–6): firmware bring-up apps on the
-  breadboard, then the full firmware, the safety review, and the supervised
-  nominal calibration and plausibility check.
+  breadboard, then the full firmware, the team's low-voltage wiring check, and
+  the 12 V AC loop session (nominal calibration and plausibility check; plan B,
+  2026-11-18).
 - **Software track**: contracts, simulator, server stack, and dashboard, testable
   without any hardware.
 
 Constraints carried into every task: no reference meter (constitution 2.0.0) —
 every displayed and published value is labeled "not validated" and no accuracy
 figure is claimed; no relay or automatic cutoff (FR-016); no secrets or real
-endpoints in tracked files (constitution IV); mains work only after the signed
-qualified review (constitution I); project procedures live in `guides/`
+endpoints in tracked files (constitution IV); plan B: the team does no mains
+wiring (only the certified, thermally protected 12 V AC adapter plugs into
+220 V), and any future mains work needs the RCD, the ACS712 test box, and the
+signed qualified review (constitution I); project procedures live in `guides/`
 (`docs/` is git-ignored local material).
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -115,9 +118,9 @@ quality, and the "not validated" label, from the simulator first and then from t
 real node, within 10 s.
 
 **Independent Test**: Simulator: `make acceptance-simulated` shows values, labels,
-and ≥95% of summaries visible ≤10 s (SC-002 part). Hardware: on the supervised
-setup, three resistive household loads meet the SC-001 plausibility check (V in
-180–250 V, P > 0, within ±15% of nameplate) and invalid readings are never shown
+and ≥95% of summaries visible ≤10 s (SC-002 part). Hardware: on the 12 V AC
+loop, one 12 V halogen bulb meets the SC-001 plausibility check (V in 10–16 V,
+P > 0, within ±20% of nameplate; current at the noise limit with the bulb off) and invalid readings are never shown
 as plain values (scenario 3, SC-006).
 
 ### Tests for User Story 1
@@ -136,7 +139,7 @@ as plain values (scenario 3, SC-006).
 - [ ] T043 [US1] Implement acquisition (ADC1 continuous DMA, alternating GPIO4/GPIO5 at 8,000 conversions/s = 4,000 pairs/s, Espressif calibration scheme, DMA overrun or missing conversion → `sample_gap`) in `firmware/components/acquisition/acquisition.c`
 - [ ] T044 [US1] Implement the calibration component with nominal coefficients (voltage gain from adapter ratio and R1/R2, current gain from 100 mV/A and R3/R4, phase correction of one conversion), `calibration_kind = nominal`, 60 s zero-current offset capture, sign correction, and append-only revisions in NVS in `firmware/components/calibration/calibration.c`
 - [ ] T045 [US1] Implement metering (1 s blocks, five blocks per 5 s summary with 20,000 paired samples, RMS, mean v·i, imported Wh with monotonic dt) in `firmware/components/metering/metering.c`
-- [ ] T046 [US1] Implement quality classification and flags (`calibration_missing`, `sample_gap`, `adc_clipped`, `sensor_disconnected`, `out_of_range`, `polarity_reversed`, `clock_unsynchronized`, `energy_continuity_uncertain`; ranges 180–250 V and 0.5–5.0 A) in `firmware/components/quality/quality.c`
+- [ ] T046 [US1] Implement quality classification and flags (`calibration_missing`, `sample_gap`, `adc_clipped`, `sensor_disconnected`, `out_of_range`, `polarity_reversed`, `clock_unsynchronized`, `energy_continuity_uncertain`; ranges 10–16 V and 0.5–2.0 A) in `firmware/components/quality/quality.c`
 - [ ] T047 [US1] Implement the NVS energy checkpoint every 60 s and restart continuity in `firmware/components/persistence/checkpoint.c`
 - [ ] T048 [US1] Implement the RAM offline queue (≥256 records, write before publish, remove only on `accepted` or `duplicate`, terminal rejection to bounded diagnostics) in `firmware/components/telemetry/queue.c`
 - [ ] T049 [US1] Implement MQTT 5 over mTLS (Clean Start false, 24 h session expiry, 15 s keepalive, retained offline last will, client ID = node ID), measurement publish, ACK handling, and retained status every 30 s in `firmware/components/telemetry/mqtt.c`
@@ -153,14 +156,14 @@ as plain values (scenario 3, SC-006).
 - [ ] T057 [P] [US1] Write Flux queries for latest values, V/I/P time series, quality windows, and pipeline health in `dashboards/queries/{latest,timeseries,quality,health}.flux`
 - [ ] T058 [US1] Build `dashboards/energy-overview.json` panels 1 (identity/quality banner with the permanent "not validated" label for `nominal`), 2 (current cards), 3 (active power), 4 (V/I with range bands), 6 (quality), 8 (pipeline health); stale/offline replace live values
 
-### Supervised hardware stages for User Story 1 (hardware track)
+### Hardware stages for User Story 1 (hardware track)
 
-- [ ] T059 [P] [US1] Write the safety review checklist and sign-off record (build guide stage 5: ACS712 test box, RCD test, breaker acceptance, USB policy) in `guides/safety/review-checklist.md`
+- [ ] T059 [P] [US1] Write the low-voltage wiring checklist (build guide stage 5: certified thermally protected adapter, never opened; loop jack → ACS712 → bulb → jack off the breadboard; tight terminals; no bare crossing conductors; rewire only unplugged; hot bulb) in `guides/safety/review-checklist.md`
 - [ ] T060 [P] [US1] Write the nominal calibration and plausibility procedure (plan › Calibration and plausibility procedure, steps 1–9) in `guides/calibration/nominal-calibration.md`
-- [ ] T061 [P] [US1] Implement the plausibility evaluation script (input: exported 5 s summaries and a CSV of load nameplates; output: table E1–E4 with V in 180–250 V, P > 0, `d_P = (P_m − P_n)/P_n × 100` within ±15% for E1–E3, E4 observed only; SHA-256 manifest) in `experiments/evaluation/plausibility.py` with a fixture in `tests/fixtures/plausibility/example.csv`
-- [ ] T062 [US1] [HW] Bench integration without mains: flash the full firmware, confirm Vb and offset readings, and connect to the server via the simulator certificate replaced by the node certificate; record evidence in `experiments/manifests/bench-YYYYMMDD.json`
-- [ ] T063 [US1] [HW] Qualified safety review of the ACS712 test box and setup, signed before any mains connection, recorded in `guides/safety/review-record.md` (blocks T064)
-- [ ] T064 [US1] [HW] Supervised session: RCD test, warm-up, offset, polarity, freeze the `nominal` calibration revision, run E1–E4 per `guides/calibration/nominal-calibration.md`; store raw captures and summaries under the ignored `experiments/data/` with a tracked manifest in `experiments/manifests/plausibility-YYYYMMDD.json`
+- [ ] T061 [P] [US1] Implement the plausibility evaluation script (input: exported 5 s summaries and a CSV with the bulb nameplate; output: table E1 with V in 10–16 V, P > 0, `d_P = (P_m − P_n)/P_n × 100` within ±20%, bulb-off current at the noise limit; windows flagged only `calibration_missing` admissible; SHA-256 manifest) in `experiments/evaluation/plausibility.py` with a fixture in `tests/fixtures/plausibility/example.csv`
+- [ ] T062 [US1] [HW] Bench integration (bulb loop not connected): flash the full firmware, confirm Vb and offset readings, and connect to the server via the simulator certificate replaced by the node certificate; record evidence in `experiments/manifests/bench-YYYYMMDD.json`
+- [ ] T063 [US1] [HW] Team low-voltage wiring check of the 12 V loop with the adapter unplugged (checklist T059 completed by two team members), recorded in `guides/safety/review-record.md` (blocks T064)
+- [ ] T064 [US1] [HW] 12 V loop session: warm-up, offset, polarity, freeze the `nominal` calibration revision, register it (T094), run E1 per `guides/calibration/nominal-calibration.md`; store raw captures and summaries under the ignored `experiments/data/` with a tracked manifest in `experiments/manifests/plausibility-YYYYMMDD.json`
 - [ ] T065 [US1] Generate the plausibility table for the article from T064 evidence with `experiments/evaluation/plausibility.py` into `experiments/evaluation/out/plausibility.csv`
 
 **Checkpoint**: US1 is the MVP: real-time values visible from the simulator and from the real node, labeled "not validated", with a plausibility table.
@@ -189,7 +192,7 @@ and queryable in order within 5 min (SC-003).
 - [ ] T071 [P] [US2] Write hourly/daily/weekly energy and peak-hour (h*) Flux queries in `dashboards/queries/{hourly,daily,weekly,peak_hour}.flux`
 - [ ] T072 [US2] Add panel 5 (hourly bars, daily/weekly totals, peak-hour marker) to `dashboards/energy-overview.json`
 - [ ] T073 [P] [US2] Implement the daily Parquet export with manifest (exact query, UTC interval, schema/calibration/firmware revisions, quality exclusions, controlled-load labels, file hashes, code commit, environment-lock hash) in `experiments/export/export_daily.py`
-- [ ] T074 [US2] Produce the seven-day dataset for SC-005/E8 and record its manifest in `experiments/manifests/seven-day.json` — **blocked on the open decision** whether it comes from supervised sessions spread over a week or from the simulator (README › Open decisions)
+- [ ] T074 [US2] Produce the seven-day dataset for SC-005/E5 with the simulator (decided 2026-11-18, plan B) and record its manifest in `experiments/manifests/seven-day.json`
 - [ ] T075 [US2] Timed operator check (first-time user finds the peak hour in < 2 min, SC-005) recorded in `tests/acceptance/us2_operator_check.md`
 
 **Checkpoint**: History views work on stored data; outage recovery passes.
@@ -209,7 +212,7 @@ locally and remotely, and the node still warns locally with the server stopped
 ### Tests for User Story 3
 
 - [ ] T076 [P] [US3] Firmware unit tests for the local state machine (`normal --value > limit--> pending`, `pending --confirmed for confirm_ms--> firing`, `pending --value <= limit or invalid--> normal`, `firing --value < clear_below_W--> clearing`, `clearing --below for clear_ms--> resolved --> normal`, `clearing --value >= clear_below_W--> firing`; invalid data never confirms or clears) in `firmware/test/main/test_threshold.c`
-- [ ] T077 [P] [US3] Firmware unit tests for config handling (bounds `active_power_limit_W` "`>0` and `<=1100`", `confirm_ms` "1,000–300,000; default 10,000", `clear_below_W` "`>=0` and `< active_power_limit_W`", rollback rejection) in `firmware/test/main/test_config.c`
+- [ ] T077 [P] [US3] Firmware unit tests for config handling (bounds `active_power_limit_W` "`>0` and `<=25`", `confirm_ms` "1,000–300,000; default 10,000", `clear_below_W` "`>=0` and `< active_power_limit_W`", rollback rejection) in `firmware/test/main/test_config.c`
 - [ ] T078 [P] [US3] Ingestion tests for alert lifecycle (`open -> acknowledged -> resolved`, open may resolve directly, acknowledgment never clears the physical condition, append-only `AlertTransition`) and event/config/measurement cross-check raising a health alert on disagreement, in `services/ingestion/tests/test_alerts.py`
 - [ ] T079 [P] [US3] Outbox tests (states `pending`, `sending`, `delivered`, `failed_terminal`; exponential backoff with jitter; idempotency on `alert_id`; provider failure never blocks storage) in `services/ingestion/tests/test_outbox.py`
 - [ ] T080 [US3] Simulated alert acceptance (surge vs sustained, local ≤2 s, remote ≤10 s, server-down local warning) in `tests/acceptance/test_us3_alerts.py`
@@ -218,11 +221,11 @@ locally and remotely, and the node still warns locally with the server stopped
 
 - [ ] T081 [US3] Implement retained config reception, NVS storage of the last accepted version, and rollback rejection in `firmware/components/threshold/config.c`
 - [ ] T082 [US3] Implement the 1 s threshold state machine, node events (`threshold_entered`, `threshold_cleared`, `measurement_quality_changed`), and buzzer/red LED only in `firing`/`clearing` (no relay, FR-016) in `firmware/components/threshold/threshold.c`
-- [ ] T083 [P] [US3] Implement `energyctl` (validate versioned YAML, store and audit, publish retained config; reject limits above 1,100 W) in `services/ingestion/src/energy_ingestion/cli/energyctl.py` with `config/thresholds.example.yaml`
+- [ ] T083 [P] [US3] Implement `energyctl` (validate versioned YAML, store and audit, publish retained config; reject limits above 25 W) in `services/ingestion/src/energy_ingestion/cli/energyctl.py` with `config/thresholds.example.yaml`
 - [ ] T084 [US3] Implement event-to-alert handling, transitions, and cross-check in `services/ingestion/src/energy_ingestion/thresholds/alerts.py`
 - [ ] T085 [US3] Implement the notification outbox worker with a generic outbound HTTPS webhook adapter (runtime-only token, redacted errors; provider choice is open decision 6) in `services/ingestion/src/energy_ingestion/notifications/outbox.py`
 - [ ] T086 [US3] Add panel 7 (alert table/history with evidence, severity, state, notification state, transition times) to `dashboards/energy-overview.json`
-- [ ] T087 [US3] [HW] Supervised alert run with a real load (iron on/off below and above a configured limit; server stopped for the local-warning case) recorded in `experiments/manifests/alerts-YYYYMMDD.json`
+- [ ] T087 [US3] [HW] Alert run on the 12 V loop (limit about 15 W; bulb on → alert, bulb off → clear; the cold-filament inrush must not alert; server stopped for the local-warning case) recorded in `experiments/manifests/alerts-YYYYMMDD.json`
 
 **Checkpoint**: All three stories work independently and together.
 
@@ -235,8 +238,10 @@ locally and remotely, and the node still warns locally with the server stopped
 - [ ] T088 [P] Security tests (anonymous MQTT, untrusted certificate, wrong-node topic, dashboard without login, internal ports unreachable from the LAN) in `tests/security/test_security.py`; wire `make test-security`
 - [ ] T089 [P] Fault-injection test that stops each stage (acquisition, connectivity, ingestion, storage, threshold, presentation) and asserts the health view names it (FR-017) in `tests/integration/test_stage_health.py`
 - [ ] T090 [P] Write the architecture overview in `guides/architecture/overview.md` and the operations runbook (start/stop, backups, certificate rotation, retention, secret rotation) in `guides/operations/runbook.md`
-- [ ] T091 [P] Write the latency/recovery evidence script producing tables for E5–E7 (mean and p95 latency, recovery R) in `experiments/evaluation/performance.py`
+- [ ] T091 [P] Write the latency/recovery evidence script producing tables for E3–E4 (mean and p95 latency, recovery R) in `experiments/evaluation/performance.py`
 - [ ] T092 Run quickstart.md sections 2–8 end to end and record deviations in `guides/operations/quickstart-validation.md`
+- [ ] T094 [US1] Implement calibration registration in `energyctl` (store a CalibrationArtifact with `calibration_kind` `nominal`, coefficients, and revision) and show summaries with an unknown calibration revision as "not validated" in ingestion and the dashboard, with a test in `tests/integration/test_calibration_registry.py`
+- [ ] T095 [P] Retention test: data older than 30 days is removed from `energy_raw` and SQLite state is kept, in `tests/integration/test_retention.py`
 - [ ] T093 Update trackers for the completed implementation (`README.md` status/roadmap/recent updates; `article/README.md` status) and move pending article `\todo{}` results only from preserved evidence (T065, T091)
 
 ---
@@ -250,11 +255,12 @@ locally and remotely, and the node still warns locally with the server stopped
   software track (T009–T025) and the hardware track (T026–T034) are independent.
 - **Phase 3 US1**: after Phase 2. Software tasks (T052–T058) need only the
   simulator; firmware tasks (T043–T051) need T026–T033; T062 needs both tracks;
-  T063 (signed review) strictly precedes T064 (first mains connection).
+  T063 (team wiring check) strictly precedes T064 (first 12 V loop session);
+  T094 precedes T064.
 - **Phase 4 US2**: after Phase 2; uses US1's pipeline for storage but is testable
-  with simulator data. T074 waits on the seven-day-data decision.
+  with simulator data. T074 uses the simulator.
 - **Phase 5 US3**: after Phase 2; firmware threshold tasks need T045/T046; T087
-  needs T063 signed.
+  needs T063 completed.
 - **Phase 6**: after the stories it covers.
 
 ### Story order
@@ -265,8 +271,8 @@ parallel with US1's hardware stages because the simulator stands in for the node
 ### Within each story
 
 Tests first (they must fail), then firmware/server implementation, then
-integration, then supervised hardware tasks last (plan: "place supervised mains
-tests after all simulation and low-voltage gates").
+integration, then hardware tasks last (plan: "place the 12 V loop session
+after all simulation and bench gates").
 
 ---
 
@@ -302,8 +308,8 @@ Then: T081 → T082 (firmware)  |  T083, T084, T085 (server)
 
 1. Phase 1 → Phase 2 (contracts, server, simulator; bring-up on the breadboard).
 2. Phase 3 software tasks with the simulator → `make acceptance-simulated`.
-3. Phase 3 firmware tasks → bench integration without mains (T062).
-4. Signed safety review (T063) → supervised plausibility session (T064, T065).
+3. Phase 3 firmware tasks → bench integration (T062); calibration registration (T094).
+4. Team wiring check (T063) → 12 V loop plausibility session (T064, T065).
 5. **Stop and validate**: values visible, labeled "not validated", plausibility table done.
 
 ### Incremental delivery
@@ -316,9 +322,9 @@ on its own. The article's Results section is filled only from preserved evidence
 
 ## Notes
 
-- Total: 93 tasks. [HW] tasks need the physical prototype; all others run on a
+- Total: 95 tasks (T094–T095 added 2026-11-18 from the analyze report). [HW] tasks need the physical prototype; all others run on a
   laptop with Docker and the ESP-IDF toolchain.
-- Open decisions that affect tasks: seven-day dataset source (T074), notification
+- Open decisions that affect tasks: notification
   provider (T085), OLED pin count and RGB LED type (T028, T050), repetitions per
   scenario (T064).
 - The schema flag `adc_crc_error` comes from the earlier external-ADC design and
