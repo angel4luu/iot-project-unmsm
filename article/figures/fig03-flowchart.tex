@@ -18,7 +18,7 @@
 \node[stp] (s2) at (0,-1.1) {2. Bloque de 1 s: calibración, desfase, $V_{\mathrm{RMS}}$, $I_{\mathrm{RMS}}$, $P$ y calidad};
 \node[stp] (s3) at (0,-2.2) {3. Resumen de 5 s: actualizar $E_k$ y punto de control};
 \node[stp] (s4) at (0,-3.3) {4. Encolar en RAM y publicar por MQTT};
-\node[side] (n1) at (4.1,0) {Ventana marcada inválida};
+\node[side] (n1) at (4.1,0) {Resumen inválido; $E$ no se integra};
 \node[side] (n2) at (4.1,-1.1) {Pantalla y LED; umbral confirmado: zumbador y evento};
 \node[side] (n4) at (4.1,-3.3) {Conservar en cola y drenar al reconectar};
 \draw[arr] (s1) -- (s2);
@@ -29,14 +29,14 @@
 \draw[arr] (s4) -- node[lbl, above] {sin ACK} (n4);
 
 % --- Server ---
-\node[stp] (s5) at (0,-4.85) {5. Ingesta: validar esquema e identidad, almacenar y emitir ACK};
-\node[stp] (s6) at (0,-5.95) {6. Análisis: $E_h$ por hora, día y semana; hora pico $h^{*}$};
+\node[stp] (s5) at (0,-4.85) {5. Ingesta: validar, registrar, escribir la serie y emitir ACK};
+\node[stp] (s6) at (0,-5.95) {6. Análisis descriptivo: $E_h$ de horas completas; hora pico $h^{*}$};
 \node[stp] (s7) at (0,-7.05) {7. Alertas: abierta, reconocida, resuelta; notificación remota};
-\node[side] (n5) at (4.1,-4.85) {ACK sin volver a almacenar};
+\node[side] (n5) at (4.1,-4.85) {Duplicado: ACK sin escribir; conflicto: rechazo};
 \draw[arr] (s4) -- (s5);
 \draw[arr] (s5) -- (s6);
 \draw[arr] (s6) -- (s7);
-\draw[arr] (s5) -- node[lbl, above] {duplicado} (n5);
+\draw[arr] (s5) -- node[lbl, above] {reenvío} (n5);
 \draw[ack] (s5.west) -- ++(-0.45,0) |- node[lbl, pos=0.25, left] {ACK} (s4.west);
 
 \begin{scope}[on background layer]

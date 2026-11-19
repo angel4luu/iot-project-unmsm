@@ -35,6 +35,6 @@
 \node[rt] (usr) at (3.6,-4.75) {Panel, alertas y registros};
 \draw[arr] (jck.east) -- node[lbl, above] {GPIO4} (jck.east -| esp.west);
 \draw[arr] (acs.east) -- node[lbl, above] {5 V, GND,\\OUT: GPIO5} (acs.east -| esp.west);
-\draw[arr] (esp) -- node[lbl, right] {Wi-Fi, MQTT/TLS} (srv);
+\draw[arr] (esp) -- node[lbl, right] {Wi-Fi, MQTT/TLS\\(E4: 8883 bloqueado)} (srv);
 \draw[arr] (srv) -- (usr);
 \end{tikzpicture}
