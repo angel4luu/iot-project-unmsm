@@ -25,7 +25,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Track | Where we are | Next |
 |---|---|---|
 | System | Design finished; demo switched to a 12 V AC bulb loop (no electrician needed). Nothing built yet | Buy the 12 V adapter (thermally protected), bulb and small parts; start building: repo setup, then the server with fake data and the breadboard tests in parallel |
-| Article | Introduction and Methodology done and trimmed (5 pages; about 1–1.3 pages left for Results and Conclusions in a 6-page paper) | Results, once the experiments run |
+| Article | Introduction done; Methodology adapted to the 12 V loop and revised after the reviewer's comments (test units, repetitions, outage and alert tests, metrics), still aimed at 5 pages | Compile in Overleaf and confirm 5 pages; then Results, once the experiments run |
 
 *Last updated: 2026-11-18*
 
@@ -50,7 +50,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 |---|---|
 | Setup and requirements | ✅ Oct 28 |
 | Introduction (with literature review) | ✅ draft Oct 28 |
-| Methodology | ✅ draft Nov 11 |
+| Methodology | ✅ draft Nov 11; revised Nov 18 after review (compile check pending) |
 | Page budget and trimming | ✅ Nov 18 (7 → 5 pages; components table and signal-flow list added) |
 | Figures 1–3 (architecture, full circuit, flowchart) | ✅ Nov 18 (old wiring figure dropped; circuit values to check at the bench; add a prototype photo once built) |
 | Results and Discussion | ⬜ needs the experiments |
@@ -63,8 +63,9 @@ Build the article: `make -C article` → `article/build/main.pdf`
 |---|---|---|
 | 0 | ~~Qualified person~~ Not needed for the 12 V demo (2026-11-18). Only needed if we ever test a 220 V appliance (future work) | — |
 | 1 | ~~Reference meter~~ Resolved 2026-11-18: none; readings are shown as "not validated" (constitution 2.0.0). A True RMS meter lent by the electrician could be added later | — |
-| 2 | How many repetitions per test | Methodology text, experiments |
+| 2 | ~~How many repetitions per test~~ Rule set 2026-11-18: 3 pilot runs of the bulb test, then a formula fixes the final number (max 10); 3 runs for the 1-hour and outage tests | — |
 | 7 | ~~Seven-day dataset~~ Resolved 2026-11-18: the simulator produces it (test E5) | — |
+| 9 | Tolerances of the resistors and the 12 V adapter we buy (needed for the uncertainty estimate) | Methodology text |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |
 | 5 | Faculty name and contact emails for the author block | Submission |
@@ -83,6 +84,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Article Methodology merged with plan B (12 V bulb loop) and revised after the reviewer's comments: clearer test units and repetitions, step-by-step alert and outage tests, honest wording on delivery guarantees, uncertainty without a reference meter, and a separate metrics section. Details in article/README.md (AD-16) |
 | 2026-11-18 | Parts list checked: the build guide now lists every part with an exact quantity (23 rows: 100 kΩ ×1, 4.7 kΩ ×2, 10 kΩ ×3, 470 Ω ×3, 1 kΩ ×1, 10 µF ×1, 22 nF ×2, male-to-female jumpers, 18 AWG loop cable, wire stripper) and a short shopping summary; polarity notes for the capacitor, buzzer and RGB LED. Leftover 220 V details removed from the plan's pin table, research, data model, task T033 and the contract examples (now 12.6 V, 1.62 A, 20.4 W) |
 | 2026-11-18 | Plan B: no electrician available, so the demo measures a 12 V halogen bulb fed by a thermally protected 12 V AC adapter. RCD, test box, household loads and the qualified review leave the MVP (kept for a future 220 V test). Tests are now E1 (bulb vs. its label, ±20 %), E2 alerts (bulb on/off, ~15 W limit), E3 latency, E4 recovery, E5 busiest hour with the simulator. Specs, tasks (+2: calibration registration, retention test), build guide, article (Fig. 4 redrawn, Tables I–II) updated |
 | 2026-11-18 | Consistency check (`/speckit.analyze`): no critical issues; 3 high to fix before the first 220 V session (who builds the test box, a circular rule on "accepted" calibration, how the dashboard learns the "not validated" label). Build guide: new section 4 on building hardware, firmware and server in parallel, then integrating |
