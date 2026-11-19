@@ -25,7 +25,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Track | Where we are | Next |
 |---|---|---|
 | System | Design finished and adapted to the team's own parts (one AC adapter + resistors to buy). Nothing built yet | Consistency check (`/speckit.analyze`), then start building: repo setup, then the server with fake data and the breadboard tests in parallel |
-| Article | Introduction and Methodology done and trimmed (5 pages; about 1–1.3 pages left for Results and Conclusions in a 6-page paper) | Results, once the experiments run |
+| Article | Introduction done; Methodology revised after the reviewer's comments and trimmed back to a 5-page paper | Compile in Overleaf and confirm 5 pages; fix the test loads in the specs; then Results, once the experiments run |
 
 *Last updated: 2026-11-18*
 
@@ -50,7 +50,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 |---|---|
 | Setup and requirements | ✅ Oct 28 |
 | Introduction (with literature review) | ✅ draft Oct 28 |
-| Methodology | ✅ draft Nov 11 |
+| Methodology | ✅ draft Nov 11; revised Nov 18 after review (compile check pending) |
 | Page budget and trimming | ✅ Nov 18 (7 → 5 pages; components table and signal-flow list added) |
 | Figures 1–3 (architecture, full circuit, flowchart) | ✅ Nov 18 (old wiring figure dropped; circuit values to check at the bench; add a prototype photo once built) |
 | Results and Discussion | ⬜ needs the experiments |
@@ -63,7 +63,9 @@ Build the article: `make -C article` → `article/build/main.pdf`
 |---|---|---|
 | 0 | Who is the qualified person (licensed electrician or electrical-engineering teacher) who reviews the setup and signs the safety review? | Any 220 V test |
 | 1 | ~~Reference meter~~ Resolved 2026-11-18: none; readings are shown as "not validated" (constitution 2.0.0). A True RMS meter lent by the electrician could be added later | — |
-| 2 | How many repetitions per test | Methodology text, experiments |
+| 2 | ~~How many repetitions per test~~ Rule set 2026-11-18: 3 pilot runs per load, then a formula fixes the final number (max 10); 3 runs for the 1-hour and outage tests | — |
+| 8 | Test loads: the article now uses two 100 W bulbs (one is below the sensor's range) and a 1 kW load without a thermostat (not an iron). The specs and build guide still say 100 W / iron and need a Spec Kit amendment | Plan, build guide |
+| 9 | Tolerances of the resistors and AC adapter we buy (needed for the uncertainty estimate) | Methodology text |
 | 7 | Seven-day dataset for the "busiest hour" test (E8): short supervised sessions over a week, or the simulator? | Task T074, Results |
 | 3 | Parts list and total cost | Comparison table in Results |
 | 4 | Which conference or journal (page limit, deadline) | Final format |
@@ -82,6 +84,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-18 | Article Methodology revised after the reviewer's comments: clearer test units and repetitions, safer and in-range test loads, step-by-step outage and alert tests, honest wording on delivery guarantees, uncertainty without a reference meter, a separate metrics section and pseudocode. Details in article/README.md (AD-15) |
 | 2026-11-18 | Consistency check (`/speckit.analyze`): no critical issues; 3 high to fix before the first 220 V session (who builds the test box, a circular rule on "accepted" calibration, how the dashboard learns the "not validated" label). Build guide: new section 4 on building hardware, firmware and server in parallel, then integrating |
 | 2026-11-18 | Task list created (`specs/.../tasks.md`, 93 tasks): setup, shared foundations, then live monitoring (the MVP), history, alerts. Breadboard tests and the server with fake data can run at the same time. Project guides go in `guides/` because `docs/` is not tracked |
 | 2026-11-18 | No reference multimeter (we can't afford a True RMS one): constitution 2.0.0 now allows a demo build whose readings are labelled "not validated". Tests E1–E4 check readings against appliance labels (±15 %) instead of claiming accuracy; the test box is now just plug, ACS712 and socket. Article, specs and build guide updated |

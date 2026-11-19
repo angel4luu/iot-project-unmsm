@@ -1,8 +1,7 @@
-% Section II. Target: ~2.5 pages incl. figures (6-page budget, A3 2026-11-18).
+% Section II. Target: ~3 pages incl. figures, whole paper 5 pages (AD-12, AD-15).
 % Evidence: specs/001-energy-monitoring-system/{plan,research,data-model}.md
 % Figures are TikZ/circuitikz sources in figures/. Values and pins follow
 % plan.md › Hardware list and Front end and pin allocation.
-% Pending: \todo{} items map to open decisions in the root README.
 
 \section{Metodología}
 \label{sec:methodology}
@@ -10,9 +9,11 @@
 \subsection{Diseño de la investigación}
 \label{sec:design}
 Es una investigación aplicada de desarrollo tecnológico, cuantitativa y experimental, sin hipótesis formal: se construye el sistema y se caracteriza su desempeño; al no disponerse de un instrumento de referencia, las mediciones se verifican solo por plausibilidad y no se afirma su exactitud.
-El escenario es una carga monofásica alimentada desde un tomacorriente común de \SI{220}{V} protegido por un interruptor diferencial de \SI{30}{mA}, con un rango de operación de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz}, \SIrange{0,5}{5,0}{A} RMS y hasta unos \SI{1,1}{kW}.
-Es un prototipo educativo construido sobre todo con componentes disponibles, no destinado a instalación permanente, facturación ni protección de equipos.
-La unidad de análisis es el resumen de \SI{5}{s}; las variables independientes son la carga y el estado de la red, y las dependientes, las magnitudes eléctricas, su desviación respecto de la potencia de placa, la latencia, la entrega y recuperación de registros y la activación de alertas.
+El escenario es una carga monofásica en un tomacorriente común de \SI{220}{V} protegido por un interruptor diferencial de \SI{30}{mA} y por el termomagnético del circuito, con un rango de \SIrange{180}{250}{V} RMS, \SIrange{55}{65}{Hz} y \SIrange{0,5}{5,0}{A} RMS, fijado por el ACS712 de \SI{20}{A} (unos \SI{1,1}{kW} a \SI{220}{V}).
+Como el límite es la corriente, solo las cargas resistivas de unos \SIrange{135}{970}{W} de placa quedan en rango en toda la banda de tensión.
+Es un prototipo educativo, no destinado a instalación permanente, facturación ni protección de equipos.
+La unidad de observación es el resumen de \SI{5}{s}; la experimental, una ejecución controlada de una condición; y una repetición, otra ejecución independiente de ella, de modo que la inferencia se hace sobre ejecuciones y no sobre resúmenes correlacionados.
+Las variables independientes son la carga y el estado del enlace; las dependientes, las magnitudes eléctricas, la latencia, la recuperación y las alertas.
 
 \subsection{Arquitectura del sistema IoT}
 \label{sec:architecture}
@@ -25,15 +26,16 @@ La unidad de análisis es el resumen de \SI{5}{s}; las variables independientes 
 
 La Fig.~\ref{fig:architecture} muestra la arquitectura por capas.
 El nodo adquiere las señales, calcula las magnitudes, mantiene una cola local y evalúa umbrales, funciones que continúan aunque el servidor no esté disponible.
-El transporte usa MQTT~5 sobre TLS con autenticación mutua, calidad de servicio~1 y una confirmación de aplicación (ACK) emitida solo después de almacenar el dato; el nodo retira un resumen de la cola únicamente al recibir su ACK.
-El servidor registra la identidad y el \textit{hash} de cada mensaje y escribe de forma idempotente, de modo que la entrega es de al menos una vez y el almacenamiento, de exactamente una vez.
+El transporte usa MQTT~5 sobre TLS con autenticación mutua por certificados de una autoridad privada y calidad de servicio~1, que entrega al menos una vez pero admite duplicados; la cola en RAM del nodo resiste cortes de red, pero no un reinicio.
+Cada resumen lleva un identificador único; la ingesta lo valida, lo registra con su \textit{hash} en SQLite, escribe en InfluxDB un punto con clave determinista, lo marca como almacenado y solo entonces emite la confirmación (ACK) que lo retira de la cola.
+Un reenvío recibe otro ACK sin nueva escritura y, como ambas bases no comparten transacción, tras una falla se repite la escritura idempotente de los registros sin marcar; así cada identificador produce a lo sumo un punto, sin afirmar entrega de exactamente una vez.
 En un único anfitrión con Docker Compose y versiones fijadas se ejecutan Mosquitto~2.1.2, un servicio de ingesta, InfluxDB OSS~2.9.1 (series temporales, \SI{30}{d}), SQLite (libro de registro, configuración y alertas), Grafana OSS~13.2.3 y Caddy~2 como único acceso HTTPS desde la red local de confianza, una pila análoga a la de~\cite{desousa2026smartmeter}.
-Las notificaciones remotas salen solo por HTTPS, y el tiempo sigue UTC mediante SNTP.
+Las notificaciones remotas salen solo por HTTPS, y el nodo sincroniza UTC por SNTP y marca el estado de su reloj; un resumen sin sincronizar no puede ser válido.
 
 \subsection{Diseño e implementación del prototipo}
 \label{sec:prototype}
 La Tabla~\ref{tab:components} lista los componentes y la Fig.~\ref{fig:circuit} el circuito con sus conexiones a los pines del ESP32-S3, programado en C/C++ con ESP-IDF~5.4 LTS.
-La corriente se mide con un ACS712 de \SI{20}{A}, sensor de efecto Hall ya usado con errores RMS inferiores al \SI{5}{\percent}~\cite{marin2026rmsbenchmark}, y la tensión con un adaptador CA-CA certificado, de modo que todo el acondicionamiento queda en baja tensión.
+La corriente se mide con un ACS712 de \SI{20}{A}, sensor de efecto Hall con aislamiento galvánico, ya usado con errores RMS inferiores al \SI{5}{\percent}~\cite{marin2026rmsbenchmark}, y la tensión con un adaptador CA-CA certificado, de modo que todo el acondicionamiento queda en baja tensión.
 
 \begin{table}[t]
 \centering
@@ -68,41 +70,52 @@ Servidor & Computadora del equipo con Docker Compose & Corredor, ingesta, almace
 
 La señal recorre el circuito en este orden:
 \begin{enumerate}
-  \item La carga se alimenta desde un tomacorriente común protegido por un interruptor diferencial de \SI{30}{mA}, y su conductor atraviesa el ACS712.
-  \item El ACS712 entrega \SI{100}{mV/A} centrados en \SI{2,5}{V}, aislados de la red; el divisor $R_3$--$R_4$, con carga mayor que el mínimo de \SI{4,7}{k\ohm} del sensor, lo lleva a $\SI{1,70}{V}\pm\SI{0,48}{V}$ a \SI{5}{A}.
-  \item El adaptador, conectado al mismo circuito, entrega una réplica aislada de la tensión de red, que $R_1$--$R_2$ reduce a unos \SI{\pm 1,1}{V} de pico sobre una polarización de \SI{1,65}{V}.
-  \item Un condensador de \SI{22}{nF} en cada entrada actúa como filtro antialias antes de GPIO4 y GPIO5.
-  \item El ADC1 del ESP32-S3 muestrea ambos canales en alternancia a \num{8000} conversiones por segundo (\num{4000} pares) y el \textit{firmware} aplica la calibración y la corrección de desfase de la Sección~\ref{sec:acquisition}.
+  \item La carga se alimenta desde el tomacorriente protegido, y su conductor atraviesa el ACS712.
+  \item El ACS712 entrega \SI{100}{mV/A} centrados en \SI{2,5}{V}, aislados de la red; el divisor $R_3$--$R_4$ (\SI{14,7}{k\ohm}, sobre el mínimo de \SI{4,7}{k\ohm}) los lleva a $\SI{1,70}{V}\pm\SI{0,48}{V}$ de pico a \SI{5}{A}, es decir, \SI{68}{mV/A}.
+  \item El adaptador, conectado al mismo circuito, entrega una réplica aislada de la tensión de red, que $R_1$--$R_2$ reduce a unos \SI{\pm 1,1}{V} de pico (\SI{\pm 1,3}{V} a \SI{250}{V}) sobre una polarización de \SI{1,65}{V}.
+  \item Un condensador de \SI{22}{nF} en cada entrada forma un filtro antialias de primer orden (corte de unos \SIrange{1,6}{2,3}{kHz}).
+  \item El ADC1 de 12 bits muestrea ambos canales en alternancia a \num{8000} conversiones por segundo (\num{4000} pares), con unos \SI{11}{mA} por bit.
   \item Con cada bloque de \SI{1}{s}, el nodo actualiza la pantalla y el LED RGB y, si se confirma un umbral, activa el zumbador a través del transistor.
   \item Cada \SI{5}{s} publica un resumen por Wi-Fi hacia el servidor.
 \end{enumerate}
-Una cola en RAM retiene \num{256} resúmenes (más de \SI{21}{min}), la energía se guarda cada \SI{60}{s} en memoria no volátil y, tras un reinicio, el intervalo sin punto de control se marca como incierto.
+Una cola en RAM retiene \num{256} resúmenes (más de \SI{21}{min}) y la energía se guarda cada \SI{60}{s} en memoria no volátil.
 El ACS712 es el único componente con terminales a tensión de red: va solo en una caja de ensayo cerrada, nunca sobre protoboard, y una persona calificada revisa el conjunto con el equipo desenergizado antes de cualquier prueba con tensión.
 El prototipo no incluye relé ni corte automático de carga.
 
 \subsection{Modelo de adquisición de variables eléctricas}
 \label{sec:acquisition}
-Sean $x_v[n]$ y $x_i[n]$ las muestras alternadas del ADC, separadas \SI{125}{\micro s}.
+Sean $x_v[n]$ y $x_i[n]$ las muestras del par $n$, con la de corriente \SI{125}{\micro s} después de la de tensión.
 Las muestras calibradas son
 \begin{equation}
-v[n]=g_v\,(x_v[n]-o_v),\qquad i[n]=g_i\,(x_i[n-\delta]-o_i),
+v[n]=g_v\,(x_v[n]-o_v),\quad i[n]=g_i\left(\tfrac{x_i[n-1]+x_i[n]}{2}-o_i\right),
 \label{eq:calib}
 \end{equation}
-donde $g$ son las ganancias, $o$ los \textit{offsets} medidos sin corriente y $\delta$ el retardo fraccionario que compensa el desfase entre canales, el del adaptador y el del sensor.
-Para $N=\num{20000}$ pares en \SI{5}{s},
+donde $g$ son las ganancias nominales, $o$ los \textit{offsets} medidos sin corriente, y el promedio interpola la corriente en el instante de la tensión para corregir el retardo entre canales (\SI{2,7}{\degree} a \SI{60}{Hz}).
+El desfase del adaptador y del sensor no se corrige; su efecto en $P$ es despreciable en cargas resistivas ($\cos\SI{3}{\degree}\approx0{,}999$), pero no en otras, donde $P$ solo se observa.
+Para cada bloque $j$ de \SI{1}{s} con $N_b=\num{4000}$ pares,
 \begin{align}
-V_{\mathrm{RMS}}&=\sqrt{\frac{1}{N}\sum_{n=1}^{N}v^{2}[n]},\quad
-I_{\mathrm{RMS}}=\sqrt{\frac{1}{N}\sum_{n=1}^{N}i^{2}[n]},
+V_{j}&=\sqrt{\frac{1}{N_b}\sum_{n\in j}v^{2}[n]},\quad
+I_{j}=\sqrt{\frac{1}{N_b}\sum_{n\in j}i^{2}[n]},
 \label{eq:rms}\\
-P&=\frac{1}{N}\sum_{n=1}^{N}v[n]\,i[n],
-\label{eq:power}\\
-E_{k}&=E_{k-1}+\max(P_{k},0)\,\frac{\Delta t_{k}}{3600},
-\label{eq:energy}
+P_{j}&=\frac{1}{N_b}\sum_{n\in j}v[n]\,i[n],
+\label{eq:power}
 \end{align}
-con $V_{\mathrm{RMS}}$ en V, $I_{\mathrm{RMS}}$ en A, $P$ en W, $E_k$ en Wh y $\Delta t_k$ en segundos de un reloj monótono, para que una corrección de SNTP no altere la energía.
+y el resumen $k$ agrega sus cinco bloques, de igual duración:
+\begin{equation}
+V_{k}=\sqrt{\tfrac{1}{5}\textstyle\sum_{j}V_{j}^{2}},\;
+I_{k}=\sqrt{\tfrac{1}{5}\textstyle\sum_{j}I_{j}^{2}},\;
+P_{k}=\tfrac{1}{5}\textstyle\sum_{j}P_{j}.
+\label{eq:agg}
+\end{equation}
+La energía importada es
+\begin{equation}
+E_{k}=E_{k-1}+\max(P_{k},0)\,\frac{\Delta t_{k}}{3600},
+\label{eq:energy}
+\end{equation}
+con $V$ en V, $I$ en A, $P$ en W, $E_k$ en Wh y $\Delta t_k$ en segundos de un reloj monótono, para que una corrección de SNTP no altere la energía.
 La potencia activa se mide como el promedio de $v[n]\,i[n]$, no como $V_{\mathrm{RMS}}I_{\mathrm{RMS}}\,\mathrm{FP}$; no se informan potencia aparente, reactiva, factor de potencia ni frecuencia.
-El signo de $P$ se conserva para detectar una polaridad invertida del sensor.
-Cada resumen lleva un estado de calidad (válido, degradado o inválido) con banderas de fuera de rango, saturación, huecos de muestreo y reloj no sincronizado; una lectura inválida nunca se interpreta como cero.
+Cada resumen lleva un estado de calidad (válido, degradado o inválido) con banderas; una lectura inválida nunca se interpreta como cero.
+Una $P_k$ negativa no descuenta energía; un resumen con huecos no se integra, y tras él o tras un reinicio, que retoma el último punto de control, el intervalo se marca como incierto.
 
 \subsection{Algoritmo de monitoreo y análisis}
 \label{sec:algorithm}
@@ -114,75 +127,69 @@ Cada resumen lleva un estado de calidad (válido, degradado o inválido) con ban
 \end{figure}
 
 La Fig.~\ref{fig:algorithm} resume el algoritmo.
-El nodo calcula (\ref{eq:calib})--(\ref{eq:power}) en bloques de \SI{1}{s}, forma un resumen con cinco bloques, actualiza $E_k$ y lo encola; tras una reconexión drena la cola desde el registro más antiguo a dos o más registros por segundo.
-El servidor valida cada mensaje contra el esquema JSON y la identidad del nodo, descarta duplicados, almacena y confirma.
-La energía por periodo se obtiene como diferencia del contador, solo con datos válidos de una misma continuidad:
+El nodo calcula (\ref{eq:calib})--(\ref{eq:power}) en bloques de \SI{1}{s}, forma un resumen con cinco bloques, actualiza $E_k$ y lo encola; tras una reconexión drena la cola desde el registro más antiguo a dos o más registros por segundo, y tras un reinicio pierde la cola, que el servidor registra como un hueco.
+El análisis es descriptivo: la energía por hora es la diferencia del contador entre resúmenes válidos de una misma continuidad,
 \begin{equation}
 E_{h}=E(t_{h+1})-E(t_{h}),\qquad h^{*}=\arg\max_{h}E_{h},
 \label{eq:hourly}
 \end{equation}
-donde $h^{*}$ es la hora de mayor consumo; la detección estadística de anomalías y la predicción quedan como trabajo futuro.
-La alerta local pasa de normal a pendiente y a activa cuando la potencia de bloques válidos supera $P_{\mathrm{lim}}$ durante un tiempo de confirmación (\SI{10}{s} por defecto), lo que descarta los picos de arranque, y se libera por debajo de $0{,}95\,P_{\mathrm{lim}}$ para evitar oscilaciones.
+donde $h^{*}$ es la hora de mayor consumo entre las horas con al menos \SI{95}{\percent} de cobertura; las incompletas se muestran como tales y no como cero.
+La detección estadística de anomalías y la predicción quedan como trabajo futuro.
+La alerta local se evalúa en cada bloque válido: pasa de normal a pendiente cuando $P_j$ supera $P_{\mathrm{lim}}$ y a activa si se mantiene durante el tiempo de confirmación $T_c$ (\SI{10}{s} por defecto), lo que descarta los picos de arranque, y se libera bajo $0{,}95\,P_{\mathrm{lim}}$ durante $T_l$ para evitar oscilaciones.
+Un bloque inválido devuelve el estado pendiente a normal, no confirma ni libera una alerta activa y genera un evento de calidad.
 El servidor convierte cada evento del nodo en una alerta abierta, reconocida o resuelta, que indica circuito, hora, valor, umbral, severidad y estado.
 
 \subsection{Implementación y diseño experimental}
 \label{sec:experimental}
-La implementación avanza por etapas, cada una condicionada a superar la anterior:
-\begin{enumerate}
-  \item \emph{Simulación}: servidor, panel y alertas con un simulador que emite mensajes conformes con los esquemas JSON del contrato.
-  \item \emph{Banco de baja tensión}: periféricos, canal de tensión con el adaptador y \textit{offset} del ACS712 sin corriente, sin red.
-  \item \emph{Revisión de seguridad}: una persona calificada revisa y firma el esquema, el aislamiento del ACS712, la caja de ensayo y la protección diferencial.
-  \item \emph{Calibración nominal supervisada}: se cargan los coeficientes de las hojas de datos y de los divisores, se mide durante \SI{60}{s} el \textit{offset} sin corriente tras \SI{10}{min} de calentamiento y se confirma la polaridad con $P>0$ en una carga resistiva; los coeficientes se congelan.
-  \item \emph{Evaluación}: escenarios de la Tabla~\ref{tab:scenarios}.
-\end{enumerate}
-No se dispone de un instrumento de referencia, por lo que el prototipo opera con coeficientes nominales, cada valor se muestra rotulado como no validado y E1--E4 son una verificación de plausibilidad frente a la potencia de placa de cargas domésticas, no una medida de exactitud (Fig.~\ref{fig:testsetup}).
+La implementación avanza por etapas, cada una condicionada a la anterior: simulación del servidor con mensajes conformes con el contrato, banco de baja tensión sin red, revisión firmada por una persona calificada, calibración nominal supervisada y evaluación con los escenarios de la Tabla~\ref{tab:scenarios}.
+Sin instrumento de referencia, el prototipo opera con coeficientes nominales, cada valor se rotula como no validado y E1--E4 verifican la plausibilidad frente a la potencia de placa de cargas domésticas, no la exactitud (Fig.~\ref{fig:testsetup}).
 
 \begin{figure}[t]
   \centering
   \input{figures/fig04-testsetup}
-  \caption{Montaje de ensayo. Las líneas gruesas llevan tensión de red; el ACS712 es el único elemento del nodo en ese camino y está dentro de la caja de ensayo. El adaptador, conectado al mismo circuito, recibe la misma tensión que la carga.}
+  \caption{Montaje de ensayo. Las líneas gruesas llevan tensión de red; el ACS712 es el único elemento del nodo en ese camino y está dentro de la caja de ensayo. El adaptador, conectado al mismo circuito, recibe la misma tensión que la carga. En E7 se bloquea el puerto MQTT del servidor.}
   \label{fig:testsetup}
 \end{figure}
 
-Cada sesión de ensayo sigue el mismo flujo:
-\begin{enumerate}
-  \item se comprueba el disparo del interruptor diferencial con su botón de prueba;
-  \item con el circuito desenergizado, se conecta la carga al tomacorriente de la caja de ensayo y se anota su potencia de placa;
-  \item se energiza, se esperan \SI{10}{min} de calentamiento y, con la carga apagada, se mide durante \SI{60}{s} el \textit{offset} del ACS712;
-  \item se enciende la carga y, ya estable, se registran los resúmenes del nodo durante al menos \SI{5}{min};
-  \item se guardan los resúmenes y las versiones, y se calcula la desviación con~\eqref{eq:error}.
-\end{enumerate}
-En E1--E3 la tensión debe estar entre \SI{180}{V} y \SI{250}{V} y la potencia debe ser positiva y quedar dentro de \SI{\pm 15}{\percent} de la de placa; esa banda cubre el error de los coeficientes nominales y la diferencia entre la placa y el consumo real, por lo que no es un límite de exactitud.
-En E4, un ventilador, $V$, $I$ y $P$ solo se observan, pues con factor de potencia distinto de la unidad no puede juzgarse $P$ sin un medidor de potencia, como en otros trabajos con cargas variadas~\cite{cardenas2026residential}.
-Se registran las versiones y el cableado, y el \textit{offset} del ACS712, que varía con la temperatura, se mide de nuevo antes de cada sesión.
-El número de repeticiones se fijará con un ensayo piloto~\todo{AI-6: fijar el número de repeticiones por escenario.}
+Cada ejecución de E1--E4 comprende la prueba del diferencial, \SI{10}{min} de calentamiento, \SI{60}{s} de \textit{offset} sin carga y, con la carga encendida y estable, \SI{5}{min} de registro resumidos por la media $\bar{P}_r$.
+La banda de \SI{\pm 15}{\percent} de E1--E3 cubre los coeficientes nominales y la variación de la carga con la tensión de red; no es un límite de exactitud.
+En E4, un ventilador, no puede juzgarse $P$ sin un medidor de potencia~\cite{cardenas2026residential}; las cargas no lineales no se ensayan.
 
 \begin{table}[t]
 \centering
-\caption{Escenarios, métricas y criterios de aceptación}
+\caption{Escenarios, ejecuciones y criterios de aceptación}
 \label{tab:scenarios}
 \footnotesize
 \begin{tabular}{@{}l >{\raggedright}p{3.3cm} >{\raggedright\arraybackslash}p{3.55cm}@{}}
 \toprule
 ID & Carga o maniobra & Métrica y criterio \\
 \midrule
-E1--E3 & Resistivas: foco halógeno (\SI{100}{W}), reflector (\SI{500}{W}) y plancha (\SI{1}{kW}) & $V$ en \SIrange{180}{250}{V}; $P>0$ y $|d_P|\leq\SI{15}{\percent}$ (SC-001, plausibilidad) \\
-E4 & Ventilador estable & $V$, $I$ y $P$ solo observadas \\
-E5 & Perfiles del simulador; carga real bajo y sobre el umbral; arranques breves & Alertas correctas; aviso local $\leq\SI{2}{s}$ y remoto $\leq\SI{10}{s}$ (SC-004) \\
-E6 & \SI{1}{h} con carga resistiva y red sana & $\geq\SI{95}{\percent}$ de $L_k\leq\SI{10}{s}$; cero duplicados (SC-002) \\
-E7 & Nodo sin enlace con el corredor durante \SI{10}{min} & $R\geq\SI{99}{\percent}$ en $\leq\SI{5}{min}$ (SC-003) \\
-E8 & Conjunto de siete días de mediciones & Hallar $h^{*}$ en $<\SI{2}{min}$ (SC-005) \\
+E1--E3 & Resistivas: dos focos de \SI{100}{W} en paralelo, reflector de \SI{500}{W} y estufa de cuarzo de \SI{1}{kW} & $V$ e $I$ en rango; $P>0$ y $|d_{P,r}|\leq\SI{15}{\percent}$ (SC-001, plausibilidad) \\
+E4 & Ventilador estable; 3 ejecuciones & $V$, $I$ y $P$ solo observadas \\
+E5 & 60 episodios del simulador y 10 con E1 y E2; $P_{\mathrm{lim}}=\SI{300}{W}$ & Exactitud de alertas; aviso local $\leq\SI{2}{s}$ y remoto $\leq\SI{10}{s}$ (SC-004) \\
+E6 & \SI{1}{h} con E2 y red sana; 3 ejecuciones & $\geq\SI{95}{\percent}$ de $L_k\leq\SI{10}{s}$; $D=0$ (SC-002) \\
+E7 & Puerto MQTT bloqueado \SI{10}{min}; 3 ejecuciones y 1 con reinicio & $R\geq\SI{99}{\percent}$ en $\leq\SI{5}{min}$, en orden (SC-003) \\
+E8 & Siete días de datos de procedencia declarada & $h^{*}$ hallada en $<\SI{2}{min}$ (SC-005) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-La desviación de la potencia medida $P_m$ respecto de la potencia de placa $P_n$ es
+E1--E3 empiezan con un piloto de tres ejecuciones por carga en orden aleatorio, y el tamaño final es el menor $n\leq10$ con $n\geq(t_{0{,}975,\,n-1}\,s/e)^{2}$, donde $s$ es la desviación de $d_{P,r}$ y $e=5$ puntos porcentuales.
+En E5 cada episodio sostenido, pico breve ($<T_c$) o bajo el umbral se clasifica una sola vez como VP, FN, FP o VN según haya o no activación.
+En E6 una sonda consulta cada \SI{1}{s} los datos del panel, con relojes sincronizados por NTP.
+En E7 un \textit{script} bloquea el puerto 8883 y registra los instantes de corte y restitución; los registros retenidos se identifican por su secuencia, y en la ejecución con reinicio se espera un hueco marcado, no una recuperación.
+E8 declara si los datos son reales o simulados, y los simulados no se presentan como operación del prototipo.
+Se informan la incertidumbre tipo~A entre ejecuciones y la tipo~B de los coeficientes nominales según la GUM; sin referencia el sesgo no se acota.
+
+\subsection{Métricas de evaluación}
+\label{sec:metrics}
+Los criterios provienen de la especificación (SC-001 a SC-006), no de una norma.
+Sin referencia no hay error de medición; se usa la desviación de $\bar{P}_r$ respecto de la potencia de placa $P_n$,
 \begin{equation}
-d_{P}\,(\%)=\frac{P_m-P_n}{P_n}\times100,
+d_{P,r}\,(\%)=\frac{\bar{P}_r-P_n}{P_n}\times100,
 \label{eq:error}
 \end{equation}
-y sin carga se usa un límite absoluto de ruido.
-La latencia de cada resumen es $L_k=t_k^{\mathrm{vis}}-t_k^{\mathrm{obs}}$ (media y percentil~95), y la recuperación, $R=n_{\mathrm{rec}}/n_{\mathrm{ret}}\times100$ sobre los registros retenidos.
-E5 usa perfiles repetibles del simulador y maniobras manuales con cargas reales, y su exactitud es $(\mathrm{VP}+\mathrm{VN})/(\mathrm{VP}+\mathrm{VN}+\mathrm{FP}+\mathrm{FN})$.
-También se reportan la desviación estándar de las repeticiones, la disponibilidad del nodo, el tiempo de cálculo de un bloque y el porcentaje de lecturas con marca de tiempo, unidad y estado (SC-006).
+y por carga se informan su media, su desviación estándar entre ejecuciones (repetibilidad) y su intervalo de confianza del \SI{95}{\percent}; sin carga se usa un límite absoluto de ruido.
+La latencia $L_k=t_k^{\mathrm{con}}-t_k^{\mathrm{obs}}+T_r$ va del fin de la ventana a su primera consulta más el refresco del panel (media y percentil~95); la disponibilidad es $A=n_{\mathrm{alm}}/n_{\mathrm{esp}}$, los duplicados $D=n_{\mathrm{pun}}-n_{\mathrm{id}}$ y la recuperación $R=n_{\mathrm{rec}}/n_{\mathrm{ret}}\times100$.
+La exactitud de alertas es $(\mathrm{VP}+\mathrm{VN})/(\mathrm{VP}+\mathrm{VN}+\mathrm{FP}+\mathrm{FN})$; también se reportan el tiempo de cálculo por bloque y el porcentaje de lecturas con marca de tiempo, unidad y estado (SC-006).
 Los datos brutos, coeficientes y \textit{scripts} se conservan con su \textit{hash}, y las tablas de resultados se generan a partir de esa evidencia.
