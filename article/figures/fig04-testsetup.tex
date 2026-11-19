@@ -1,7 +1,7 @@
 % Test setup (single column): mains path through the ACS712 test box, low-voltage
 % node and server. No reference meter (constitution 2.0.0).
-% Source: plan.md › Hardware list (ACS712 test box, reference instrument) and
-% Calibration and acceptance procedure; research R-001, R-002, R-004.
+% Source: plan.md › Hardware list (ACS712 test box) and
+% Calibration and plausibility procedure; research R-001, R-002, R-004.
 \begin{tikzpicture}[
   font=\scriptsize,
   every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
@@ -38,6 +38,6 @@
 \draw[arr] (adp) -- node[lbl, right] {GPIO4} (esp);
 \draw (acs.east) -- (acs.east -| box.east);
 \draw[arr] (acs.east -| box.east) -- node[lbl, above, pos=0.5] {5 V, GND,\\OUT: GPIO5} (acs.east -| esp.west);
-\draw[arr] (esp) -- node[lbl, right] {Wi-Fi, MQTT/TLS} (srv);
+\draw[arr] (esp) -- node[lbl, right] {Wi-Fi, MQTT/TLS\\(E7: 8883 bloqueado)} (srv);
 \draw[arr] (srv) -- (usr);
 \end{tikzpicture}
