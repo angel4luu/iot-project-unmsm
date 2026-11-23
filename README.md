@@ -27,7 +27,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | System | Design finished; demo switched to a 12 V AC bulb loop (no electrician needed). Nothing built yet | Buy the 12 V adapter (thermally protected), bulb and small parts; start building: repo setup, then the server with fake data and the breadboard tests in parallel |
 | Article | Introduction done; Methodology adapted to the 12 V loop and revised after the reviewer's comments (test units, repetitions, outage and alert tests, metrics), still aimed at 5 pages | Compile in Overleaf and confirm 5 pages; then Results, once the experiments run |
 
-*Last updated: 2026-11-18*
+*Last updated: 2026-11-23*
 
 ## Roadmap
 
@@ -84,6 +84,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-23 | Spec Kit commands now work as native slash commands in Claude Code (`/speckit-implement`, etc.), alongside Codex. No specs or templates changed |
 | 2026-11-18 | Article Methodology merged with plan B (12 V bulb loop) and revised after the reviewer's comments: clearer test units and repetitions, step-by-step alert and outage tests, honest wording on delivery guarantees, uncertainty without a reference meter, and a separate metrics section. Details in article/README.md (AD-16) |
 | 2026-11-18 | Parts list checked: the build guide now lists every part with an exact quantity (23 rows: 100 kΩ ×1, 4.7 kΩ ×2, 10 kΩ ×3, 470 Ω ×3, 1 kΩ ×1, 10 µF ×1, 22 nF ×2, male-to-female jumpers, 18 AWG loop cable, wire stripper) and a short shopping summary; polarity notes for the capacitor, buzzer and RGB LED. Leftover 220 V details removed from the plan's pin table, research, data model, task T033 and the contract examples (now 12.6 V, 1.62 A, 20.4 W) |
 | 2026-11-18 | Plan B: no electrician available, so the demo measures a 12 V halogen bulb fed by a thermally protected 12 V AC adapter. RCD, test box, household loads and the qualified review leave the MVP (kept for a future 220 V test). Tests are now E1 (bulb vs. its label, ±20 %), E2 alerts (bulb on/off, ~15 W limit), E3 latency, E4 recovery, E5 busiest hour with the simulator. Specs, tasks (+2: calibration registration, retention test), build guide, article (Fig. 4 redrawn, Tables I–II) updated |

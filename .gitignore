@@ -60,6 +60,10 @@ htmlcov/
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/speckit-*/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/speckit-*/
 docs/
 
 # LaTeX article build output

@@ -61,5 +61,5 @@ After completing, starting, or changing any phase, step, milestone, or decision:
 ## Repo rules
 
 - No secrets, keys, or real endpoints in tracked files (constitution IV).
-- `docs/` (lab reports), `.codex/`, and `.agents/` (except `skills/speckit-*`) are git-ignored local material.
+- `docs/` (lab reports), `.codex/`, `.agents/`, and `.claude/` (except `skills/speckit-*` in both) are git-ignored local material.
 - Mains-voltage work requires a qualified-person review before energizing; never suggest skipping it.
