@@ -1,4 +1,4 @@
-% Section II. Target: ~3 pages incl. figures, whole paper 5 pages (AD-12, AD-15, AD-16).
+% Section II. Page limit relaxed until a venue is chosen (AD-6, AD-17); see AD-15, AD-16.
 % Evidence: specs/001-energy-monitoring-system/{plan,research,data-model}.md
 % Figures are TikZ/circuitikz sources in figures/. Values and pins follow
 % plan.md › Hardware list and Front end and pin allocation.
@@ -15,22 +15,26 @@ Es un prototipo educativo construido sobre todo con componentes disponibles, no 
 La unidad de observación es el resumen de \SI{5}{s}; la experimental, una ejecución controlada de una condición; y una repetición, otra ejecución independiente de ella, de modo que la inferencia se hace sobre ejecuciones y no sobre resúmenes correlacionados.
 Las variables independientes son la carga y el estado del enlace; las dependientes, las magnitudes eléctricas, la latencia, la recuperación y las alertas.
 
-\subsection{Arquitectura del sistema IoT}
+\subsection{Arquitectura: componentes y despliegue}
 \label{sec:architecture}
 \begin{figure}[t]
   \centering
   \input{figures/fig01-architecture}
-  \caption{Arquitectura del sistema por capas. La línea discontinua gruesa marca el aislamiento galvánico entre la red eléctrica y el nodo.}
+  \caption{Diagrama de componentes y despliegue. Los recuadros de borde grueso son dispositivos físicos y contienen sus componentes de software; cada enlace indica protocolo y puerto. Solo el adaptador certificado se conecta a \SI{220}{V}.}
   \label{fig:architecture}
 \end{figure}
 
-La Fig.~\ref{fig:architecture} muestra la arquitectura por capas.
-El nodo adquiere las señales, calcula las magnitudes, mantiene una cola local y evalúa umbrales, funciones que continúan aunque el servidor no esté disponible.
-El transporte usa MQTT~5 sobre TLS con autenticación mutua por certificados de una autoridad privada y calidad de servicio~1, que entrega al menos una vez pero admite duplicados; la cola en RAM del nodo resiste cortes de red, pero no un reinicio.
-Cada resumen lleva un identificador único; la ingesta lo valida, lo registra con su \textit{hash} en SQLite, escribe en InfluxDB un punto con clave determinista, lo marca como almacenado y solo entonces emite la confirmación (ACK) que lo retira de la cola.
-Un reenvío recibe otro ACK sin nueva escritura y, como ambas bases no comparten transacción, tras una falla se repite la escritura idempotente de los registros sin marcar; así cada identificador produce a lo sumo un punto, sin afirmar entrega de exactamente una vez.
-En un único anfitrión con Docker Compose y versiones fijadas se ejecutan Mosquitto~2.1.2, un servicio de ingesta, InfluxDB OSS~2.9.1 (series temporales, \SI{30}{d}), SQLite (libro de registro, configuración y alertas), Grafana OSS~13.2.3 y Caddy~2 como único acceso HTTPS desde la red local de confianza, una pila análoga a la de~\cite{desousa2026smartmeter}.
-Las notificaciones remotas salen solo por HTTPS, y el nodo sincroniza UTC por SNTP y marca el estado de su reloj; un resumen sin sincronizar no puede ser válido.
+La Fig.~\ref{fig:architecture} muestra los componentes del sistema y su despliegue en cuatro dispositivos físicos, con el protocolo y el puerto de cada enlace:
+\begin{itemize}
+  \item \emph{Banco}: el tomacorriente alimenta solo el adaptador certificado, cuya salida de \SI{12}{V} CA alimenta el lazo del foco y el canal de tensión; el ACS712 mide la corriente del lazo y un cargador USB de \SI{5}{V} alimenta el nodo.
+  \item \emph{Nodo}: el ESP32-S3 adquiere las señales, calcula las magnitudes, mantiene una cola local y evalúa umbrales, funciones que continúan aunque el servidor no esté disponible.
+  Sincroniza UTC por SNTP y marca el estado de su reloj; un resumen sin sincronizar no puede ser válido.
+  \item \emph{Red}: un enrutador Wi-Fi de la red local de confianza lleva MQTT~5 sobre TLS con autenticación mutua por certificados de una autoridad privada y calidad de servicio~1, que entrega al menos una vez pero admite duplicados; la cola en RAM del nodo resiste cortes de red, pero no un reinicio.
+  \item \emph{Servidor}: en la computadora del equipo, con Docker Compose y versiones fijadas, se ejecutan Mosquitto~2.1.2, un servicio de ingesta, InfluxDB OSS~2.9.1 (series temporales, \SI{30}{d}), SQLite (libro de registro, configuración y alertas), Grafana OSS~13.2.3 y Caddy~2, una pila análoga a la de~\cite{desousa2026smartmeter}; solo se publican los puertos 8883 y 443.
+  Cada resumen lleva un identificador único; la ingesta lo valida, lo registra con su \textit{hash} en SQLite, escribe en InfluxDB un punto con clave determinista, lo marca como almacenado y solo entonces emite la confirmación (ACK) que lo retira de la cola.
+  Un reenvío recibe otro ACK sin nueva escritura y, como ambas bases no comparten transacción, tras una falla se repite la escritura idempotente de los registros sin marcar; así cada identificador produce a lo sumo un punto, sin afirmar entrega de exactamente una vez.
+  \item \emph{Usuario}: el operador accede al panel solo por HTTPS con inicio de sesión desde la red local, y las notificaciones remotas salen solo por HTTPS.
+\end{itemize}
 
 \subsection{Diseño e implementación del prototipo}
 \label{sec:prototype}

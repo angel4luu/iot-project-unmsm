@@ -1,89 +1,89 @@
-% Fig. 1: layered system architecture, medium level (single column).
-% Source: plan.md, Component and Deployment Design. Shows WHAT exists and
-% WHERE it lives; step-by-step flow is Fig. 3 and wiring is Fig. 2.
-% Layer names match the terms used in 02-methodology.tex.
+% Fig. 1: component and deployment diagram (single column), plan B.
+% Source: plan.md › Component and Deployment Design and Physical deployment.
+% Thick boxes are physical devices; rounded boxes inside them are software
+% components or containers; every link names its protocol and port.
+% Internal step-by-step flow is Fig. 3; wiring is Fig. 2; bench setup is Fig. 4.
 \begin{tikzpicture}[
   font=\scriptsize,
   every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
-  hw/.style={draw, fill=gray!25, align=center, minimum height=7mm, inner sep=2pt},
-  sw/.style={draw, fill=white, rounded corners=3pt, align=center, minimum height=7mm, inner sep=2pt},
+  hw/.style={draw, fill=gray!25, align=center, minimum height=7mm, inner sep=2pt, text width=15mm},
+  cp/.style={draw, fill=white, rounded corners=3pt, align=center, minimum height=6mm,
+    inner sep=1.5pt, text width=19mm},
   db/.style={draw, fill=white, align=center, shape=cylinder, shape border rotate=90,
     aspect=0.12, minimum height=8mm, inner sep=1.5pt},
   ex/.style={draw, dashed, fill=white, rounded corners=3pt, align=center,
     minimum height=7mm, inner sep=2pt},
-  band/.style={fill=gray!7, draw=none},
+  dev/.style={draw, line width=1.1pt, fill=gray!7, rounded corners=1pt},
+  devt/.style={font=\tiny\bfseries, anchor=north west, inner sep=2pt},
   lay/.style={font=\scriptsize\bfseries, rotate=90, anchor=center},
   sig/.style={-{Stealth[length=1.4mm]}, thin},
   dat/.style={-{Latex[length=1.8mm]}, line width=0.9pt},
-  cal/.style={-{Stealth[length=1.4mm]}, densely dotted, semithick},
   lbl/.style={font=\tiny, inner sep=1pt, align=center},
 ]
-% ---- Layer bands (background) ----
-\def\R{8.35}
-\begin{scope}[on background layer]
-  \fill[band] (0,0.55) rectangle (\R,-0.75);
-  \fill[band] (0,-1.05) rectangle (\R,-2.35);
-  \fill[band] (0,-2.65) rectangle (\R,-3.25);
-  \fill[band] (0,-3.55) rectangle (\R,-6.05);
-  \fill[band] (0,-6.35) rectangle (\R,-7.25);
-\end{scope}
-\node[lay] at (0.25,-0.1) {Eléctrica};
-\node[lay] at (0.25,-1.7) {Nodo};
-\node[lay, font=\tiny\bfseries] at (0.25,-2.95) {Red};
-\node[lay] at (0.25,-4.8) {Servidor};
-\node[lay] at (0.25,-6.8) {Usuario};
+% ---- Bench ----
+\node[lay] at (0.2,-0.1) {Banco};
+\node[hw] (out) at (1.3,-0.1) {Tomacorriente\\\SI{220}{V}};
+\node[hw] (adp) at (3.25,-0.1) {Adaptador \SI{12}{V}$\sim$, prot.\ térmica};
+\node[hw] (loop) at (5.25,-0.1) {Lazo \SI{12}{V}:\\ACS712 y foco};
+\node[hw] (chg) at (7.3,-0.1) {Cargador\\USB \SI{5}{V}};
+\draw[thin] (out) -- (adp);
+\draw[line width=1.1pt] (adp) -- (loop);
+\draw[very thick, dash pattern=on 3pt off 2pt] (2.3,0.45) -- (2.3,-0.65);
+\node[lbl, anchor=south] at (2.3,0.45) {aislamiento};
 
-% ---- Electrical layer ----
-\node[hw] (load) at (1.45,-0.1) {Carga\\monofásica};
-\node[hw] (vs) at (3.35,-0.1) {Sensor de\\tensión aislado};
-\node[hw] (cs) at (5.35,-0.1) {Sensor de\\corriente (Hall)};
-\draw[thin] (load) -- (vs);
-\draw[thin] (load.north) |- ++(0,0.3) -| (cs.north);
+% ---- Node device ----
+\node[lay] at (0.2,-2.0) {Nodo};
+\draw[dev] (0.5,-0.95) rectangle (8.0,-3.05);
+\node[devt, anchor=south west] at (0.5,-3.05) {«dispositivo» ESP32-S3 DevKitC-1 (protoboard)};
+\node[cp] (meas) at (1.75,-1.55) {Medición\\y calidad};
+\node[cp] (acq) at (4.25,-1.55) {Adquisición\\ADC1};
+\node[cp] (que) at (6.75,-1.55) {Cola RAM\\y NVS};
+\node[cp] (thr) at (1.75,-2.3) {Umbral local};
+\node[cp] (ui) at (4.25,-2.3) {OLED, LED\\y zumbador};
+\node[cp] (mq) at (6.75,-2.3) {Cliente\\MQTT/TLS};
+\draw[sig] (adp.south) -- node[lbl, left, pos=0.3] {GPIO4} (adp.south |- acq.north);
+\draw[sig] (loop.south) -- node[lbl, right, pos=0.3] {GPIO5} (loop.south |- acq.north);
+\draw[sig] (chg.south) -- node[lbl, right, pos=0.4] {USB} (chg.south |- 0,-0.95);
 
-% ---- Isolation boundary ----
-\draw[very thick, dash pattern=on 3pt off 2pt] (0.55,-0.9) -- (\R,-0.9);
-\node[lbl, fill=gray!7, anchor=east] at (\R-0.05,-0.9) {aislamiento galvánico};
+% ---- Network ----
+\node[lay, font=\tiny\bfseries] at (0.2,-3.45) {Red};
+\node[draw, line width=1.1pt, fill=gray!7, align=center, inner sep=2pt] (ap) at (4.25,-3.45) {«dispositivo» Router Wi-Fi (LAN de confianza)};
+\draw[dat] (mq.south) |- node[lbl, right, pos=0.3] {Wi-Fi} (ap.east);
 
-% ---- Node layer ----
-\node[hw, text width=43mm] (node) at (3.75,-1.7) {\textbf{Nodo de medición (ESP32-S3)}\\[1pt]
-  {\tiny $V_{\mathrm{RMS}}$, $I_{\mathrm{RMS}}$, $P$, $E$ y calidad;\\ cola local y umbral local}};
-\node[hw] (led) at (7.35,-1.7) {Aviso local\\LED, OLED\\y zumbador};
-\draw[sig] (vs) -- (vs |- node.north);
-\draw[sig] (cs) -- (cs |- node.north);
-\draw[sig] (node) -- (led);
+% ---- Server device ----
+\node[lay] at (0.2,-5.5) {Servidor};
+\draw[dev] (0.5,-4.3) rectangle (8.0,-6.7);
+\node[devt, anchor=south west] at (0.5,-6.7) {«dispositivo» Computadora del equipo, Docker Compose};
+\node[cp] (mos) at (1.75,-4.9) {Mosquitto\\:8883};
+\node[cp] (ing) at (4.25,-4.9) {Servicio de\\ingesta};
+\node[db] (sql) at (1.75,-5.85) {SQLite};
+\node[db] (inf) at (3.5,-5.85) {InfluxDB};
+\node[cp, text width=13mm] (gra) at (5.15,-5.85) {Grafana};
+\node[cp, text width=13mm] (cad) at (6.85,-5.85) {Caddy\\:443};
+\draw[dat] (ap.west) -| node[lbl, right, pos=0.72] {MQTT 5, TLS mutuo,\\QoS 1 y ACK} (mos.north);
+\draw[dat] (mos) -- (ing);
+\draw[dat] (ing.south) -- ++(0,-0.2) -| (sql.north);
+\draw[dat] (ing.south) -- ++(0,-0.2) -| (inf.north);
+\draw[dat] (inf) -- (gra);
+\draw[dat] (gra) -- (cad);
 
-% ---- Network layer ----
-\node[lbl, anchor=west] at (2.0,-2.95) {Wi-Fi del laboratorio $\cdot$ MQTT 5 con TLS mutuo};
-
-% ---- Server layer ----
-\node[sw] (broker) at (1.6,-4.1) {Corredor\\MQTT};
-\node[sw] (ingest) at (3.95,-4.1) {Servicio de\\ingesta};
-\node[db] (sql) at (3.3,-5.4) {Registro\\y alertas};
-\node[db] (tsdb) at (4.6,-5.4) {Series\\temporales};
-\node[sw] (dash) at (6.3,-5.4) {Panel web\\(HTTPS)};
-\draw[dat] (node.south -| broker) -- (broker.north);
-\draw[dat] (broker) -- (ingest);
-\draw[dat] (ingest.south -| sql.north) -- (sql.north);
-\draw[dat] (ingest.south -| tsdb.north) -- (tsdb.north);
-\draw[dat] (tsdb) -- (dash);
-\begin{scope}[on background layer]
-  \node[draw, dashed, rounded corners=2pt, inner sep=2mm, fit=(broker)(ingest)(sql)(tsdb)(dash)] (srv) {};
-\end{scope}
-
-% ---- User layer ----
-\node[ex] (op) at (4.3,-6.8) {Operador\\(red de confianza)};
-\node[ex] (notif) at (7.1,-6.8) {Servicio de\\notificación remota};
-\draw[dat] (dash.south) -- ++(0,-0.45) -| (op.north);
-\draw[dat] (notif) -- (op);
-\draw[dat] (ingest.east) -- node[lbl, above, pos=0.62] {HTTPS saliente} (7.95,-4.1) -- ($(notif.north)+(0.85,0)$);
+% ---- Users and external ----
+\node[lay] at (0.2,-7.6) {Usuario};
+\node[ex] (br) at (4.1,-7.6) {Navegador del operador\\(LAN de confianza)};
+\node[ex] (nt) at (6.85,-7.6) {Proveedor de\\notificaciones};
+\draw[dat] (cad.south) -- ++(0,-0.75) -| node[lbl, below, pos=0.25] {HTTPS :443, con sesión} (br.north);
+\draw[dat] (ing.east) -- (8.2,-4.9) |- (nt.east);
+\node[lbl, rotate=90, anchor=north] at (8.2,-5.9) {HTTPS saliente};
+\draw[dat] (nt) -- (br);
 
 % ---- Legend ----
-\begin{scope}[shift={(0.3,-7.65)}, every node/.style={font=\tiny, anchor=west, inner sep=1pt}]
-  \draw[fill=gray!25] (0,-0.08) rectangle (0.3,0.08); \node at (0.33,0) {hardware};
-  \draw[rounded corners=1.5pt] (1.2,-0.08) rectangle (1.5,0.08); \node at (1.53,0) {software};
-  \draw[fill=white] (2.43,0.06) -- (2.43,-0.06) arc[start angle=180, end angle=360, x radius=0.12, y radius=0.035] -- (2.67,0.06); \draw[fill=white] (2.55,0.06) ellipse[x radius=0.12, y radius=0.035]; \node at (2.72,0) {almacén};
-  \draw[dashed, rounded corners=1.5pt] (3.55,-0.08) rectangle (3.85,0.08); \node at (3.88,0) {externo};
-  \draw[sig] (4.75,0) -- (5.1,0); \node at (5.12,0) {señal};
-  \draw[dat] (5.75,0) -- (6.1,0); \node at (6.12,0) {datos};
+\begin{scope}[shift={(0.3,-8.4)}, every node/.style={font=\tiny, anchor=west, inner sep=1pt}]
+  \draw[line width=1.1pt, fill=gray!7] (0,-0.08) rectangle (0.3,0.08); \node at (0.33,0) {dispositivo};
+  \draw[fill=gray!25] (1.3,-0.08) rectangle (1.6,0.08); \node at (1.63,0) {hardware};
+  \draw[rounded corners=1.5pt] (2.55,-0.08) rectangle (2.85,0.08); \node at (2.88,0) {software};
+  \draw[fill=white] (3.78,0.06) -- (3.78,-0.06) arc[start angle=180, end angle=360, x radius=0.12, y radius=0.035] -- (4.02,0.06); \draw[fill=white] (3.9,0.06) ellipse[x radius=0.12, y radius=0.035]; \node at (4.07,0) {almacén};
+  \draw[dashed, rounded corners=1.5pt] (4.85,-0.08) rectangle (5.15,0.08); \node at (5.18,0) {externo};
+  \draw[sig] (5.95,0) -- (6.3,0); \node at (6.32,0) {señal};
+  \draw[dat] (6.9,0) -- (7.25,0); \node at (7.27,0) {datos};
 \end{scope}
 \end{tikzpicture}

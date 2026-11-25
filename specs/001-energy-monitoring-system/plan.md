@@ -32,9 +32,13 @@ FastAPI health/management endpoint, pytest; Eclipse Mosquitto 2.1.2, InfluxDB OS
 **Storage**: Device RAM offline queue plus NVS energy checkpoints and encrypted NVS credentials; server InfluxDB `energy_raw`
 and `operations` buckets with 30-day retention; SQLite WAL ingestion ledger,
 configuration, alert audit, and notification outbox; named container volumes  
-**Testing**: ESP-IDF Unity with captured waveforms; pytest/unit/property/contract
+**Testing**: firmware logic tested on the development PC (host build with ESP-IDF's
+Unity, hardware behind thin interfaces with fakes) against waveform fixtures whose
+expected values come from a Python reference calculation; firmware payloads
+validated against the JSON Schemas; the same tests later run on the ESP32-S3 as
+on-target integration tests; pytest/unit/property/contract
 tests; JSON Schema fixtures; Docker Compose integration and fault injection;
-supervised nominal calibration and plausibility check (no reference meter); secret scanning and network
+12 V loop session with nominal calibration and plausibility check (no reference meter); secret scanning and network
 reachability tests  
 **Target Platform**: ESP32-S3 DevKitC-1 monitoring node; one x86-64/ARM64 Linux host on the
 trusted local LAN; modern browser on the same trusted LAN  
@@ -87,8 +91,8 @@ Phase 1 keeps every pre-research gate at **PASS**:
   persistence invariants.
 - [contracts/](contracts/) defines independently testable firmware/service
   boundaries and valid/invalid fixtures.
-- [quickstart.md](quickstart.md) starts with simulation and separates unsupervised
-  software checks from supervised energized acceptance.
+- [quickstart.md](quickstart.md) starts with simulation and separates PC-only
+  software checks from the 12 V loop session on hardware.
 - Analytics collection is designed, but model training/deployment remains a
   separate future specification and cannot block or alter the MVP.
 
@@ -130,8 +134,11 @@ firmware/
 │   ├── quality/
 │   ├── persistence/
 │   ├── threshold/
-│   └── telemetry/
+│   ├── telemetry/
+│   └── ui/
 └── test/
+    ├── host/          # Unity tests built for the PC (no board needed)
+    └── target/        # same tests and fixture replay on the ESP32-S3 (later, [HW])
 
 services/
 └── ingestion/
@@ -180,8 +187,9 @@ tests/
 ├── recovery/
 ├── security/
 ├── acceptance/
+├── evaluation/
 └── fixtures/
-    ├── waveforms/
+    ├── waveforms/     # synthetic CSVs plus expected.json from reference.py
     ├── telemetry/
     └── plausibility/
 
@@ -216,12 +224,15 @@ are explicit.
 
 ```mermaid
 flowchart LR
-    subgraph ELEC[Hazardous controlled electrical setup]
-        LOAD[Single-phase protected test load]
-        VS[Certified AC-AC adapter<br/>isolated voltage sensing]
-        CS[ACS712 Hall current sensor<br/>12 V AC test loop]
-        LOAD --> VS
-        LOAD --> CS
+    subgraph ELEC[Electrical setup, plan B]
+        OUTLET[220 V wall outlet]
+        ADP[Certified, thermally protected<br/>220 V to 12 V AC adapter<br/>isolation barrier]
+        LOOP[12 V AC loop:<br/>ACS712 IP+/IP- and halogen bulb]
+        VS[Voltage channel:<br/>adapter output via jack]
+        CS[ACS712 Hall current sensor<br/>output 5 V, GND, OUT]
+        OUTLET --> ADP --> LOOP
+        ADP --> VS
+        LOOP --> CS
     end
 
     subgraph NODE[Low-voltage monitoring node]
@@ -261,6 +272,43 @@ flowchart LR
     INGEST -->|outbound HTTPS only| NOTIFY[Remote notification provider]
     NOTIFY --> USER
 ```
+
+### Physical deployment
+
+The component diagram above shows what runs where; this one shows the physical
+devices, the links between them, and the protocol and port on each link.
+
+```mermaid
+flowchart LR
+    subgraph BENCH[Bench]
+        OUT[220 V outlet] --> ADP[12 V AC adapter,<br/>thermally protected]
+        ADP --> LOOP[12 V loop:<br/>ACS712 + bulb]
+        CHG[Certified 5 V<br/>USB charger]
+    end
+    subgraph DEV[Device: ESP32-S3 DevKitC-1 on breadboard]
+        FW[Firmware: acquisition, metering,<br/>quality, queue, threshold, UI, MQTT client]
+    end
+    ADP -->|GPIO4, divider| DEV
+    LOOP -->|GPIO5, divider| DEV
+    CHG -->|USB 5 V| DEV
+    DEV -->|Wi-Fi WPA2| AP[Device: Wi-Fi router<br/>trusted local LAN]
+    subgraph PC[Device: team computer, Docker Compose]
+        MOS[Container: Mosquitto :8883]
+        ING[Container: ingestion]
+        SQL[(Volume: SQLite)]
+        INF[Container: InfluxDB]
+        GRA[Container: Grafana]
+        CAD[Container: Caddy :443]
+        MOS --> ING --> SQL
+        ING --> INF --> GRA --> CAD
+    end
+    AP -->|MQTT 5, mutual TLS, :8883| MOS
+    BR[Device: operator browser<br/>on the LAN] -->|HTTPS :443, login| CAD
+    ING -->|HTTPS outbound only| EXT[External: notification provider]
+```
+
+Only ports 8883 and 443 are published on the team computer; InfluxDB, Grafana,
+SQLite, and the ingestion health API stay on the Compose network.
 
 ### Deployment boundaries
 
@@ -443,6 +491,19 @@ No reference meter is used (constitution 2.0.0, research R-004).
 9. Hash and preserve raw waveform excerpts, summaries, scripts, environment,
    coefficients, and the plausibility table. Outside-range data is flagged.
 
+### Experiment runs
+
+Adopted 2026-11-25 from the team's Methodology revision (article AD-16) so the
+specs and the article agree. The experimental unit is a run, not a 5 s summary.
+
+| Test | Runs on | Runs and episodes | Evidence task |
+|---|---|---|---|
+| E1 plausibility (SC-001) | 12 V loop, bulb | 3 pilot runs on different days; final n is the smallest n ≤ 10 with n ≥ (t₀.₉₇₅,ₙ₋₁ · s / e)², s = standard deviation of d_P across runs, e = 5 percentage points | T064, T065 |
+| E2 alerts (SC-004) | Simulator and 12 V loop | 60 simulator episodes (20 sustained, 20 brief surges shorter than `confirm_ms`, 20 below the limit) and 10 bulb episodes of 60 s (5 on, 5 off); each episode classified once as TP, FN, FP, or TN | T080, T087 |
+| E3 latency (SC-002) | Real node, bulb on | 3 runs of 1 h; dashboard probe every 1 s, NTP-synchronized clocks | T104, T091 |
+| E4 recovery (SC-003) | Real node | 3 runs with port 8883 blocked 10 min, plus 1 run with a reboot during the outage (marked gap expected) | T105, T091 |
+| E5 busiest hour (SC-005) | Simulator dataset | 1 seven-day dataset; timed operator check | T074, T075 |
+
 ## Telemetry, Delivery, and Clock Design
 
 The normative topics, fields, units, compatibility rules, and schemas are in
@@ -493,8 +554,9 @@ physical order. Unsynchronized observations remain diagnostic and cannot be
 - Outbound notifications use HTTPS, a runtime-only token, stable `alert_id` for
   idempotency, bounded retries, and redacted error logs. Provider failure never
   blocks local warning or measurement storage.
-- CI/release gates include secret scanning, container/dependency scanning,
-  certificate/ACL negative tests, and an external LAN port scan.
+- Local release gates (no CI service; run with `make` before merging and before
+  each hardware session) include secret scanning, dependency and container-image
+  scanning, certificate/ACL negative tests, and an external LAN port scan.
 
 ## Storage, Dashboard, Alerts, and Health
 
@@ -586,11 +648,33 @@ outage-replay intervals follow documented inclusion rules. Insufficient history
 produces `insufficient data`, not a model result. A future specification must set
 horizons and promotion thresholds before any result affects users.
 
+## Test Strategy
+
+No hardware is available yet, so firmware is tested on the development PC first
+and on the board later. There is no CI service; every gate is a `make` target run
+locally (decided 2026-11-25).
+
+| Layer | What it covers | Runs on | Command |
+|---|---|---|---|
+| Firmware host unit tests | Metering, quality, energy, calibration math, clock states, threshold machine, config, queue, UI state, acquisition frame parsing (fake DMA frames), JSON serializer | PC (host build, Unity, AddressSanitizer and UndefinedBehaviorSanitizer) | `make firmware-test` |
+| Reference calculation | `tests/fixtures/waveforms/reference.py` computes expected V RMS, I RMS, P (mean of v·i), and Wh for every fixture into `expected.json`; firmware host tests must match within stated tolerances | PC | part of `make firmware-test` |
+| Firmware payload contract | Host-built serializer writes sample payloads; pytest validates them against `contracts/*.schema.json` | PC | `make contracts-test` |
+| Server unit and property tests | Ledger, alerts, outbox, node status, `energyctl`, health API; Hypothesis properties (ledger idempotency, energy never decreasing, counter resets) | PC | `make server-test` |
+| Migrations | Alembic upgrade and downgrade on an empty database | PC | `make server-test` |
+| Contracts | Schemas, fixtures, topics, simulator output | PC | `make contracts-test` |
+| Integration, recovery, security, acceptance | Compose stack with the simulator | PC (Docker) | `make test-integration`, `test-recovery`, `test-security`, `acceptance-simulated` |
+| Evaluation scripts | `plausibility.py`, `performance.py`, export reproduction from a manifest, on fixtures with known answers | PC | `make test` |
+| Static checks and hygiene | ruff, mypy, clang-format, gitleaks, `pip-audit`, container-image scan, coverage report (no threshold), pre-commit hooks | PC | `make lint`, `make deps-scan`, `make coverage` |
+| On-target integration (later) | Same Unity tests and fixture replay on the ESP32-S3; bring-up apps; bench integration; 12 V loop session | Board ([HW]) | `make firmware-flash-test-fixtures` and build guide stages |
+
+`make test` runs every fast PC gate (lint, firmware host tests, contracts,
+server, evaluation). Pytest markers separate `unit`, `integration`, and `hw`.
+
 ## Requirement Traceability and Verification
 
 | Requirement/outcome | Design element | Minimum verification evidence |
 |---|---|---|
-| FR-001–005, SC-001 | Alternating ADC with delay correction, formulas, quality, NVS checkpoint, calibration | Waveform unit tests (including delay correction); sample-gap/restart injection; signed plausibility report (no reference meter) |
+| FR-001–005, SC-001 | Alternating ADC with delay correction, formulas, quality, NVS checkpoint, calibration | Host waveform unit tests against reference values (including delay correction); sample-gap/restart injection; plausibility report (no reference meter) |
 | FR-006, SC-002–003 | MQTT QoS 1, durable queue, ledger, app ACK | Duplicate/conflict tests; broker/ingestion/storage stops; timed 10-minute recovery report |
 | FR-007 | mTLS, ACL, encrypted provisioning, LAN-only ingress | Anonymous/untrusted/wrong-topic negatives, secret scan, LAN port scan |
 | FR-008 | Influx 30-day bucket | Provisioning assertion and retention API test |

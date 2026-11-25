@@ -24,6 +24,7 @@
 - Q: Should the node show readings locally? → A: Yes. The node shows its latest values and state on a local display and status light, and keeps doing so when the network is unavailable (FR-018).
 - Q: Which parts are in the minimal MVP build? → A: Only those needed for measurement, local indication (status LED, buzzer, display, which the team already owns), safety, and calibration; non-essential extras (temperature logging, bench polarity source, dedicated protection panel) are left out (see plan › Hardware list).
 - Q: Is a reference meter used? → A: No (constitution 2.0.0, Principle II). The team cannot afford a true-RMS reference meter, so the node runs on nominal (datasheet) coefficients plus offset zeroing and a polarity check; every displayed and published value is labeled as not validated, no accuracy figure is claimed, and readings are compared with load nameplates and the expected wall voltage only as a plausibility check.
+- Q: What does "validated" mean in FR-001 and FR-006 now that readings are labeled "not validated"? → A: Renamed to "quality-checked (`valid`)": the summary passed the quality rules of the data model. "Not validated" refers only to the nominal calibration (no reference meter). (Session 2026-11-25, from `/speckit-analyze` finding A1.)
 - Q: What circuit does the MVP demonstration monitor, given that no electrician or qualified reviewer is available? → A: A 12 V AC extra-low-voltage loop (plan B). A certified, thermally protected plug-in 220 V → 12 V AC adapter (≥ 2 A) feeds one 12 V halogen bulb (about 20 W) through the ACS712; the same adapter output feeds the voltage channel. Only the certified adapter touches the 220 V outlet, so the MVP has no mains wiring and needs no residual-current device, test box, fuse, or qualified-person review. Monitoring a 220 V load is future work and, if added, brings back the RCD, the closed ACS712 test box, and the signed qualified review (constitution I).
 
 ## User Scenarios & Testing *(mandatory)*
@@ -127,12 +128,12 @@ flowchart LR
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST acquire voltage and current observations from one monitored single-phase circuit at a rate sufficient to publish validated RMS voltage, RMS current, and active-power summaries at least every 5 seconds.
+- **FR-001**: The system MUST acquire voltage and current observations from one monitored single-phase circuit at a rate sufficient to publish quality-checked (`valid`) RMS voltage, RMS current, and active-power summaries at least every 5 seconds.
 - **FR-002**: Every published measurement MUST include a timestamp, node identity, circuit identity, units, and a validity or quality indication.
 - **FR-003**: The system MUST calculate and report active power in watts and accumulated active energy in Wh or kWh from synchronized voltage and current observations using a documented phase-correction, calibration, and unit convention; multiplying independent RMS values alone MUST NOT be labeled active power.
 - **FR-004**: The system MUST reject, flag, or quarantine disconnected, saturated, physically impossible, stale, or otherwise invalid observations.
 - **FR-005**: The system MUST preserve active-energy accumulation across routine restarts and MUST clearly indicate any interval for which accumulation is uncertain.
-- **FR-006**: The system MUST transmit validated telemetry to the remote service and retry recoverable failures without silently duplicating measurements.
+- **FR-006**: The system MUST transmit quality-checked telemetry to the remote service and retry recoverable failures without silently duplicating measurements.
 - **FR-007**: Device and service connections MUST be authenticated, telemetry in transit MUST be protected from unauthorized disclosure or alteration, and secrets MUST not be included in source-controlled files. The dashboard MUST accept access only from the trusted local network and MUST NOT be exposed directly to inbound public-internet traffic; outbound remote threshold notifications are permitted.
 - **FR-008**: The system MUST retain at least 30 days of timestamped measurements for the prototype evaluation unless storage capacity is explicitly reconfigured.
 - **FR-009**: Users MUST be able to see the latest RMS voltage, RMS current, active power, accumulated active energy, node status, and time of last valid update.

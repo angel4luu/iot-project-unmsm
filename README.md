@@ -24,10 +24,10 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Track | Where we are | Next |
 |---|---|---|
-| System | Design finished; demo switched to a 12 V AC bulb loop (no electrician needed). Nothing built yet | Buy the 12 V adapter (thermally protected), bulb and small parts; start building: repo setup, then the server with fake data and the breadboard tests in parallel |
-| Article | Introduction done; Methodology adapted to the 12 V loop and revised after the reviewer's comments (test units, repetitions, outage and alert tests, metrics), still aimed at 5 pages | Compile in Overleaf and confirm 5 pages; then Results, once the experiments run |
+| System | Design finished; demo is a 12 V AC bulb loop. Test plan updated: firmware is tested on our PCs (no board needed yet), and board tests come later. Nothing built yet | Fix what the consistency check finds, then start building: repo setup, server with fake data, and firmware tests on the PC |
+| Article | Introduction done; Methodology adapted to the 12 V loop, revised after the reviewer's comments, and Fig. 1 redrawn as a component and deployment diagram (6 pages; the 5-page target is relaxed until we pick a venue) | Results, once the experiments run |
 
-*Last updated: 2026-11-23*
+*Last updated: 2026-11-25*
 
 ## Roadmap
 
@@ -36,7 +36,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Step | What it means | Status |
 |---|---|---|
 | Design | Requirements, architecture, research, data formats | ✅ Oct 14 (hardware adapted Nov 18) |
-| Task list | Turn the design into an ordered to-do list (95 tasks, hardware and software tracks in parallel) | ✅ Nov 18 |
+| Task list | Turn the design into an ordered to-do list (106 tasks, hardware and software tracks in parallel) | ✅ Nov 18 (test tasks added Nov 25) |
 | Simulated version | Server, database and dashboard working with fake data | ⏳ |
 | Device software | Measuring and calculating on the ESP32 | ⬜ |
 | Loop check and calibration | Team checks the 12 V bulb loop (adapter unplugged); nominal calibration and plausibility check against the bulb's label (no reference meter) | ⬜ |
@@ -52,7 +52,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Introduction (with literature review) | ✅ draft Oct 28 |
 | Methodology | ✅ draft Nov 11; revised Nov 18 after review (compile check pending) |
 | Page budget and trimming | ✅ Nov 18 (7 → 5 pages; components table and signal-flow list added) |
-| Figures 1–3 (architecture, full circuit, flowchart) | ✅ Nov 18 (old wiring figure dropped; circuit values to check at the bench; add a prototype photo once built) |
+| Figures 1–3 (component and deployment diagram, full circuit, flowchart) | ✅ Nov 25 (Fig. 1 redrawn; circuit values to check at the bench; add a prototype photo once built) |
 | Results and Discussion | ⬜ needs the experiments |
 | Conclusions and abstract | ⬜ |
 | Review and submission | ⬜ |
@@ -63,7 +63,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 |---|---|---|
 | 0 | ~~Qualified person~~ Not needed for the 12 V demo (2026-11-18). Only needed if we ever test a 220 V appliance (future work) | — |
 | 1 | ~~Reference meter~~ Resolved 2026-11-18: none; readings are shown as "not validated" (constitution 2.0.0). A True RMS meter lent by the electrician could be added later | — |
-| 2 | ~~How many repetitions per test~~ Rule set 2026-11-18: 3 pilot runs of the bulb test, then a formula fixes the final number (max 10); 3 runs for the 1-hour and outage tests | — |
+| 2 | ~~How many repetitions per test~~ Rule set 2026-11-18, now also in the plan (2026-11-25): 3 pilot runs of the bulb test, then a formula fixes the final number (max 10); 3 runs for the 1-hour and outage tests | — |
 | 7 | ~~Seven-day dataset~~ Resolved 2026-11-18: the simulator produces it (test E5) | — |
 | 9 | Tolerances of the resistors and the 12 V adapter we buy (needed for the uncertainty estimate) | Methodology text |
 | 3 | Parts list and total cost | Comparison table in Results |
@@ -84,6 +84,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-25 | Test plan: no CI service; firmware tests run on our PCs without the board (expected values from a Python reference calculation, firmware messages checked against the data formats), board tests later; 11 test tasks added (106 tasks), including the real-device latency and outage runs; the run counts decided for the article are now in the plan. Diagrams: plan's electrical diagram fixed for the 12 V loop, new physical deployment diagram, and article Fig. 1 redrawn as a component and deployment diagram. Git history squashed (32 → 16 commits) |
 | 2026-11-23 | Spec Kit commands now work as native slash commands in Claude Code (`/speckit-implement`, etc.), alongside Codex. No specs or templates changed |
 | 2026-11-18 | Article Methodology merged with plan B (12 V bulb loop) and revised after the reviewer's comments: clearer test units and repetitions, step-by-step alert and outage tests, honest wording on delivery guarantees, uncertainty without a reference meter, and a separate metrics section. Details in article/README.md (AD-16) |
 | 2026-11-18 | Parts list checked: the build guide now lists every part with an exact quantity (23 rows: 100 kΩ ×1, 4.7 kΩ ×2, 10 kΩ ×3, 470 Ω ×3, 1 kΩ ×1, 10 µF ×1, 22 nF ×2, male-to-female jumpers, 18 AWG loop cable, wire stripper) and a short shopping summary; polarity notes for the capacitor, buzzer and RGB LED. Leftover 220 V details removed from the plan's pin table, research, data model, task T033 and the contract examples (now 12.6 V, 1.62 A, 20.4 W) |

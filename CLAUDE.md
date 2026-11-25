@@ -41,9 +41,23 @@ wait for the user to approve it:
 
 Skip the briefing only for trivial edits or when the user explicitly says to go ahead.
 
+## Commits
+
+- Do not commit or push after every edit. Let related changes accumulate in the
+  working tree.
+- Commit only when the user asks, or when a whole step (phase, milestone, or
+  article step) is finished and the user approves closing it. Then make **one**
+  commit for that step, with a message that lists what changed.
+- Push only when the user asks. Before pushing, fetch and rebase on
+  `origin/main`, since teammates push too, and run `make test` once it exists
+  (all fast PC gates; there is no CI service, plan › Test Strategy).
+- Never rewrite published history (`rebase -i`, squash, force-push) on `main`
+  without explicit approval from the user.
+
 ## Always update the trackers
 
-After completing, starting, or changing any phase, step, milestone, or decision:
+Update the trackers once per finished step or decision, not for every small edit,
+and in the same commit as the step:
 
 - Update `README.md`: "Status at a glance" (and its last-updated date), the relevant Roadmap row, "Open decisions", and add a short "Recent updates" row. Keep the README short and non-technical; technical detail belongs in `specs/` or `article/README.md`.
 - For article work, also update the Status and Decisions tables in `article/README.md`.

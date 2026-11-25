@@ -427,6 +427,14 @@ InfluxDB client, SQLAlchemy/Alembic, Prometheus client, and pytest. Infrastructu
 is Docker Compose with pinned container images. Exact patch versions and hashes
 are fixed in implementation lockfiles.
 
+*Amended 2026-11-25*: no hardware is available yet and no CI service is used.
+Firmware calculation and state logic is kept free of hardware calls and built for
+the development PC (ESP-IDF host build with Unity; ADC, NVS, I²C, and MQTT behind
+thin interfaces with fakes), so it is tested without a board; the same tests later
+run on the ESP32-S3. Expected results come from an independent Python reference
+calculation, and firmware-generated payloads are validated against the JSON
+Schemas. All gates are local `make` targets (plan › Test Strategy).
+
 Verification layers are calculation unit tests with recorded waveform fixtures,
 JSON Schema contract tests, broker/ingestion/storage integration tests, outage and
 clock-fault injection, dashboard provisioning checks, secret scanning, and

@@ -53,12 +53,12 @@ plus `scripts/` for developer tooling.
 
 - [ ] T001 Verify `.gitignore` keeps `.specify/` and `specs/` tracked (plan › Project Structure) and add ignores for `infrastructure/secrets/*` except `README.example.md`, `firmware/build/`, `firmware/sdkconfig`, `*.sqlite*`, `experiments/data/`, and `**/secrets.local*` in `.gitignore`
 - [ ] T002 Create the source tree from plan.md › Project Structure (`firmware/`, `services/ingestion/`, `infrastructure/`, `dashboards/queries/`, `config/`, `experiments/{export,manifests,evaluation}/`, `tests/{contract,integration,recovery,security,acceptance,fixtures/{waveforms,telemetry,plausibility}}/`, `guides/{architecture,safety,calibration,operations,experiments}/`, `scripts/`) with a one-line `README.md` in each top-level folder
-- [ ] T003 Create the root `Makefile` with documented placeholder targets from quickstart.md: `dev-certs`, `secrets-scan`, `contracts-test`, `infra-config-check`, `infra-up`, `infra-health`, `infra-down`, `simulate`, `acceptance-simulated`, `test-integration`, `test-recovery`, `test-security`, `firmware-test`, `firmware-build`, `firmware-flash-test-fixtures`
+- [ ] T003 Create the root `Makefile` with documented placeholder targets from quickstart.md: `dev-certs`, `secrets-scan`, `contracts-test`, `infra-config-check`, `infra-up`, `infra-health`, `infra-down`, `simulate`, `acceptance-simulated`, `test-integration`, `test-recovery`, `test-security`, `firmware-test`, `firmware-build`, `firmware-flash-test-fixtures`, `lint`, `server-test`, `test` (all fast PC gates), `deps-scan`, `coverage` (plan › Test Strategy; no CI service)
 - [ ] T004 [P] Create `.env.example` with non-secret placeholders only (LAN bind address, trusted subnet CIDR, ports 443/8883, timezone `America/Lima`) and `infrastructure/secrets/README.example.md` listing every secret file name (CA key, leaf keys, Influx tokens, Grafana password, Wi-Fi credentials, notification token) without values
-- [ ] T005 [P] Initialize `services/ingestion/pyproject.toml` for Python 3.14 with Paho MQTT, Pydantic, `jsonschema`, InfluxDB client, SQLAlchemy, Alembic, FastAPI, pytest, hypothesis, ruff; lock with `uv` into `services/ingestion/uv.lock`
+- [ ] T005 [P] Initialize `services/ingestion/pyproject.toml` for Python 3.14 with Paho MQTT, Pydantic, `jsonschema`, InfluxDB client, SQLAlchemy, Alembic, FastAPI, pytest, pytest-cov, hypothesis, ruff, mypy, pip-audit; lock with `uv` into `services/ingestion/uv.lock`
 - [ ] T006 [P] Initialize the ESP-IDF 5.4 LTS project in `firmware/CMakeLists.txt`, `firmware/sdkconfig.defaults` (target esp32s3, encrypted NVS, MQTT 5, SNTP) and empty components `firmware/components/{acquisition,calibration,metering,quality,persistence,threshold,telemetry,ui}/`
 - [ ] T007 [P] Add the secret-scanning gate (`gitleaks` config) in `.gitleaks.toml` and wire it to `make secrets-scan` in `Makefile`
-- [ ] T008 [P] Add ruff and pytest configuration in `services/ingestion/pyproject.toml` and clang-format settings in `firmware/.clang-format`
+- [ ] T008 [P] Add ruff, mypy, and pytest configuration (markers `unit`, `integration`, `hw`) in `services/ingestion/pyproject.toml`, clang-format settings in `firmware/.clang-format`, and `.pre-commit-config.yaml` (ruff, clang-format, gitleaks)
 
 **Checkpoint**: Empty but buildable skeleton; `make secrets-scan` passes.
 
@@ -103,11 +103,12 @@ that every story needs. **No user story work starts before this phase is done.**
 - [ ] T029 [P] [HW] Bring-up app for build guide stages 3–4 (raw ADC logger: alternating GPIO4/GPIO5 continuous mode at 8,000 conversions/s; prints mean/min/max in mV over USB; reports Vb ≈ 1.65 V with the adapter unplugged and the ACS712 offset ≈ 1.70 V with no current; can dump a raw capture) in `firmware/bringup/stage34_adc_logger/main/main.c`
 - [ ] T030 [P] Implement encrypted-NVS credential provisioning from an ignored per-device manifest in `firmware/components/telemetry/provisioning.c` and `scripts/provision-node.py`
 - [ ] T031 [P] Implement the clock module (SNTP UTC, `sntp`/`holdover`/`unsynchronized`, monotonic uptime) in `firmware/components/telemetry/clock.c`
-- [ ] T032 [P] Implement the Unity test runner and waveform-fixture loader in `firmware/test/main/test_main.c` and `firmware/test/fixtures/README.md`; wire `make firmware-test` and `make firmware-build`
+- [ ] T032 [P] Implement the host test build for the PC (no board): CMake project in `firmware/test/host/` that compiles the hardware-free firmware components with ESP-IDF's Unity, fakes for ADC/NVS/I²C/MQTT behind the interfaces in `firmware/components/*/include/*_port.h`, AddressSanitizer and UndefinedBehaviorSanitizer enabled, and a waveform-fixture loader in `firmware/test/host/fixtures.c`; wire `make firmware-test` (PC) and `make firmware-build` (ESP32-S3 image)
 - [ ] T033 [P] Generate synthetic waveform fixtures (pure sine at 12 V/1.7 A in phase as on the plan B loop, 60° lag, DC offset, clipping, sample gap, no current) in `tests/fixtures/waveforms/generate.py` with outputs in `tests/fixtures/waveforms/*.csv`
+- [ ] T096 [P] Write the independent Python reference calculation in `tests/fixtures/waveforms/reference.py`: for every fixture, expected V RMS, I RMS, active power as the mean of v·i (with the one-conversion phase correction), and Wh, plus per-quantity tolerances, into `tests/fixtures/waveforms/expected.json`; with its own pytest in `tests/fixtures/waveforms/test_reference.py`
 - [ ] T034 Annotate build guide stages 1–4 with the bring-up app each stage uses (T027–T029) in `hardware/build-guide.md`
 
-**Checkpoint**: `make contracts-test`, `make infra-up`/`infra-health`, `make simulate SCENARIO=normal` run; bring-up apps pass build guide stages 1–4 on the breadboard (no mains).
+**Checkpoint**: `make contracts-test`, `make firmware-test` (PC, no board), `make infra-up`/`infra-health`, `make simulate SCENARIO=normal` run; when the board is available, bring-up apps pass build guide stages 1–4 on the breadboard ([HW] tasks may wait for the hardware without blocking the PC tasks).
 
 ---
 
@@ -125,10 +126,14 @@ as plain values (scenario 3, SC-006).
 
 ### Tests for User Story 1
 
-- [ ] T035 [P] [US1] Firmware unit tests for RMS, active power as mean of v·i (FR-003; never Vrms·Irms), fractional phase correction of the one-conversion offset, and negative power raising `polarity_reversed` without decrementing energy, using T033 fixtures, in `firmware/test/main/test_metering.c`
-- [ ] T036 [P] [US1] Firmware unit tests for quality classification (`valid` requires "all four values, accepted calibration, synchronized or permitted holdover clock, no clipping/sample-gap/disconnect/out-of-range flag, and `valid_sample_ratio >= 0.99`"; `invalid` quantities are null and never copied from the last valid record) in `firmware/test/main/test_quality.c`
-- [ ] T037 [P] [US1] Firmware unit tests for monotonic-time Wh integration and NVS checkpoint recovery (`energy_continuity_uncertain` after an unclean restart; new `counter_id` only when continuity cannot be established) in `firmware/test/main/test_energy.c`
-- [ ] T038 [P] [US1] Firmware unit test for the LED/OLED state mapping (plan › Local indication: green/red/yellow/blue/white; a non-`valid` value never shown as a plain reading) in `firmware/test/main/test_ui_state.c`
+- [ ] T035 [P] [US1] Firmware unit tests for RMS, active power as mean of v·i (FR-003; never Vrms·Irms), fractional phase correction of the one-conversion offset, and negative power raising `polarity_reversed` without decrementing energy, using T033 fixtures and comparing with T096 `expected.json` within its tolerances, in `firmware/test/host/test_metering.c`
+- [ ] T036 [P] [US1] Firmware unit tests for quality classification (`valid` requires "all four values, accepted calibration, synchronized or permitted holdover clock, no clipping/sample-gap/disconnect/out-of-range flag, and `valid_sample_ratio >= 0.99`"; `invalid` quantities are null and never copied from the last valid record) in `firmware/test/host/test_quality.c`
+- [ ] T037 [P] [US1] Firmware unit tests for monotonic-time Wh integration and NVS checkpoint recovery (`energy_continuity_uncertain` after an unclean restart; new `counter_id` only when continuity cannot be established) in `firmware/test/host/test_energy.c`
+- [ ] T038 [P] [US1] Firmware unit test for the LED/OLED state mapping (plan › Local indication: green/red/yellow/blue/white; a non-`valid` value never shown as a plain reading) in `firmware/test/host/test_ui_state.c`
+- [ ] T097 [P] [US1] Firmware serializer contract test: the host build of `firmware/components/telemetry/serialize.c` writes sample measurement, status, and event payloads (valid, invalid-quality, and holdover cases) to `tests/fixtures/telemetry/firmware-*.json`, and `tests/contract/test_firmware_payloads.py` validates them against `specs/001-energy-monitoring-system/contracts/*.schema.json`
+- [ ] T098 [P] [US1] Firmware host unit tests for the remaining logic: clock states `sntp`/`holdover`/`unsynchronized` (T031), calibration offset capture, sign correction, and append-only revisions (T044), acquisition frame parsing with fake DMA frames raising `sample_gap` (T043), and provisioning manifest parsing (T030), in `firmware/test/host/test_{clock,calibration,acquisition,provisioning}.c`
+- [ ] T099 [P] [US1] Server unit tests for node status timers (`stale` after 15 s, `offline` after 30 s or last will), `energyctl` (reject limits above 25 W; calibration registration), and the health API, in `services/ingestion/tests/test_{node_status,energyctl,health_api}.py`
+- [ ] T100 [P] [US1] Property and migration tests: Hypothesis properties for ledger idempotency (same ID and hash → one point), energy never decreasing within a `counter_id`, and contract round trips, in `services/ingestion/tests/test_properties.py`; Alembic upgrade/downgrade on an empty database in `services/ingestion/tests/test_migrations.py`; both part of `make server-test`
 - [ ] T039 [P] [US1] Ingestion unit tests: schema/identity validation, ledger transitions `new -> received -> stored`, `new -> rejected`, `stored -> stored` (duplicate ACK), conflict on same ID with different hash, and "The application ACK is published only from `stored` or `rejected`", in `services/ingestion/tests/test_ledger.py`
 - [ ] T040 [P] [US1] Ingestion integration test: crash between Influx write and ledger `stored` repeats the idempotent write on recovery, in `tests/integration/test_crash_recovery.py`
 - [ ] T041 [P] [US1] Dashboard provisioning smoke test (datasource healthy, dashboard loads, "offline / no data" with no node, never zeros or a fabricated last value) in `tests/integration/test_dashboard_provisioning.py`
@@ -137,12 +142,12 @@ as plain values (scenario 3, SC-006).
 ### Firmware implementation for User Story 1 (hardware track)
 
 - [ ] T043 [US1] Implement acquisition (ADC1 continuous DMA, alternating GPIO4/GPIO5 at 8,000 conversions/s = 4,000 pairs/s, Espressif calibration scheme, DMA overrun or missing conversion → `sample_gap`) in `firmware/components/acquisition/acquisition.c`
-- [ ] T044 [US1] Implement the calibration component with nominal coefficients (voltage gain from adapter ratio and R1/R2, current gain from 100 mV/A and R3/R4, phase correction of one conversion), `calibration_kind = nominal`, 60 s zero-current offset capture, sign correction, and append-only revisions in NVS in `firmware/components/calibration/calibration.c`
+- [ ] T044 [US1] Implement the calibration component with nominal coefficients (voltage gain from R1/R2 only, since the node measures the 12 V adapter output directly; current gain from 100 mV/A and R3/R4, phase correction of one conversion), `calibration_kind = nominal`, 60 s zero-current offset capture, sign correction, and append-only revisions in NVS in `firmware/components/calibration/calibration.c`
 - [ ] T045 [US1] Implement metering (1 s blocks, five blocks per 5 s summary with 20,000 paired samples, RMS, mean v·i, imported Wh with monotonic dt) in `firmware/components/metering/metering.c`
 - [ ] T046 [US1] Implement quality classification and flags (`calibration_missing`, `sample_gap`, `adc_clipped`, `sensor_disconnected`, `out_of_range`, `polarity_reversed`, `clock_unsynchronized`, `energy_continuity_uncertain`; ranges 10–16 V and 0.5–2.0 A) in `firmware/components/quality/quality.c`
 - [ ] T047 [US1] Implement the NVS energy checkpoint every 60 s and restart continuity in `firmware/components/persistence/checkpoint.c`
 - [ ] T048 [US1] Implement the RAM offline queue (≥256 records, write before publish, remove only on `accepted` or `duplicate`, terminal rejection to bounded diagnostics) in `firmware/components/telemetry/queue.c`
-- [ ] T049 [US1] Implement MQTT 5 over mTLS (Clean Start false, 24 h session expiry, 15 s keepalive, retained offline last will, client ID = node ID), measurement publish, ACK handling, and retained status every 30 s in `firmware/components/telemetry/mqtt.c`
+- [ ] T049 [US1] Implement MQTT 5 over mTLS (Clean Start false, 24 h session expiry, 15 s keepalive, retained offline last will, client ID = node ID), measurement publish, ACK handling, and retained status every 30 s in `firmware/components/telemetry/mqtt.c`, building payloads only through `firmware/components/telemetry/serialize.c` (T097)
 - [ ] T050 [US1] Implement the OLED and RGB LED driver showing V, A, W, Wh with units, quality, clock/link state and a "no validado" marker for nominal calibration, per plan › Local indication, in `firmware/components/ui/ui.c`
 - [ ] T051 [US1] Wire acquisition → metering → quality → queue → telemetry and UI in `firmware/main/main.c`
 
@@ -156,14 +161,19 @@ as plain values (scenario 3, SC-006).
 - [ ] T057 [P] [US1] Write Flux queries for latest values, V/I/P time series, quality windows, and pipeline health in `dashboards/queries/{latest,timeseries,quality,health}.flux`
 - [ ] T058 [US1] Build `dashboards/energy-overview.json` panels 1 (identity/quality banner with the permanent "not validated" label for `nominal`), 2 (current cards), 3 (active power), 4 (V/I with range bands), 6 (quality), 8 (pipeline health); stale/offline replace live values
 
+- [ ] T094 [US1] Implement calibration registration in `energyctl` (store a CalibrationArtifact with `calibration_kind` `nominal`, coefficients, and revision) and show summaries with an unknown calibration revision as "not validated" in ingestion and the dashboard, with a test in `tests/integration/test_calibration_registry.py`
+
 ### Hardware stages for User Story 1 (hardware track)
 
 - [ ] T059 [P] [US1] Write the low-voltage wiring checklist (build guide stage 5: certified thermally protected adapter, never opened; loop jack → ACS712 → bulb → jack off the breadboard; tight terminals; no bare crossing conductors; rewire only unplugged; hot bulb) in `guides/safety/review-checklist.md`
 - [ ] T060 [P] [US1] Write the nominal calibration and plausibility procedure (plan › Calibration and plausibility procedure, steps 1–9) in `guides/calibration/nominal-calibration.md`
+- [ ] T102 [P] [US1] Plausibility script test on fixtures with known answers (within/outside ±20 %, bulb-off noise limit, `calibration_missing`-only windows admissible, any other flag inadmissible) in `tests/evaluation/test_plausibility.py`; written before T061
 - [ ] T061 [P] [US1] Implement the plausibility evaluation script (input: exported 5 s summaries and a CSV with the bulb nameplate; output: table E1 with V in 10–16 V, P > 0, `d_P = (P_m − P_n)/P_n × 100` within ±20%, bulb-off current at the noise limit; windows flagged only `calibration_missing` admissible; SHA-256 manifest) in `experiments/evaluation/plausibility.py` with a fixture in `tests/fixtures/plausibility/example.csv`
+- [ ] T101 [US1] [HW] On-target integration tests (when the board is available): `firmware/test/target/` runs the T035–T038, T097, and T098 Unity tests on the ESP32-S3 and replays the T033 fixtures through the real metering path, comparing with T096 `expected.json`; wire `make firmware-flash-test-fixtures`
 - [ ] T062 [US1] [HW] Bench integration (bulb loop not connected): flash the full firmware, confirm Vb and offset readings, and connect to the server via the simulator certificate replaced by the node certificate; record evidence in `experiments/manifests/bench-YYYYMMDD.json`
 - [ ] T063 [US1] [HW] Team low-voltage wiring check of the 12 V loop with the adapter unplugged (checklist T059 completed by two team members), recorded in `guides/safety/review-record.md` (blocks T064)
-- [ ] T064 [US1] [HW] 12 V loop session: warm-up, offset, polarity, freeze the `nominal` calibration revision, register it (T094), run E1 per `guides/calibration/nominal-calibration.md`; store raw captures and summaries under the ignored `experiments/data/` with a tracked manifest in `experiments/manifests/plausibility-YYYYMMDD.json`
+- [ ] T064 [US1] [HW] 12 V loop session: warm-up, offset, polarity, freeze the `nominal` calibration revision, register it (T094), run E1 per `guides/calibration/nominal-calibration.md` (3 pilot runs on different days, then the final n from plan › Experiment runs, at most 10); store raw captures and summaries under the ignored `experiments/data/` with a tracked manifest in `experiments/manifests/plausibility-YYYYMMDD.json`
+- [ ] T104 [US1] [HW] E3 latency run on the real node: 3 runs of 1 h with the bulb on and a healthy network; a probe queries the dashboard data every 1 s with NTP-synchronized clocks; manifests in `experiments/manifests/latency-YYYYMMDD-runN.json` (SC-002 on hardware; plan › Experiment runs)
 - [ ] T065 [US1] Generate the plausibility table for the article from T064 evidence with `experiments/evaluation/plausibility.py` into `experiments/evaluation/out/plausibility.csv`
 
 **Checkpoint**: US1 is the MVP: real-time values visible from the simulator and from the real node, labeled "not validated", with a plausibility table.
@@ -182,7 +192,7 @@ and queryable in order within 5 min (SC-003).
 ### Tests for User Story 2
 
 - [ ] T066 [P] [US2] Golden-query tests for hourly/daily/weekly energy from Wh counter differences ("never by summing cumulative totals"), counter resets via `counter_id`, exclusion of invalid windows, and `America/Lima` day boundaries, in `tests/integration/test_history_queries.py`
-- [ ] T067 [P] [US2] Firmware unit tests for queue drain (oldest first, ≥2 records/s, ≤10 in flight, new observations still enqueued) in `firmware/test/main/test_queue_drain.c`
+- [ ] T067 [P] [US2] Firmware unit tests for queue drain (oldest first, ≥2 records/s, ≤10 in flight, new observations still enqueued) in `firmware/test/host/test_queue_drain.c`
 - [ ] T068 [US2] Recovery test: disconnect the publisher 10 min, assert ≥99% of retained records stored and chronologically queryable within 5 min, plus exact duplicates, conflicting IDs, out-of-order arrival, ingestion restart, storage unavailability, clock holdover, and full queue, in `tests/recovery/test_outage.py`; wire `make test-recovery OUTAGE=10m`
 
 ### Implementation for User Story 2
@@ -193,6 +203,7 @@ and queryable in order within 5 min (SC-003).
 - [ ] T072 [US2] Add panel 5 (hourly bars, daily/weekly totals, peak-hour marker) to `dashboards/energy-overview.json`
 - [ ] T073 [P] [US2] Implement the daily Parquet export with manifest (exact query, UTC interval, schema/calibration/firmware revisions, quality exclusions, controlled-load labels, file hashes, code commit, environment-lock hash) in `experiments/export/export_daily.py`
 - [ ] T074 [US2] Produce the seven-day dataset for SC-005/E5 with the simulator (decided 2026-11-18, plan B) and record its manifest in `experiments/manifests/seven-day.json`
+- [ ] T105 [US2] [HW] E4 outage run on the real node: a script blocks port 8883 for 10 min and logs cut and restore times; 3 runs plus 1 run with a node reboot during the outage (a marked gap is expected, not recovery); manifests in `experiments/manifests/outage-YYYYMMDD-runN.json` (SC-003 on hardware; plan › Experiment runs)
 - [ ] T075 [US2] Timed operator check (first-time user finds the peak hour in < 2 min, SC-005) recorded in `tests/acceptance/us2_operator_check.md`
 
 **Checkpoint**: History views work on stored data; outage recovery passes.
@@ -211,11 +222,11 @@ locally and remotely, and the node still warns locally with the server stopped
 
 ### Tests for User Story 3
 
-- [ ] T076 [P] [US3] Firmware unit tests for the local state machine (`normal --value > limit--> pending`, `pending --confirmed for confirm_ms--> firing`, `pending --value <= limit or invalid--> normal`, `firing --value < clear_below_W--> clearing`, `clearing --below for clear_ms--> resolved --> normal`, `clearing --value >= clear_below_W--> firing`; invalid data never confirms or clears) in `firmware/test/main/test_threshold.c`
-- [ ] T077 [P] [US3] Firmware unit tests for config handling (bounds `active_power_limit_W` "`>0` and `<=25`", `confirm_ms` "1,000–300,000; default 10,000", `clear_below_W` "`>=0` and `< active_power_limit_W`", rollback rejection) in `firmware/test/main/test_config.c`
+- [ ] T076 [P] [US3] Firmware unit tests for the local state machine (`normal --value > limit--> pending`, `pending --confirmed for confirm_ms--> firing`, `pending --value <= limit or invalid--> normal`, `firing --value < clear_below_W--> clearing`, `clearing --below for clear_ms--> resolved --> normal`, `clearing --value >= clear_below_W--> firing`; invalid data never confirms or clears) in `firmware/test/host/test_threshold.c`
+- [ ] T077 [P] [US3] Firmware unit tests for config handling (bounds `active_power_limit_W` "`>0` and `<=25`", `confirm_ms` "1,000–300,000; default 10,000", `clear_below_W` "`>=0` and `< active_power_limit_W`", rollback rejection) in `firmware/test/host/test_config.c`
 - [ ] T078 [P] [US3] Ingestion tests for alert lifecycle (`open -> acknowledged -> resolved`, open may resolve directly, acknowledgment never clears the physical condition, append-only `AlertTransition`) and event/config/measurement cross-check raising a health alert on disagreement, in `services/ingestion/tests/test_alerts.py`
 - [ ] T079 [P] [US3] Outbox tests (states `pending`, `sending`, `delivered`, `failed_terminal`; exponential backoff with jitter; idempotency on `alert_id`; provider failure never blocks storage) in `services/ingestion/tests/test_outbox.py`
-- [ ] T080 [US3] Simulated alert acceptance (surge vs sustained, local ≤2 s, remote ≤10 s, server-down local warning) in `tests/acceptance/test_us3_alerts.py`
+- [ ] T080 [US3] Simulated alert acceptance (60 episodes: 20 sustained, 20 brief surges shorter than `confirm_ms`, 20 below the limit; surge vs sustained, local ≤2 s, remote ≤10 s, server-down local warning) in `tests/acceptance/test_us3_alerts.py`
 
 ### Implementation for User Story 3
 
@@ -225,7 +236,7 @@ locally and remotely, and the node still warns locally with the server stopped
 - [ ] T084 [US3] Implement event-to-alert handling, transitions, and cross-check in `services/ingestion/src/energy_ingestion/thresholds/alerts.py`
 - [ ] T085 [US3] Implement the notification outbox worker with a generic outbound HTTPS webhook adapter (runtime-only token, redacted errors; provider choice is open decision 6) in `services/ingestion/src/energy_ingestion/notifications/outbox.py`
 - [ ] T086 [US3] Add panel 7 (alert table/history with evidence, severity, state, notification state, transition times) to `dashboards/energy-overview.json`
-- [ ] T087 [US3] [HW] Alert run on the 12 V loop (limit about 15 W; bulb on → alert, bulb off → clear; the cold-filament inrush must not alert; server stopped for the local-warning case) recorded in `experiments/manifests/alerts-YYYYMMDD.json`
+- [ ] T087 [US3] [HW] Alert run on the 12 V loop (limit about 15 W; 10 episodes of 60 s: 5 bulb on → alert, 5 bulb off → no alert or clear; the cold-filament inrush must not alert; server stopped for the local-warning case) recorded in `experiments/manifests/alerts-YYYYMMDD.json`
 
 **Checkpoint**: All three stories work independently and together.
 
@@ -238,10 +249,11 @@ locally and remotely, and the node still warns locally with the server stopped
 - [ ] T088 [P] Security tests (anonymous MQTT, untrusted certificate, wrong-node topic, dashboard without login, internal ports unreachable from the LAN) in `tests/security/test_security.py`; wire `make test-security`
 - [ ] T089 [P] Fault-injection test that stops each stage (acquisition, connectivity, ingestion, storage, threshold, presentation) and asserts the health view names it (FR-017) in `tests/integration/test_stage_health.py`
 - [ ] T090 [P] Write the architecture overview in `guides/architecture/overview.md` and the operations runbook (start/stop, backups, certificate rotation, retention, secret rotation) in `guides/operations/runbook.md`
-- [ ] T091 [P] Write the latency/recovery evidence script producing tables for E3–E4 (mean and p95 latency, recovery R) in `experiments/evaluation/performance.py`
+- [ ] T091 [P] Write the latency/recovery evidence script producing tables for E3–E4 from T104/T105 evidence (mean and p95 latency, availability, duplicates, recovery R) in `experiments/evaluation/performance.py`
 - [ ] T092 Run quickstart.md sections 2–8 end to end and record deviations in `guides/operations/quickstart-validation.md`
-- [ ] T094 [US1] Implement calibration registration in `energyctl` (store a CalibrationArtifact with `calibration_kind` `nominal`, coefficients, and revision) and show summaries with an unknown calibration revision as "not validated" in ingestion and the dashboard, with a test in `tests/integration/test_calibration_registry.py`
 - [ ] T095 [P] Retention test: data older than 30 days is removed from `energy_raw` and SQLite state is kept, in `tests/integration/test_retention.py`
+- [ ] T106 [P] Evaluation script tests on fixtures with known answers: `performance.py` (T091) in `tests/evaluation/test_performance.py`, and the export reproduction test (re-run T073 from its manifest and compare file hashes) in `tests/integration/test_export_reproduction.py`
+- [ ] T103 [P] Local hygiene gates: `make deps-scan` (`pip-audit` on `uv.lock`; image scan of the pinned Compose images), `make coverage` (pytest-cov and gcovr for the host firmware build; report only, no threshold), and `make test` running lint, firmware host, contract, server, and evaluation tests
 - [ ] T093 Update trackers for the completed implementation (`README.md` status/roadmap/recent updates; `article/README.md` status) and move pending article `\todo{}` results only from preserved evidence (T065, T091)
 
 ---
@@ -254,7 +266,9 @@ locally and remotely, and the node still warns locally with the server stopped
 - **Phase 2 Foundational**: after Phase 1; blocks all stories. Inside it, the
   software track (T009–T025) and the hardware track (T026–T034) are independent.
 - **Phase 3 US1**: after Phase 2. Software tasks (T052–T058) need only the
-  simulator; firmware tasks (T043–T051) need T026–T033; T062 needs both tracks;
+  simulator; firmware tasks (T043–T051) need T026 and T030–T033 (not the [HW]
+  bring-up apps); T035 needs T096; T102 precedes T061; T104 needs T062 and T064; T105 needs T062 and T069; T091 needs T104 and T105; T097 and T098 need T032; T101 needs the board
+  and T035–T038, T097, T098; T062 needs both tracks;
   T063 (team wiring check) strictly precedes T064 (first 12 V loop session);
   T094 precedes T064.
 - **Phase 4 US2**: after Phase 2; uses US1's pipeline for storage but is testable
@@ -282,13 +296,14 @@ after all simulation and bench gates").
 
 ```text
 Software: T009, T014, T015, T016, T017, T018 in parallel → T019 → T020 → T021 → T022 → T024
-Hardware: T026, T027, T028, T029 in parallel (breadboard stages 1–4) → T030, T031, T032, T033
+Firmware on the PC: T026, T032, T033 → T096, then T030, T031
+Hardware (when the board arrives): T027, T028, T029 in parallel (breadboard stages 1–4)
 ```
 
 ### User Story 1
 
 ```text
-Tests in parallel: T035, T036, T037, T038, T039, T040, T041
+Tests in parallel: T035, T036, T037, T038, T039, T040, T041, T097, T098, T099, T100
 Server in parallel with firmware: T052–T058 (software)  |  T043–T051 (firmware)
 Procedures in parallel: T059, T060, T061
 ```
@@ -322,11 +337,10 @@ on its own. The article's Results section is filled only from preserved evidence
 
 ## Notes
 
-- Total: 95 tasks (T094–T095 added 2026-11-18 from the analyze report). [HW] tasks need the physical prototype; all others run on a
+- Total: 106 tasks (T094–T095 added 2026-11-18 from the analyze report; T096–T106 added 2026-11-25 for the PC-first test strategy and the hardware E3/E4 runs, plan › Test Strategy and Experiment runs). No CI service: every gate is a local `make` target. [HW] tasks need the physical prototype; all others run on a
   laptop with Docker and the ESP-IDF toolchain.
 - Open decisions that affect tasks: notification
-  provider (T085), OLED pin count and RGB LED type (T028, T050), repetitions per
-  scenario (T064).
+  provider (T085), OLED pin count and RGB LED type (T028, T050), and component tolerances (README open decision 9). Run counts are fixed in plan › Experiment runs.
 - The schema flag `adc_crc_error` comes from the earlier external-ADC design and
   is never raised by the internal ADC; keep it for compatibility.
 - Commit after each task or logical group; never commit `infrastructure/secrets/`,

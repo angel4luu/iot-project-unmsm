@@ -137,6 +137,11 @@ make firmware-build
 make firmware-flash-test-fixtures
 ```
 
+`make firmware-test` builds the firmware logic for this PC and needs no board:
+expected values come from `tests/fixtures/waveforms/reference.py`.
+`make firmware-flash-test-fixtures` is for later, when the board is available: it
+runs the same tests and replays the fixtures on the ESP32-S3.
+
 Start with recorded ADC/waveform fixtures or an isolated signal source. Unit tests
 verify RMS, alternating-sample delay and phase correction, active power,
 monotonic-time Wh integration, NVS checkpoint recovery, quality classification,
@@ -192,12 +197,16 @@ before the 30-day raw-retention boundary.
 
 | Gate | Default command | Evidence |
 |---|---|---|
-| Formatting/static checks | `make lint` | CI log |
-| Firmware calculations | `make firmware-test` | Unit/fixture report |
+| All fast PC gates | `make test` | Lint, firmware host, contract, server, and evaluation reports |
+| Formatting/static checks | `make lint` | ruff, mypy, clang-format, gitleaks output |
+| Dependencies and images | `make deps-scan` | `pip-audit` and image-scan report |
+| Coverage (no threshold) | `make coverage` | pytest-cov and gcovr report |
+| Firmware calculations (PC, no board) | `make firmware-test` | Host unit report against reference values |
+| Firmware on the board (later) | `make firmware-flash-test-fixtures` | On-target test and replay log |
 | Boundary compatibility | `make contracts-test` | Valid/invalid schema report |
 | Server behavior | `make server-test` | pytest and migration report |
 | Integrated path | `make test-integration` | Broker-to-dashboard report |
 | Outage recovery | `make test-recovery OUTAGE=10m` | Delivery/latency table |
 | Secret/network posture | `make secrets-scan test-security` | Scanner and reachability report |
-| Measurement claim | supervised acceptance command defined later | Calibration and plausibility report |
-| User outcomes | `make acceptance-simulated` plus supervised hardware run | SC-001–SC-006 checklist |
+| Measurement claim | 12 V loop session (build guide stage 6) | Calibration and plausibility report |
+| User outcomes | `make acceptance-simulated` plus the 12 V loop session | SC-001–SC-006 checklist |
