@@ -18,3 +18,6 @@ CONFIG_LWIP_SNTP_MAX_SERVERS=2
 
 # Keep the main task stack roomy for TLS setup.
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
+
+# Take the SNTP server from DHCP when the lab network offers one.
+CONFIG_LWIP_DHCP_GET_NTP_SRV=y

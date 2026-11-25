@@ -66,12 +66,15 @@ coverage: ## Coverage report, no threshold (pytest-cov)
 
 # ---- Contracts and server ------------------------------------------------------
 
-.PHONY: contracts-test server-test
+.PHONY: contracts-test server-test evaluation-test
 contracts-test: ## Validate schemas, fixtures, and topic/identity rules
 	$(PYTEST) -m "not integration and not hw" $(ROOT)/tests/contract
 
 server-test: ## Ingestion unit tests and migration test
 	$(PYTEST) -m "not integration and not hw" $(INGEST)/tests
+
+evaluation-test: ## Evaluation scripts on fixtures with known answers (E1 plausibility)
+	$(PYTEST) -m "not integration and not hw" $(ROOT)/tests/evaluation
 
 # ---- Infrastructure (T014-T020) -------------------------------------------------
 
@@ -157,4 +160,4 @@ firmware-flash-test-fixtures: ## On-target tests and fixture replay (board neede
 # ---- Aggregate ------------------------------------------------------------------
 
 .PHONY: test
-test: lint firmware-test contracts-test server-test ## All fast PC gates
+test: lint firmware-test contracts-test server-test evaluation-test ## All fast PC gates

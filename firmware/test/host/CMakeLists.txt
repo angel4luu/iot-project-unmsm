@@ -34,9 +34,20 @@ target_compile_options(unity PRIVATE -Wno-conversion -Wno-shadow)
 add_library(firmware_logic STATIC
   "${COMPONENTS}/telemetry/clock.c"
   "${COMPONENTS}/telemetry/provisioning.c"
+  "${COMPONENTS}/calibration/calibration.c"
+  "${COMPONENTS}/metering/metering.c"
+  "${COMPONENTS}/quality/quality.c"
+  "${COMPONENTS}/acquisition/acquisition.c"
+  "${COMPONENTS}/persistence/checkpoint.c"
+  "${COMPONENTS}/telemetry/serialize.c"
+  "${COMPONENTS}/telemetry/queue.c"
+  "${COMPONENTS}/ui/ui_state.c"
 )
 target_include_directories(firmware_logic PUBLIC
   "${COMPONENTS}/acquisition/include"
+  "${COMPONENTS}/calibration/include"
+  "${COMPONENTS}/metering/include"
+  "${COMPONENTS}/quality/include"
   "${COMPONENTS}/persistence/include"
   "${COMPONENTS}/telemetry/include"
   "${COMPONENTS}/ui/include"
@@ -46,12 +57,18 @@ target_include_directories(firmware_logic PUBLIC
 add_library(host_support STATIC fakes/fake_nvs.c fakes/fake_adc.c fixtures.c)
 target_include_directories(host_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" fakes)
 target_link_libraries(host_support PUBLIC firmware_logic unity m)
+target_link_libraries(firmware_logic PUBLIC m)
 target_compile_definitions(host_support PRIVATE
   FIXTURES_DIR="${REPO_DIR}/tests/fixtures/waveforms")
 
 enable_testing()
-foreach(t test_clock test_provisioning test_fixtures test_board)
+foreach(t test_clock test_provisioning test_fixtures test_board test_metering
+          test_quality test_energy test_calibration test_acquisition test_serialize
+          test_queue test_ui_state)
   add_executable(${t} ${t}.c)
   target_link_libraries(${t} PRIVATE host_support)
   add_test(NAME ${t} COMMAND ${t})
 endforeach()
+
+target_compile_definitions(test_serialize PRIVATE
+  TELEMETRY_OUT="${REPO_DIR}/tests/fixtures/telemetry")

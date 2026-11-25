@@ -24,7 +24,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Track | Where we are | Next |
 |---|---|---|
-| System | Simulated version works end to end: a fake node's readings are checked, stored once (even after a crash or a resend), acknowledged back to the node, and shown on the dashboard, which says STALE/OFFLINE/NO DATA instead of an old number and labels everything "not validated". Calibration records can be registered. Foundations, firmware basics and the board test apps from before | Measuring code on the ESP32 (firmware for live monitoring); try the stage 1–4 apps when the board is wired |
+| System | Simulated version works end to end (a fake node's readings are checked, stored once, acknowledged, and shown on the dashboard with STALE/OFFLINE/NO DATA and a "not validated" label). The ESP32 software is now complete and builds: it measures volts, amps, watts and watt-hours, marks each reading valid/degraded/invalid, keeps unsent readings while offline, sends them over the encrypted link, and drives the screen, LED and buzzer; all of this passes its tests on the PC. The script that checks the bulb readings against the bulb's label is ready | Wire the board and run the stage 1–4 test apps; then the 12 V loop check (adapter unplugged) and nominal calibration |
 | Article | Introduction done; Methodology adapted to the 12 V loop, revised after the reviewer's comments, and Fig. 1 redrawn as a component and deployment diagram (6 pages; the 5-page target is relaxed until we pick a venue) | Results, once the experiments run |
 
 *Last updated: 2026-11-25*
@@ -39,7 +39,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Task list | Turn the design into an ordered to-do list (106 tasks, hardware and software tracks in parallel) | ✅ Nov 18 (test tasks added Nov 25) |
 | Setup and foundations | Repo tools and checks, data-format tests, server stack, fake node, firmware basics tested on the PC, board test apps (Phases 1–2) | ✅ Nov 25 (board test apps still to run on the board) |
 | Simulated version | Server, database and dashboard working with fake data | ✅ Nov 25 (1-hour simulated run passed) |
-| Device software | Measuring and calculating on the ESP32 | 🔄 clock, credential setup and pin map done; measuring next |
+| Device software | Measuring and calculating on the ESP32 | ✅ Nov 25 on the PC (tests and build pass; still to try on the board) |
 | Loop check and calibration | Team checks the 12 V bulb loop (adapter unplugged); nominal calibration and plausibility check against the bulb's label (no reference meter) | ⬜ |
 | Full system tests | Real device end to end, network-outage recovery, security | ⬜ |
 | Alerts | Local LED/buzzer and remote notifications | ⬜ |
@@ -71,6 +71,8 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | 4 | Which conference or journal (page limit, deadline) | Final format |
 | 5 | Faculty name and contact emails for the author block | Submission |
 | 6 | Which service sends remote alerts | Alerts |
+| 10 | Screen model: SSD1306 or SH1106 (the second needs a one-line setting change); check the module when the board is wired | Screen on the board |
+| 11 | Circuit name is fixed in the device software as `lab-load-001`; fine for one bulb loop, needs a setup field if we ever monitor more than one circuit | Nothing for the demo |
 
 ## Key decisions made
 
@@ -85,6 +87,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-25 | Live monitoring, device part (Phase 3B, 17 tasks): the ESP32 software measures the 12 V loop every 5 s (power as the average of volts × amps, never volts × amps of the averages), labels each reading valid/degraded/invalid with the reason, keeps a running watt-hour total that survives restarts (after a crash the next reading is marked "uncertain", and the total can step back by up to one minute of energy), queues up to 256 readings while offline, and shows values, quality and connection on the screen with "NO VALIDADO". New serial commands for the bench calibration steps (zero offset, polarity, freeze). New script checks a bulb run against its label (10–16 V, power within ±20 %, bulb-off current near zero) and keeps file hashes. Everything is tested on the PC; nothing has run on the board yet |
 | 2026-11-25 | Live monitoring, server part (Phase 3A, 15 tasks; dashboard queries and the two guides by Codex, reviewed): readings from the fake node are validated, stored exactly once, and acknowledged; a crash in the middle of saving is repeated safely on restart (tested with a real crash). Dashboard: live values only while the node is online and the reading is under 15 s old, otherwise STALE/OFFLINE/NO DATA, with a permanent "not validated" banner. New `energyctl` command registers nodes and calibrations and rejects alert limits above 25 W. Guides: 12 V wiring checklist (signed by two members) and nominal calibration procedure. Fixed along the way: fake-node reruns reused message IDs (now a fresh ID set per run). 1-hour simulated run (T042): all 720 readings stored once, all acknowledged, 100 % on the dashboard within 10 s (target 95 %) |
 | 2026-11-25 | Building started (Phases 1–2, 32 tasks; Claude with Codex on the server setup). The server stack starts with one command and only opens the two planned ports; a fake node sends readings over an encrypted connection that rejects unknown or impersonating devices. Firmware basics (clock, Wi-Fi/credential setup, pin map) pass their tests on the PC, checked against reference values computed independently from test signals of the 12 V loop. Test apps for build-guide stages 1–4 are written and noted in the guide; they still need the board. Note: the board's first start permanently stores an encryption key in the chip (one time, harmless) |
 | 2026-11-25 | Test plan: no CI service; firmware tests run on our PCs without the board (expected values from a Python reference calculation, firmware messages checked against the data formats), board tests later; 11 test tasks added (106 tasks), including the real-device latency and outage runs; the run counts decided for the article are now in the plan. Diagrams: plan's electrical diagram fixed for the 12 V loop, new physical deployment diagram, and article Fig. 1 redrawn as a component and deployment diagram. Git history squashed (32 → 16 commits) |
