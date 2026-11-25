@@ -215,6 +215,16 @@ antes de integrar de nuevo. Nunca se recablea con el adaptador enchufado.
 Mantenga la placa desconectada de todos los sensores y de todo lo relacionado
 con la red.
 
+**App de prueba:** `firmware/bringup/stage1_board` (T027). Arranca, se une al
+Wi-Fi con las credenciales aprovisionadas y alterna el LED RGB rojo, verde y
+azul. Grábela con
+`idf.py -C firmware/bringup/stage1_board -p /dev/ttyUSB0 flash monitor`.
+En el primer arranque espera el aprovisionamiento: desde la computadora,
+`uv run --project services/ingestion python scripts/provision-node.py --node-id node-001 --port /dev/ttyUSB0`
+lee el manifiesto local ignorado y guarda las credenciales en NVS cifrado.
+Ese primer arranque graba una clave HMAC en el eFuse de la placa (una sola vez,
+irreversible). Busque `PASS` en el monitor serie.
+
 1. Instale o active el entorno ESP-IDF 5.4 LTS del proyecto.
 2. Compile y grabe el *firmware* según las instrucciones del proyecto. Use solo
    la configuración de desarrollo y valores de ejemplo sin secretos donde se
@@ -242,6 +252,11 @@ de añadir periféricos.
 Use el ESP32-S3, el cargador USB-C certificado y una tierra común de baja
 tensión. Añada un periférico, pruébelo y apague antes de cambiar el cableado. La
 etapa 2 no tiene conexión a la red ni conductor de red en el ACS712.
+
+**App de prueba:** `firmware/bringup/stage2_peripherals` (T028). Busca la OLED en
+el bus I²C (0x3C o 0x3D) y escribe un texto de prueba, hace sonar el zumbador
+200 ms mediante el 2N2222 y enciende el LED RGB un color a la vez. Si la OLED es
+SH1106 en vez de SSD1306, cambie `OLED_COLUMN_OFFSET` a 2 en su `main.c`.
 
 ### OLED: GPIO8 / GPIO9
 
@@ -296,6 +311,14 @@ retire ese periférico y vuelva a la última configuración que funcionaba.
 Esta etapa usa solo la salida del adaptador CA-CA certificado y aislado. El
 adaptador no se conecta a ninguna entrada de alimentación de CC. No pase ningún
 conductor por el ACS712 en esta etapa: el foco todavía no se conecta.
+
+**App de prueba:** `firmware/bringup/stage34_adc_logger` (T029), la misma de la
+etapa 4. Muestrea GPIO4 y GPIO5 de forma alterna a 8000 conversiones/s y
+muestra cada segundo la media, el mínimo y el máximo en mV. Con el adaptador
+desenchufado, GPIO4 debe marcar cerca de 1650 mV (la polarización); enchufado,
+unos 1650 ± 760 mV de pico. Escriba `d` y Enter para volcar un segundo en CSV
+con el mismo formato de `tests/fixtures/waveforms/`, y guarde el volcado como
+evidencia.
 
 ### Circuito nominal
 
@@ -352,6 +375,11 @@ forma de onda y la polarización medida.
 Esta etapa verifica solo la salida de baja tensión del ACS712, sin corriente.
 Ningún conductor pasa por IP+/IP−. La polaridad se comprueba después, en la
 primera medición con el foco (etapa 6).
+
+**App de prueba:** `firmware/bringup/stage34_adc_logger` (T029). Sin corriente,
+GPIO5 debe marcar cerca de 1700 mV (el *offset* de cero del ACS712 tras el
+divisor). Con el foco encendido, en la etapa 6, la variación esperada es de unos
+± 160 mV de pico.
 
 ### Circuito nominal y verificaciones
 

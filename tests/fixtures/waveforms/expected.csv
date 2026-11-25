@@ -1,0 +1,9 @@
+fixture,valid,flags,v_rms_v,i_rms_a,active_power_w,energy_wh
+sine_inphase,1,,12.000026,1.700025,20.381927,0.005662
+lag60,1,,12.000016,1.699795,10.181804,0.002828
+dc_offset,1,,12.000302,1.700007,20.382157,0.005662
+clipping,0,adc_clipped,,,,
+sample_gap,0,sample_gap,,,,
+no_current,1,,12.000291,0.015335,0.002462,1e-06
+tolerance_rel,,,0.005,0.01,0.01,0.01
+tolerance_abs,,,0.02,0.01,0.05,0.0001

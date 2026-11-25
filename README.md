@@ -24,7 +24,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Track | Where we are | Next |
 |---|---|---|
-| System | Design finished; demo is a 12 V AC bulb loop. Test plan updated: firmware is tested on our PCs (no board needed yet), and board tests come later. Nothing built yet | Fix what the consistency check finds, then start building: repo setup, server with fake data, and firmware tests on the PC |
+| System | Foundations built: the server runs on one PC (broker, database, dashboard) and accepts data from a fake node over an encrypted, certificate-checked connection; firmware basics are tested on the PC; test apps for build-guide stages 1–4 are ready for the board. `make test` runs every check | Live monitoring (MVP): store readings, show them on the dashboard, and the measuring code on the ESP32; try the stage 1–4 apps when the board is wired |
 | Article | Introduction done; Methodology adapted to the 12 V loop, revised after the reviewer's comments, and Fig. 1 redrawn as a component and deployment diagram (6 pages; the 5-page target is relaxed until we pick a venue) | Results, once the experiments run |
 
 *Last updated: 2026-11-25*
@@ -37,8 +37,9 @@ Build the article: `make -C article` → `article/build/main.pdf`
 |---|---|---|
 | Design | Requirements, architecture, research, data formats | ✅ Oct 14 (hardware adapted Nov 18) |
 | Task list | Turn the design into an ordered to-do list (106 tasks, hardware and software tracks in parallel) | ✅ Nov 18 (test tasks added Nov 25) |
-| Simulated version | Server, database and dashboard working with fake data | ⏳ |
-| Device software | Measuring and calculating on the ESP32 | ⬜ |
+| Setup and foundations | Repo tools and checks, data-format tests, server stack, fake node, firmware basics tested on the PC, board test apps (Phases 1–2) | ✅ Nov 25 (board test apps still to run on the board) |
+| Simulated version | Server, database and dashboard working with fake data | 🔄 server and fake node running; storage and dashboard next |
+| Device software | Measuring and calculating on the ESP32 | 🔄 clock, credential setup and pin map done; measuring next |
 | Loop check and calibration | Team checks the 12 V bulb loop (adapter unplugged); nominal calibration and plausibility check against the bulb's label (no reference meter) | ⬜ |
 | Full system tests | Real device end to end, network-outage recovery, security | ⬜ |
 | Alerts | Local LED/buzzer and remote notifications | ⬜ |
@@ -84,6 +85,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-25 | Building started (Phases 1–2, 32 tasks; Claude with Codex on the server setup). The server stack starts with one command and only opens the two planned ports; a fake node sends readings over an encrypted connection that rejects unknown or impersonating devices. Firmware basics (clock, Wi-Fi/credential setup, pin map) pass their tests on the PC, checked against reference values computed independently from test signals of the 12 V loop. Test apps for build-guide stages 1–4 are written and noted in the guide; they still need the board. Note: the board's first start permanently stores an encryption key in the chip (one time, harmless) |
 | 2026-11-25 | Test plan: no CI service; firmware tests run on our PCs without the board (expected values from a Python reference calculation, firmware messages checked against the data formats), board tests later; 11 test tasks added (106 tasks), including the real-device latency and outage runs; the run counts decided for the article are now in the plan. Diagrams: plan's electrical diagram fixed for the 12 V loop, new physical deployment diagram, and article Fig. 1 redrawn as a component and deployment diagram. Git history squashed (32 → 16 commits) |
 | 2026-11-23 | Spec Kit commands now work as native slash commands in Claude Code (`/speckit-implement`, etc.), alongside Codex. No specs or templates changed |
 | 2026-11-18 | Article Methodology merged with plan B (12 V bulb loop) and revised after the reviewer's comments: clearer test units and repetitions, step-by-step alert and outage tests, honest wording on delivery guarantees, uncertainty without a reference meter, and a separate metrics section. Details in article/README.md (AD-16) |

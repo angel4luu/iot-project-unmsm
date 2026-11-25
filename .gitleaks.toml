@@ -1,0 +1,17 @@
+# Secret-scanning gate (constitution IV). Run with `make secrets-scan`.
+title = "unmsm-energy gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholders and documentation-only values"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)uv\.lock$''',
+  '''^article/build/''',
+]
+regexes = [
+  '''192\.0\.2\.[0-9]+''',
+  '''example\.(invalid|com|org)''',
+]

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "event_id": "123e4567-e89b-42d3-a456-426614174010",
+  "node_id": "node-001",
+  "circuit_id": "lab-load-001",
+  "boot_id": "123e4567-e89b-42d3-8456-426614174001",
+  "sequence": 43,
+  "observed_at": "2026-10-14T17:00:15.000Z",
+  "event_type": "threshold_entered",
+  "severity": "warning",
+  "config_version": 1,
+  "measured_value": 21.0,
+  "threshold_value": 15.0,
+  "unit": "W",
+  "quality": "valid",
+  "reason_code": null
+}

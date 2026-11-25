@@ -1,0 +1,18 @@
+# Device identities are the node_id mapped from the client certificate CN.
+pattern write unmsm/energy/v1/nodes/%u/measurements
+pattern write unmsm/energy/v1/nodes/%u/events
+pattern write unmsm/energy/v1/nodes/%u/status
+pattern read unmsm/energy/v1/nodes/%u/config
+pattern read unmsm/energy/v1/nodes/%u/acks/measurements
+
+# Ingestion consumes telemetry and writes only node configuration and ACKs.
+user svc-ingestion
+topic read unmsm/energy/v1/nodes/+/measurements
+topic read unmsm/energy/v1/nodes/+/events
+topic read unmsm/energy/v1/nodes/+/status
+topic write unmsm/energy/v1/nodes/+/config
+topic write unmsm/energy/v1/nodes/+/acks/measurements
+
+# Operator identity is separate and read-only.
+user svc-admin
+topic read unmsm/energy/v1/#

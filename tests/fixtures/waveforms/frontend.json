@@ -1,0 +1,11 @@
+{
+  "_comment": "Nominal front-end of plan B (plan.md, Front end and pin allocation; Calibration step 4). Shared by generate.py and reference.py; the firmware's nominal calibration uses the same numbers.",
+  "conversions_per_s": 8000,
+  "pairs_per_s": 4000,
+  "current_delay_conversions": 1,
+  "adc_min_mv": 0,
+  "adc_max_mv": 3100,
+  "voltage": {"bias_mv": 1650.0, "r1_ohm": 100000.0, "r2_ohm": 4700.0},
+  "current": {"sensor": "ACS712-20A", "zero_mv": 2500.0, "sensitivity_mv_per_a": 100.0, "r3_ohm": 4700.0, "r4_ohm": 10000.0},
+  "zero_noise_current_a": 0.05
+}

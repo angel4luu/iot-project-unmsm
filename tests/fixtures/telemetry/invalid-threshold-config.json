@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "config_version": 1,
+  "node_id": "node-001",
+  "circuit_id": "lab-load-001",
+  "effective_at": "2026-10-14T17:00:00.000Z",
+  "active_power_limit_W": 0,
+  "confirm_ms": 10000,
+  "clear_below_W": 12.0,
+  "clear_ms": 10000,
+  "severity": "warning",
+  "local_warning_enabled": true
+}

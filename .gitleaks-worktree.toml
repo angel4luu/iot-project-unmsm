@@ -1,0 +1,12 @@
+# Working-tree scan only (make secrets-scan). Extends .gitleaks.toml and skips the
+# git-ignored infrastructure/secrets/ folder, which holds the real local dev keys.
+# History is scanned with the strict .gitleaks.toml, and `make secrets-scan` also
+# fails if any file in that folder other than README.example.md is tracked.
+title = "unmsm-energy gitleaks worktree config"
+
+[extend]
+path = ".gitleaks.toml"
+
+[allowlist]
+description = "Ignored local secrets folder (never committed)"
+paths = ['''(^|/)infrastructure/secrets/''']

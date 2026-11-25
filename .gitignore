@@ -74,3 +74,25 @@ article/build/
 *.fdb_latexmk
 *.fls
 *.synctex.gz
+
+# Project secrets and runtime state (constitution IV; plan › Project Structure)
+infrastructure/secrets/*
+!infrastructure/secrets/README.example.md
+**/secrets.local*
+*.crt
+*.csr
+*.srl
+*.sqlite
+*.sqlite-*
+*.sqlite3
+experiments/data/
+
+# ESP-IDF outputs and machine-local configuration
+firmware/build/
+firmware/**/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/**/sdkconfig
+firmware/**/sdkconfig.old
+firmware/managed_components/
+firmware/**/managed_components/

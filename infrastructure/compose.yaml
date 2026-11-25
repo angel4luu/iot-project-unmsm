@@ -1,0 +1,233 @@
+name: unmsm-energy
+
+services:
+  mosquitto-secrets:
+    image: eclipse-mosquitto:2.1.2-alpine
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - >-
+        install -o mosquitto -g mosquitto -m 0400 /run/secrets/ca.crt /secure/ca.crt &&
+        install -o mosquitto -g mosquitto -m 0400 /run/secrets/broker.crt /secure/broker.crt &&
+        install -o mosquitto -g mosquitto -m 0400 /run/secrets/broker.key /secure/broker.key
+    volumes:
+      - mosquitto-secret-files:/secure
+    secrets:
+      - ca.crt
+      - broker.crt
+      - broker.key
+    networks: [backend]
+
+  mosquitto:
+    image: eclipse-mosquitto:2.1.2-alpine
+    restart: unless-stopped
+    ports:
+      - "${LAN_BIND_ADDRESS:-127.0.0.1}:${MQTT_TLS_PORT:-8883}:8883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-secret-files:/run/secrets:ro
+    depends_on:
+      mosquitto-secrets:
+        condition: service_completed_successfully
+    # backend is internal (no host port forwarding); edge carries only the published 8883.
+    networks: [backend, edge]
+    healthcheck:
+      test: ["CMD", "mosquitto", "--test-config", "-c", "/mosquitto/config/mosquitto.conf"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  influxdb:
+    image: influxdb:2.9.1
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: unmsm-admin
+      DOCKER_INFLUXDB_INIT_PASSWORD_FILE: /run/secrets/influx-admin-password
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN_FILE: /run/secrets/influx-admin-token
+      DOCKER_INFLUXDB_INIT_ORG: unmsm-energy
+      DOCKER_INFLUXDB_INIT_BUCKET: energy_raw
+      DOCKER_INFLUXDB_INIT_RETENTION: 720h
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    secrets:
+      - influx-admin-password
+      - influx-admin-token
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8086/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  ingestion-secrets:
+    image: unmsm-energy-ingestion:local
+    build:
+      context: ../services/ingestion
+      dockerfile: Dockerfile
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - >-
+        install -o app -g app -m 0400 /run/secrets/ca.crt /secure/ca.crt &&
+        install -o app -g app -m 0400 /run/secrets/ingestion.crt /secure/ingestion.crt &&
+        install -o app -g app -m 0400 /run/secrets/ingestion.key /secure/ingestion.key &&
+        install -o app -g app -m 0400 /run/secrets/influx-ingestion-token /secure/influx-ingestion-token &&
+        install -o app -g app -m 0400 /run/secrets/notification-token /secure/notification-token
+    volumes:
+      - ingestion-secret-files:/secure
+    secrets:
+      - ca.crt
+      - ingestion.crt
+      - ingestion.key
+      - influx-ingestion-token
+      - notification-token
+    networks: [backend]
+
+  ingestion:
+    build:
+      context: ../services/ingestion
+      dockerfile: Dockerfile
+    image: unmsm-energy-ingestion:local
+    restart: unless-stopped
+    command: ["python", "-m", "energy_ingestion.service"]
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "8883"
+      MQTT_CA_FILE: /run/secrets/ca.crt
+      MQTT_CERT_FILE: /run/secrets/ingestion.crt
+      MQTT_KEY_FILE: /run/secrets/ingestion.key
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_ORG: unmsm-energy
+      INFLUX_TOKEN_FILE: /run/secrets/influx-ingestion-token
+      SQLITE_PATH: /data/energy.sqlite
+      ENERGY_CONTRACTS_DIR: /app/specs/001-energy-monitoring-system/contracts
+      TZ: ${TZ:-UTC}
+      NOTIFY_BASE_URL: ${NOTIFY_BASE_URL:-https://notify.example.invalid}
+      NOTIFICATION_TOKEN_FILE: /run/secrets/notification-token
+    volumes:
+      - ingestion-data:/data
+      - ingestion-secret-files:/run/secrets:ro
+      - ../specs/001-energy-monitoring-system/contracts:/app/specs/001-energy-monitoring-system/contracts:ro
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      ingestion-secrets:
+        condition: service_completed_successfully
+    networks: [backend, egress]
+    healthcheck:
+      test: ["CMD", "python", "-m", "energy_ingestion.health.ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  grafana-secrets:
+    image: grafana/grafana:13.2.3
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - >-
+        install -o grafana -g root -m 0400 /run/secrets/grafana-admin-password /secure/grafana-admin-password &&
+        install -o grafana -g root -m 0400 /run/secrets/influx-grafana-token /secure/influx-grafana-token
+    volumes:
+      - grafana-secret-files:/secure
+    secrets:
+      - grafana-admin-password
+      - influx-grafana-token
+    networks: [backend]
+
+  grafana:
+    image: grafana/grafana:13.2.3
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: operator
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - grafana-secret-files:/run/secrets:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      grafana-secrets:
+        condition: service_completed_successfully
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  caddy:
+    image: caddy:2.11.9
+    restart: unless-stopped
+    environment:
+      DASHBOARD_HOSTNAME: ${DASHBOARD_HOSTNAME:-energy.example.invalid}
+    ports:
+      - "${LAN_BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      grafana:
+        condition: service_healthy
+    # edge carries only the published 443.
+    networks: [backend, edge]
+
+secrets:
+  ca.crt:
+    file: ./secrets/ca.crt
+  broker.crt:
+    file: ./secrets/broker.crt
+  broker.key:
+    file: ./secrets/broker.key
+  ingestion.crt:
+    file: ./secrets/ingestion.crt
+  ingestion.key:
+    file: ./secrets/ingestion.key
+  influx-admin-password:
+    file: ./secrets/influx-admin-password
+  influx-admin-token:
+    file: ./secrets/influx-admin-token
+  influx-ingestion-token:
+    file: ./secrets/influx-ingestion-token
+  influx-grafana-token:
+    file: ./secrets/influx-grafana-token
+  grafana-admin-password:
+    file: ./secrets/grafana-admin-password
+  notification-token:
+    file: ./secrets/notification-token
+
+volumes:
+  mosquitto-data:
+  mosquitto-secret-files:
+  influxdb-data:
+  influxdb-config:
+  ingestion-data:
+  ingestion-secret-files:
+  grafana-data:
+  grafana-secret-files:
+  caddy-data:
+  caddy-config:
+
+networks:
+  backend:
+    internal: true
+  egress:
+    driver: bridge
+  edge:
+    driver: bridge

@@ -1,0 +1,25 @@
+# Local hooks only (no CI service). Install once: `make hooks`.
+# Each hook calls a tool already pinned in services/ingestion/uv.lock or installed on the PC.
+repos:
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (staged changes)
+        entry: gitleaks git --staged --redact --config .gitleaks.toml --no-banner
+        language: system
+        pass_filenames: false
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --project services/ingestion ruff check --force-exclude
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --project services/ingestion ruff format --check --force-exclude
+        language: system
+        types: [python]
+      - id: clang-format
+        name: clang-format (firmware)
+        entry: clang-format --dry-run --Werror
+        language: system
+        files: ^firmware/.*\.(c|h)$
