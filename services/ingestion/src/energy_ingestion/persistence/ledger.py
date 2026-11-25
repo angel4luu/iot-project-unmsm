@@ -46,10 +46,10 @@ def payload_sha256(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def admit(
-    session: Session, ident: MessageIdentity, sha256: str, received_at: datetime
-) -> tuple[Admission, IngestionLedger | None]:
-    """Classify an incoming message and create its `received` row when new."""
+def lookup(
+    session: Session, ident: MessageIdentity
+) -> tuple[IngestionLedger | None, IngestionLedger | None]:
+    """Rows matching the message_id and the (node_id, boot_id, sequence) tuple."""
     by_id = session.get(IngestionLedger, ident.message_id)
     by_tuple = session.scalar(
         select(IngestionLedger).where(
@@ -58,20 +58,15 @@ def admit(
             IngestionLedger.sequence == ident.sequence,
         )
     )
+    return by_id, by_tuple
+
+
+def classify(
+    by_id: IngestionLedger | None, by_tuple: IngestionLedger | None, sha256: str
+) -> tuple[Admission, IngestionLedger | None]:
+    """Admission for a message given its ledger matches (no writes)."""
     if by_id is None and by_tuple is None:
-        row = IngestionLedger(
-            message_id=ident.message_id,
-            node_id=ident.node_id,
-            boot_id=ident.boot_id,
-            sequence=ident.sequence,
-            payload_sha256=sha256,
-            state="received",
-            received_at=received_at,
-            ack_count=0,
-        )
-        session.add(row)
-        session.flush()
-        return Admission.NEW, row
+        return Admission.NEW, None
     existing = by_id or by_tuple
     assert existing is not None
     if by_id is not by_tuple or existing.payload_sha256 != sha256:
@@ -83,6 +78,28 @@ def admit(
             return Admission.REJECTED, existing
         case _:
             return Admission.RESUME, existing
+
+
+def admit(
+    session: Session, ident: MessageIdentity, sha256: str, received_at: datetime
+) -> tuple[Admission, IngestionLedger | None]:
+    """Classify an incoming message and create its `received` row when new."""
+    admission, existing = classify(*lookup(session, ident), sha256)
+    if admission is not Admission.NEW:
+        return admission, existing
+    row = IngestionLedger(
+        message_id=ident.message_id,
+        node_id=ident.node_id,
+        boot_id=ident.boot_id,
+        sequence=ident.sequence,
+        payload_sha256=sha256,
+        state="received",
+        received_at=received_at,
+        ack_count=0,
+    )
+    session.add(row)
+    session.flush()
+    return Admission.NEW, row
 
 
 def mark_stored(row: IngestionLedger, stored_at: datetime) -> None:

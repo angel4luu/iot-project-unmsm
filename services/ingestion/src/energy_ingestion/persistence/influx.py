@@ -17,14 +17,24 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 
 from energy_ingestion.contracts.models import Measurement
 
-MEASUREMENT = "energy_window"
+MEASUREMENT = "electrical_measurement"  # plan: Storage and retention
 RAW_BUCKET = "energy_raw"
 OPERATIONS_BUCKET = "operations"
 TAG_KEYS = frozenset({"node_id", "circuit_id", "quality", "calibration_revision"})
 NO_CALIBRATION = "none"
 
 
-def measurement_point(m: Measurement) -> Point:
+NOT_VALIDATED = "not_validated"
+VALIDATED = "validated"
+
+
+def measurement_point(
+    m: Measurement,
+    validation: str = NOT_VALIDATED,
+    receive_lag_ms: float | None = None,
+    store_lag_ms: float | None = None,
+) -> Point:
+    """One window as a point; `validation` comes from the calibration registry."""
     q = m.measurements
     point = (
         Point(MEASUREMENT)
@@ -43,7 +53,12 @@ def measurement_point(m: Measurement) -> Point:
         .field("clock_source", m.clock.source)
         .field("uptime_ms", m.uptime_ms)
         .field("counter_id", str(q.active_energy_import_total.counter_id))
+        .field("validation", validation)
     )
+    if receive_lag_ms is not None:
+        point.field("receive_lag_ms", float(receive_lag_ms))
+    if store_lag_ms is not None:
+        point.field("store_lag_ms", float(store_lag_ms))
     if m.clock.last_sync_age_s is not None:
         point.field("last_sync_age_s", m.clock.last_sync_age_s)
     values = {
@@ -77,9 +92,6 @@ class InfluxWriter:
 
     def write(self, bucket: str, point: Point) -> None:
         self._api.write(bucket=bucket, org=self._org, record=point)
-
-    def write_measurement(self, m: Measurement) -> None:
-        self.write(RAW_BUCKET, measurement_point(m))
 
     def close(self) -> None:
         self._client.close()

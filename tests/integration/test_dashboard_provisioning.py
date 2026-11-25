@@ -1,0 +1,129 @@
+"""T041: dashboard provisioning smoke test against the live stack.
+
+Datasource healthy, dashboard provisioned read-only, and panel 2 (current cards)
+shows `NO DATA` for a node that never sent, a number only while the node is
+online with a fresh valid window, and `STALE` once it goes quiet: never a zero
+or a fabricated last value. Queries go through Grafana itself (`/api/ds/query`).
+"""
+
+import json
+import secrets
+import time
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+import pytest
+from tests import stack
+
+from energy_ingestion.cli.simulate import SimulatedNode
+
+pytestmark = pytest.mark.integration
+DASH_UID = "energy-overview"
+DS_UID = "influxdb-energy"
+
+
+@pytest.fixture(scope="module")
+def dashboard() -> dict[str, Any]:
+    stack.require_stack()
+    out: dict[str, Any] = stack.grafana(f"/api/dashboards/uid/{DASH_UID}")
+    return out
+
+
+def panel_query(dash: dict[str, Any], panel_id: int) -> str:
+    def walk(panels: list[dict[str, Any]]) -> Any:
+        for p in panels:
+            if p.get("id") == panel_id:
+                return p["targets"][0]["query"]
+            found = walk(p.get("panels", []))
+            if found:
+                return found
+        return None
+
+    query = walk(dash["panels"])
+    assert query, f"panel {panel_id} not found"
+    return str(query)
+
+
+def cards(dash: dict[str, Any], node: str) -> dict[str, str]:
+    """Panel 2 rendered by Grafana: metric -> displayed value."""
+    body = {
+        "from": "now-15m",
+        "to": "now",
+        "queries": [
+            {
+                "refId": "A",
+                "datasource": {"type": "influxdb", "uid": DS_UID},
+                "query": panel_query(dash, 2).replace("${node}", node),
+            }
+        ],
+    }
+    result = stack.grafana("/api/ds/query", body)["results"]["A"]
+    assert "error" not in result, result.get("error")
+    shown: dict[str, str] = {}
+    for frame in result["frames"]:
+        names = [f["name"] for f in frame["schema"]["fields"]]
+        columns = dict(zip(names, frame["data"]["values"], strict=True))
+        for metric, value in zip(columns["metric"], columns["value"], strict=True):
+            shown[metric] = value
+    return shown
+
+
+def test_datasource_is_healthy() -> None:
+    stack.require_stack()
+    health = stack.grafana(f"/api/datasources/uid/{DS_UID}/health")
+    assert health["status"] == "OK", health
+
+
+def test_dashboard_is_provisioned_read_only(dashboard: dict[str, Any]) -> None:
+    dash, meta = dashboard["dashboard"], dashboard["meta"]
+    assert dash["title"] == "Energy overview"
+    assert dash["editable"] is False
+    assert meta.get("provisioned") is True
+    assert {p["id"] for p in dash["panels"]} >= {1, 2, 3, 4, 6, 8}
+    assert not {5, 7} & {p["id"] for p in dash["panels"]}  # user stories 2-3
+
+
+def test_node_that_never_sent_shows_no_data(dashboard: dict[str, Any]) -> None:
+    shown = cards(dashboard["dashboard"], f"never-{secrets.token_hex(3)}")
+    assert set(shown.values()) == {"NO DATA"}, shown
+
+
+def test_live_then_stale_never_zero(dashboard: dict[str, Any]) -> None:
+    dash = dashboard["dashboard"]
+    node = SimulatedNode("normal", datetime.now(UTC), seed=secrets.randbits(32))
+    msgs = list(node.messages(timedelta(seconds=10)))  # status + two windows
+    with stack.sim_link() as link:
+        for msg in msgs:
+            delay = (msg.at - datetime.now(UTC)).total_seconds()
+            if delay > 0:
+                time.sleep(delay)
+            link.publish(msg.topic, msg.payload, retain=msg.retain)
+            if msg.kind == "measurement":
+                ack = link.wait_ack(json.loads(msg.payload)["message_id"])
+                assert ack is not None
+                assert ack["status"] == "accepted"
+    live = stack.wait_until(
+        lambda: (s := cards(dash, node.node_id)) and _numeric(s.get("Active power")) and s, 8
+    )
+    assert live, "panel 2 never showed the live value"
+    assert float(live["Active power"]) > 0
+    assert float(live["V RMS"]) > 0
+    assert "Wh" in live["Import energy"]
+
+    # Quiet for more than 15 s: the server marks the node stale and the cards stop
+    # showing numbers (no last value kept on screen).
+    stale = stack.wait_until(
+        lambda: (s := cards(dash, node.node_id)) and not any(_numeric(v) for v in s.values()) and s,
+        30,
+        every_s=2,
+    )
+    assert stale, "panel 2 kept showing a number after the node went quiet"
+    assert set(stale.values()) <= {"STALE", "OFFLINE"}, stale
+
+
+def _numeric(value: str | None) -> bool:
+    try:
+        float(value or "")
+    except ValueError:
+        return False
+    return True

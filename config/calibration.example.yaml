@@ -1,0 +1,20 @@
+# Example nominal calibration for `energyctl calibration register` (T094).
+# Copy it, fill in the bench values from guides/calibration/nominal-calibration.md,
+# and register the copy. A revision is immutable once registered; a new bench
+# session gets a new revision. Nominal = datasheet coefficients, no reference
+# meter: every value computed with it is shown as "not validated".
+# Quote hex values (commit, SHA-256) so YAML keeps them as strings.
+calibration_revision: cal-node-001-2026-12-01-r1
+node_id: node-001
+hardware_revision: proto-a
+firmware_commit: "0000000000000000000000000000000000000000"  # `git rev-parse HEAD` of the flashed build
+calibration_kind: nominal                                  # `reference` needs reference_meter_id (future)
+current_sensor_variant: 20A
+# Volts at the load per volt at the ADC pin: 1 / (0.0449 V/V divider gain), from frontend.json.
+voltage_gain: 22.276596
+# Amperes per volt at the ADC pin: 1 / (0.100 V/A * 10/14.7 divider).
+current_gain: 14.700000
+phase_correction_samples: 0.5    # current sampled one conversion after voltage
+zero_noise_current_a: 0.050      # bulb-off RMS noise floor from the 60 s offset capture
+procedure_version: nominal-calibration-v1
+dataset_manifest_sha256: "0000000000000000000000000000000000000000000000000000000000000000"

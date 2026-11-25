@@ -25,6 +25,7 @@ import math
 import os
 import random
 import re
+import secrets
 import ssl
 import sys
 import time
@@ -317,7 +318,11 @@ def run_broker(args: argparse.Namespace, node: SimulatedNode) -> int:
         ).wait_for_publish(10)
         client.loop_stop()
         client.disconnect()
-    print(json.dumps({"scenario": args.scenario, "published": sent, "acks": len(acks)}))
+    print(
+        json.dumps(
+            {"scenario": args.scenario, "seed": args.seed, "published": sent, "acks": len(acks)}
+        )
+    )
     return 0
 
 
@@ -328,7 +333,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--node-id", default="sim-001")
     p.add_argument("--circuit-id", default="sim-load-001")
     p.add_argument("--limit-w", type=float, default=22.0, help="threshold the scenarios cross")
-    p.add_argument("--seed", type=int, default=1)
+    p.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="reproduce a run; default is a fresh seed, so every run is a new boot with new IDs",
+    )
     p.add_argument("--host", default=os.environ.get("MQTT_HOST", "localhost"))
     p.add_argument("--port", type=int, default=int(os.environ.get("MQTT_TLS_PORT", "8883")))
     p.add_argument("--ca", type=Path, default=SECRETS / "ca.crt")
@@ -337,6 +347,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--dry-run", action="store_true", help="print payloads; no broker")
     args = p.parse_args(argv)
     start = datetime.now(UTC).replace(microsecond=0)
+    if args.seed is None:  # same seed = same message IDs: a rerun would be an identity conflict
+        args.seed = secrets.randbits(32)
     node = SimulatedNode(
         args.scenario, start, args.node_id, args.circuit_id, args.limit_w, args.seed
     )

@@ -8,13 +8,21 @@ in `tests/test_contract_models.py`.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 
 from energy_ingestion.contracts.validate import validate_payload
+
+
+def wire_time(t: datetime) -> str:
+    """RFC 3339 UTC with milliseconds and `Z`, the only form the schemas accept."""
+    return t.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+WireTime = Annotated[datetime, PlainSerializer(wire_time, return_type=str, when_used="json")]
 
 QualityState = Literal["valid", "degraded", "invalid"]
 ClockSource = Literal["sntp", "holdover", "unsynchronized"]
@@ -36,8 +44,8 @@ class _Contract(BaseModel):
 
 
 class Window(_Contract):
-    start: datetime
-    end: datetime
+    start: WireTime
+    end: WireTime
     duration_ms: int
     sample_count: int
 
@@ -100,7 +108,7 @@ class NodeStatus(_Contract):
     schema_version: Literal["1.0.0"]
     node_id: str
     boot_id: UUID
-    observed_at: datetime
+    observed_at: WireTime
     state: Literal["online", "degraded", "offline"]
     firmware_version: str
     hardware_revision: str
@@ -109,7 +117,7 @@ class NodeStatus(_Contract):
     acquisition_state: Literal["sampling", "degraded", "stopped"]
     pending_records: int
     oldest_pending_age_s: int
-    last_valid_window_end: datetime | None
+    last_valid_window_end: WireTime | None
     last_error_code: str | None
 
 
@@ -120,7 +128,7 @@ class NodeEvent(_Contract):
     circuit_id: str
     boot_id: UUID
     sequence: int
-    observed_at: datetime
+    observed_at: WireTime
     event_type: Literal["threshold_entered", "threshold_cleared", "measurement_quality_changed"]
     severity: Literal["info", "warning", "critical"]
     config_version: int
@@ -137,7 +145,7 @@ class ThresholdConfig(_Contract):
     config_version: int
     node_id: str
     circuit_id: str
-    effective_at: datetime
+    effective_at: WireTime
     active_power_limit_w: float = Field(alias="active_power_limit_W")
     confirm_ms: int = 10000
     clear_below_w: float = Field(alias="clear_below_W")
@@ -148,14 +156,14 @@ class ThresholdConfig(_Contract):
 
 class MeasurementAck(_Contract):
     schema_version: Literal["1.0.0"]
-    acknowledged_at: datetime
+    acknowledged_at: WireTime
     message_id: UUID
     node_id: str
     boot_id: UUID
     sequence: int
     status: Literal["accepted", "duplicate", "rejected"]
     reason_code: str | None
-    stored_at: datetime | None = None
+    stored_at: WireTime | None = None
 
 
 MODELS: dict[str, type[_Contract]] = {

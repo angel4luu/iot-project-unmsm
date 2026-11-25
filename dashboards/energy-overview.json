@@ -1,0 +1,749 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Node identity and state — NOT VALIDATED — nominal calibration (no reference meter)",
+      "description": "Permanent calibration label: NOT VALIDATED — nominal calibration (no reference meter). The table shows latest node status and last valid update metadata.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-energy"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "NO DATA"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "query": "// Panel 1 — node identity, current status, calibration, clock, and last valid update.\nimport \"array\"\n\nstatusData = from(bucket: \"operations\")\n    |> range(start: -30d)\n    |> filter(fn: (r) => r._measurement == \"node_status\" and r.node_id == \"${node}\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"acquisition_state\", \"clock_source\", \"firmware_version\", \"calibration_revision\", \"last_measurement_age_s\"]))\n    |> group(columns: [\"_field\"])\n    |> last()\n    |> yield(name: \"latest_node_metadata\")\n\nstateData = from(bucket: \"operations\")\n    |> range(start: -30d)\n    |> filter(fn: (r) => r._measurement == \"node_status\" and r.node_id == \"${node}\" and r._field == \"state\")\n    |> keep(columns: [\"_time\", \"node_id\", \"_field\", \"_value\"])\n\nunion(tables: [stateData, array.from(rows: [{_time: time(v: 0), node_id: \"${node}\", _field: \"state\", _value: \"NO DATA\"}])])\n    |> group(columns: [\"node_id\"])\n    |> sort(columns: [\"_time\"])\n    |> last()\n    |> yield(name: \"latest_node_status\")\n\nvalidUpdate = from(bucket: \"energy_raw\")\n    |> range(start: -30d)\n    |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and r.quality == \"valid\" and r._field == \"active_power_W\")\n    |> map(fn: (r) => ({_time: r._time, node_id: r.node_id, circuit_id: r.circuit_id, calibration_revision: r.calibration_revision, _field: \"last_valid_update\", _value: string(v: r._time), last_valid_age_s: string(v: float(v: int(v: now()) - int(v: r._time)) / 1000000000.0)}))\n\nunion(tables: [validUpdate, array.from(rows: [{_time: time(v: 0), node_id: \"${node}\", circuit_id: \"unknown\", calibration_revision: \"unknown\", _field: \"last_valid_update\", _value: \"NO DATA\", last_valid_age_s: \"NO DATA\"}])])\n    |> group(columns: [\"node_id\"])\n    |> sort(columns: [\"_time\"])\n    |> last()\n    |> map(fn: (r) => ({r with _time: if r._value == \"NO DATA\" then now() else r._time}))\n    |> yield(name: \"last_valid_update\")",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Current cards — values require online state and a valid window no older than 15 s",
+      "description": "Each row includes value or status text, unit, timestamp, and quality. A stale, offline, missing, degraded, or invalid reading is never shown as a number. Import energy includes Wh and Wh/1000 as kWh.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-energy"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "NO DATA"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "query": "// Panel 2 — current cards. Values are strings so status text can replace a number safely.\nimport \"join\"\nimport \"array\"\n\nstatusData = from(bucket: \"operations\")\n    |> range(start: -15m)\n    |> filter(fn: (r) => r._measurement == \"node_status\" and r.node_id == \"${node}\" and r._field == \"state\")\n    |> rename(columns: {_value: \"node_state\"})\n    |> keep(columns: [\"_time\", \"node_id\", \"node_state\"])\n\nlatestStatus = union(tables: [statusData, array.from(rows: [{_time: time(v: 0), node_id: \"${node}\", node_state: \"NO DATA\"}])])\n    |> group(columns: [\"node_id\"])\n    |> sort(columns: [\"_time\"])\n    |> last(column: \"node_state\")\n\nwindowData = from(bucket: \"energy_raw\")\n    |> range(start: -15m)\n    |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and r._field == \"quality_flags\")\n    |> rename(columns: {_value: \"window_flags\", _time: \"window_time\"})\n    |> keep(columns: [\"node_id\", \"quality\", \"calibration_revision\", \"window_flags\", \"window_time\"])\n\nlatestWindow = union(tables: [windowData, array.from(rows: [{node_id: \"${node}\", quality: \"unknown\", calibration_revision: \"unknown\", window_flags: \"\", window_time: time(v: 0)}])])\n    |> group(columns: [\"node_id\"])\n    |> sort(columns: [\"window_time\"])\n    |> last(column: \"window_flags\")\n\nstatusWithWindow = join.left(\n    left: latestStatus,\n    right: latestWindow,\n    on: (l, r) => l.node_id == r.node_id,\n    as: (l, r) => ({l with latest_quality: r.quality, calibration_revision: r.calibration_revision, window_flags: r.window_flags, window_time: r.window_time}),\n)\n\ncard = (field, label, unit, energy) => {\n    readingData = from(bucket: \"energy_raw\")\n        |> range(start: -30d)\n        |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and r.quality == \"valid\" and r._field == field)\n        |> map(fn: (r) => ({_time: r._time, node_id: r.node_id, circuit_id: r.circuit_id, calibration_revision: r.calibration_revision, _value: float(v: r._value), has_reading: true}))\n\n    reading = union(tables: [readingData, array.from(rows: [{_time: time(v: 0), node_id: \"${node}\", circuit_id: \"unknown\", calibration_revision: \"unknown\", _value: 0.0, has_reading: false}])])\n        |> group(columns: [\"node_id\"])\n        |> sort(columns: [\"_time\"])\n        |> last()\n        |> rename(columns: {_value: \"reading\", _time: \"reading_time\", calibration_revision: \"reading_calibration_revision\"})\n\n    return join.left(\n        left: statusWithWindow,\n        right: reading,\n        on: (l, r) => l.node_id == r.node_id,\n        as: (l, r) => ({l with circuit_id: r.circuit_id, reading_calibration_revision: r.reading_calibration_revision, reading: r.reading, reading_time: r.reading_time, has_reading: r.has_reading}),\n    )\n        |> map(fn: (r) => {\n            age_s = if r.has_reading then float(v: int(v: now()) - int(v: r.reading_time)) / 1000000000.0 else 999999.0\n            hasBadWindow = exists r.latest_quality and (r.latest_quality == \"degraded\" or r.latest_quality == \"invalid\")\n            reason = if exists r.window_flags and r.window_flags != \"\" then r.window_flags else if exists r.latest_quality then r.latest_quality else \"quality unavailable\"\n            live = r.node_state == \"online\" and r.has_reading and age_s <= 15.0 and exists r.latest_quality and r.latest_quality == \"valid\"\n            display = if r.node_state == \"NO DATA\" then \"NO DATA\" else if r.node_state == \"offline\" then \"OFFLINE\" else if hasBadWindow then reason else if r.node_state == \"stale\" or (r.has_reading and age_s > 15.0) or r.node_state == \"degraded\" then \"STALE\" else if live then (if energy then string(v: r.reading) + \" Wh / \" + string(v: r.reading / 1000.0) + \" kWh\" else string(v: r.reading)) else \"NO DATA\"\n            quality = if r.node_state == \"NO DATA\" then \"no data\" else if r.node_state == \"offline\" then \"offline\" else if hasBadWindow then reason else if live then \"valid\" else if r.node_state == \"stale\" or (r.has_reading and age_s > 15.0) or r.node_state == \"degraded\" then \"stale\" else \"no data\"\n            return {_time: if r.has_reading then r.reading_time else now(), node_id: r.node_id, circuit_id: r.circuit_id, metric: label, value: display, unit: unit, reading_time: if r.has_reading then string(v: r.reading_time) else \"—\", quality: quality, calibration_revision: r.reading_calibration_revision}\n        })\n}\n\nunion(tables: [\n    card(field: \"voltage_rms_V\", label: \"V RMS\", unit: \"V\", energy: false),\n    card(field: \"current_rms_A\", label: \"I RMS\", unit: \"A\", energy: false),\n    card(field: \"active_power_W\", label: \"Active power\", unit: \"W\", energy: false),\n    card(field: \"active_energy_import_total_Wh\", label: \"Import energy\", unit: \"Wh / kWh\", energy: true),\n])\n    |> yield(name: \"current_cards\")",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Active power — valid windows only",
+      "description": "Missing windows remain gaps; an explicit null is inserted after gaps longer than 10 s. Nominal values are not validated.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-energy"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "never",
+            "connectNulls": false
+          },
+          "mappings": [],
+          "noValue": "NO DATA"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "custom": {
+          "drawStyle": "line",
+          "lineInterpolation": "linear",
+          "lineWidth": 2,
+          "fillOpacity": 12,
+          "showPoints": "never",
+          "connectNulls": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "query": "// Panel 3 — valid active-power windows; insert a null point after gaps longer than 10 s.\nimport \"internal/debug\"\n\npower = from(bucket: \"energy_raw\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and r.quality == \"valid\" and r._field == \"active_power_W\")\n    |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)\n    |> sort(columns: [\"_time\"])\n    |> elapsed(unit: 1s, columnName: \"elapsed_s\")\n\npowerValues = power\n    |> drop(columns: [\"elapsed_s\"])\n\ngapBreaks = power\n    |> filter(fn: (r) => r.elapsed_s > 10)\n    |> map(fn: (r) => ({r with _time: time(v: int(v: r._time) - 5000000000), _value: debug.null(type: \"float\")}))\n    |> drop(columns: [\"elapsed_s\"])\n\nunion(tables: [powerValues, gapBreaks])\n    |> sort(columns: [\"_time\"])\n    |> yield(name: \"valid_active_power_W\")",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Voltage and current — nominal calibrated ranges",
+      "description": "Green threshold bands mark the expected ranges: 10–16 V and 0.5–2.0 A. This is a plausibility range, not a validated operating or accuracy claim.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-energy"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "connectNulls": false
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "voltage_rms_V"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "volt"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "left"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 10
+                    },
+                    {
+                      "color": "red",
+                      "value": 16
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "current_rms_A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "amp"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.5
+                    },
+                    {
+                      "color": "red",
+                      "value": 2.0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "custom": {
+          "thresholdsStyle": {
+            "mode": "area"
+          },
+          "connectNulls": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "query": "// Panel 4 — valid RMS voltage/current; calibrated ranges are shaded by Grafana field thresholds.\nfrom(bucket: \"energy_raw\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and r.quality == \"valid\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"voltage_rms_V\", \"current_rms_A\"]))\n    |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)\n    |> yield(name: \"valid_voltage_current\")",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Measurement quality",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 61,
+          "type": "timeseries",
+          "title": "Degraded / invalid windows per minute",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 26,
+            "w": 8,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 70
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb-energy"
+              },
+              "query": "// Panel 6a — degraded and invalid windows counted by minute.\nfrom(bucket: \"energy_raw\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and (r.quality == \"degraded\" or r.quality == \"invalid\") and r._field == \"quality_flags\")\n    |> aggregateWindow(every: 1m, fn: count, createEmpty: false)\n    |> yield(name: \"non_valid_windows_per_minute\")",
+              "rawQuery": true,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 62,
+          "type": "table",
+          "title": "Recent quality flags",
+          "description": "",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "gridPos": {
+            "x": 8,
+            "y": 26,
+            "w": 8,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "noValue": "NO DATA"
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "md",
+            "footer": {
+              "show": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb-energy"
+              },
+              "query": "// Panel 6b — recent quality flags; empty flag strings are omitted.\nfrom(bucket: \"energy_raw\")\n    |> range(start: -24h)\n    |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and (r.quality == \"degraded\" or r.quality == \"invalid\") and r._field == \"quality_flags\")\n    |> filter(fn: (r) => r._value != \"\")\n    |> keep(columns: [\"_time\", \"node_id\", \"circuit_id\", \"quality\", \"_value\"])\n    |> sort(columns: [\"_time\"], desc: true)\n    |> limit(n: 100)\n    |> yield(name: \"recent_quality_flags\")",
+              "rawQuery": true,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 63,
+          "type": "timeseries",
+          "title": "Clock source and calibration revision",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "gridPos": {
+            "x": 16,
+            "y": 26,
+            "w": 8,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "staircase",
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb-energy"
+              },
+              "query": "// Panel 6c — clock source over time; calibration revision is retained as a tag on each window.\nfrom(bucket: \"energy_raw\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and r._field == \"clock_source\")\n    |> yield(name: \"clock_source_and_calibration_revision\")",
+              "rawQuery": true,
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Pipeline health",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 81,
+          "type": "timeseries",
+          "title": "Pipeline rates and ingestion latency",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 35,
+            "w": 12,
+            "h": 9
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2
+              },
+              "mappings": []
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "ingest_latency_ms_p50"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ms"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "ingest_latency_ms_max"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ms"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb-energy"
+              },
+              "query": "// Panel 8a — pipeline counters converted to per-second rates plus ingest latency.\nfrom(bucket: \"operations\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"pipeline\" and r.component == \"ingestion\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"received_total\", \"accepted_total\", \"rejected_total\", \"duplicate_total\", \"conflict_total\"]))\n    |> derivative(unit: 1s, nonNegative: true)\n    |> yield(name: \"pipeline_counter_rates\")",
+              "rawQuery": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb-energy"
+              },
+              "query": "// Panel 8a — ingest latency distribution summaries.\nfrom(bucket: \"operations\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"pipeline\" and r.component == \"ingestion\")\n    |> filter(fn: (r) => r._field == \"ingest_latency_ms_p50\" or r._field == \"ingest_latency_ms_max\")\n    |> yield(name: \"ingest_latency_ms\")",
+              "rawQuery": true,
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 82,
+          "type": "table",
+          "title": "Node pending queue",
+          "description": "",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 35,
+            "w": 6,
+            "h": 9
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "noValue": "NO DATA"
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "md",
+            "footer": {
+              "show": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb-energy"
+              },
+              "query": "// Panel 8b — most recent node queue state.\nfrom(bucket: \"operations\")\n    |> range(start: -15m)\n    |> filter(fn: (r) => r._measurement == \"node_status\" and r.node_id == \"${node}\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"pending_records\", \"oldest_pending_age_s\", \"state\"]))\n    |> group(columns: [\"_field\"])\n    |> last()\n    |> yield(name: \"node_queue_status\")",
+              "rawQuery": true,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 83,
+          "type": "table",
+          "title": "Recent ingestion rejects and conflicts",
+          "description": "",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "gridPos": {
+            "x": 18,
+            "y": 35,
+            "w": 6,
+            "h": 9
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "noValue": "NO DATA"
+            },
+            "overrides": []
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "md",
+            "footer": {
+              "show": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb-energy"
+              },
+              "query": "// Panel 8c — latest rejected/conflict events.\nfrom(bucket: \"operations\")\n    |> range(start: -24h)\n    |> filter(fn: (r) => r._measurement == \"ingest_event\" and r.node_id == \"${node}\")\n    |> keep(columns: [\"_time\", \"node_id\", \"result\", \"_field\", \"_value\"])\n    |> sort(columns: [\"_time\"], desc: true)\n    |> limit(n: 100)\n    |> yield(name: \"recent_ingest_events\")",
+              "rawQuery": true,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 84,
+          "type": "stat",
+          "title": "Age of latest energy_raw point",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 44,
+            "w": 12,
+            "h": 5
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "noValue": "NO DATA",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb-energy"
+              },
+              "query": "// Panel 8d — age of the newest energy_raw point, in seconds.\nfrom(bucket: \"energy_raw\")\n    |> range(start: -30d)\n    |> filter(fn: (r) => r._measurement == \"electrical_measurement\" and r.node_id == \"${node}\" and r._field == \"active_power_W\")\n    |> group(columns: [\"node_id\"])\n    |> last()\n    |> map(fn: (r) => ({r with _value: float(v: int(v: now()) - int(v: r._time)) / 1000000000.0, _field: \"last_point_age_s\"}))\n    |> yield(name: \"energy_raw_last_point_age\")",
+              "rawQuery": true,
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 41,
+  "tags": [
+    "energy",
+    "quality",
+    "operations"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "node-001",
+          "value": "node-001"
+        },
+        "datasource": {
+          "type": "influxdb",
+          "uid": "influxdb-energy"
+        },
+        "definition": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"operations\", measurement: \"node_status\", tag: \"node_id\")",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Node",
+        "name": "node",
+        "options": [
+          {
+            "selected": true,
+            "text": "node-001",
+            "value": "node-001"
+          }
+        ],
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"operations\", measurement: \"node_status\", tag: \"node_id\")",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "America/Lima",
+  "title": "Energy overview",
+  "uid": "energy-overview",
+  "version": 1,
+  "weekStart": ""
+}

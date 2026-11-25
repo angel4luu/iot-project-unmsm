@@ -115,11 +115,13 @@ infra-down: ## Stop the Compose stack (volumes are kept)
 simulate: ## Run the node simulator: make simulate SCENARIO=normal DURATION=10m
 	$(UV) python -m energy_ingestion.cli.simulate --scenario $(SCENARIO) --duration $(DURATION) $(SIM_ARGS)
 
-acceptance-simulated: ## Simulated acceptance run (SC-001-SC-006 software part)
-	$(call planned,US1-US3)
+ACCEPTANCE_DURATION_S ?= 3600
+
+acceptance-simulated: ## Simulated acceptance run, US1 (SC-002, SC-006); 1 h by default (needs infra-up)
+	ACCEPTANCE_DURATION_S=$(ACCEPTANCE_DURATION_S) $(PYTEST) -m integration -s $(ROOT)/tests/acceptance
 
 test-integration: ## Broker-to-dashboard integration tests (needs infra-up)
-	$(call planned,US1)
+	$(PYTEST) -m integration $(ROOT)/tests/integration
 
 test-recovery: ## Outage recovery test: make test-recovery OUTAGE=10m
 	$(call planned,US1)
