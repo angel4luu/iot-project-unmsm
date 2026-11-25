@@ -123,11 +123,20 @@ ACCEPTANCE_DURATION_S ?= 3600
 acceptance-simulated: ## Simulated acceptance run, US1 (SC-002, SC-006); 1 h by default (needs infra-up)
 	ACCEPTANCE_DURATION_S=$(ACCEPTANCE_DURATION_S) $(PYTEST) -m integration -s $(ROOT)/tests/acceptance
 
+.PHONY: dataset-seven-day
+dataset-seven-day: ## Publish the fixed seven-day E5 dataset (T074; node and calibration registered first)
+	$(MAKE) dev-certs CERT_NODES=sim-history
+	$(UV) python -m energy_ingestion.cli.simulate --scenario history --node-id sim-history \
+	  --circuit-id sim-history-load --start 2026-11-16T05:00:00Z --duration 168h --seed 740251 \
+	  --backfill --cert $(ROOT)/infrastructure/secrets/node-sim-history.crt \
+	  --key $(ROOT)/infrastructure/secrets/node-sim-history.key
+
 test-integration: ## Broker-to-dashboard integration tests (needs infra-up)
 	$(PYTEST) -m integration $(ROOT)/tests/integration
 
-test-recovery: ## Outage recovery test: make test-recovery OUTAGE=10m
-	$(call planned,US1)
+OUTAGE ?= 10m
+test-recovery: ## Outage recovery test (SC-003): make test-recovery OUTAGE=10m (needs infra-up)
+	OUTAGE=$(OUTAGE) $(PYTEST) -m integration -s $(ROOT)/tests/recovery
 
 test-security: ## Certificate/ACL negative tests and LAN port scan
 	$(call planned,US1)

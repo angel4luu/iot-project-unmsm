@@ -1,0 +1,61 @@
+{
+  "scenario": "history",
+  "seed": 740251,
+  "node_id": "sim-history",
+  "circuit_id": "sim-history-load",
+  "calibration_revision": "sim-history-nominal-r1",
+  "validation": "not_validated",
+  "dry_run_command": "uv run --project services/ingestion python -m energy_ingestion.cli.simulate --scenario history --node-id sim-history --circuit-id sim-history-load --start 2026-11-16T05:00:00Z --duration 168h --seed 740251 --dry-run",
+  "publish_command": "uv run --project services/ingestion python -m energy_ingestion.cli.simulate --scenario history --node-id sim-history --circuit-id sim-history-load --start 2026-11-16T05:00:00Z --duration 168h --seed 740251 --backfill --cert infrastructure/secrets/node-sim-history.crt --key infrastructure/secrets/node-sim-history.key",
+  "published": 120960,
+  "application_acks": 120960,
+  "utc_interval": {
+    "start_inclusive": "2026-11-16T05:00:00Z",
+    "stop_exclusive": "2026-11-23T05:00:00Z"
+  },
+  "window_seconds": 5,
+  "window_count": 120960,
+  "invalid_window_count": 605,
+  "invalid_fraction": 0.005004960317460317,
+  "reboot": {
+    "at_utc": "2026-11-19T17:00:00Z",
+    "at_lima": "2026-11-19T12:00:00-05:00",
+    "new_boot_id": true,
+    "sequence_restarts_at": 0,
+    "new_counter_starts_Wh": 0.0
+  },
+  "counter_ids": [
+    "6dfe586f-9c40-4b34-bf48-f2ae12a3473c",
+    "56764b95-211f-47fb-81be-1ca07b5431a1"
+  ],
+  "expected_peak_hour": {
+    "lima": "2026-11-19T18:00:00-05:00",
+    "utc": "2026-11-19T23:00:00Z",
+    "energy_Wh": 23.8622
+  },
+  "runner_up_hour": {
+    "lima": "2026-11-17T17:00:00-05:00",
+    "utc": "2026-11-17T22:00:00Z",
+    "energy_Wh": 20.3219
+  },
+  "peak_margin_over_runner_up_fraction": 0.174211,
+  "dry_run_payload_stream": {
+    "path": "experiments/data/seven-day/stream.jsonl",
+    "format": "JSON Lines",
+    "sha256": "738666fe2d425b13bb54e82a614ff80582fa04ecd77e7c8e3af7fff88f0722a3"
+  },
+  "source": {
+    "git_commit": "7133366c2c9463e31dda5709919c0cc4d82760ad",
+    "git_dirty": true,
+    "services_ingestion_uv_lock_sha256": "c3da750a6503e9a449162b1b1ed957bd1cf43814d1386a9f12dcb1b4a81e3220"
+  },
+  "query_check": {
+    "passed": true,
+    "interval": "2026-11-16T05:00:00Z/2026-11-23T05:00:00Z",
+    "hourly_rows": 50,
+    "daily_rows": 7,
+    "weekly_rows": 1,
+    "peak_hour_rows": 1,
+    "peak_hour_matches_expected": true
+  }
+}

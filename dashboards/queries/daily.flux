@@ -1,0 +1,20 @@
+import "timezone"
+
+option location = timezone.location(name: "America/Lima")
+
+from(bucket: "energy_raw")
+    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+    |> filter(fn: (r) => r._measurement == "electrical_measurement" and r.node_id == "${node}" and r.quality == "valid")
+    |> filter(fn: (r) => r._field == "active_energy_import_total_Wh" or r._field == "counter_id")
+    |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+    |> keep(columns: ["_time", "counter_id", "active_energy_import_total_Wh"])
+    |> group(columns: ["counter_id"])
+    |> sort(columns: ["_time"])
+    |> difference(columns: ["active_energy_import_total_Wh"])
+    |> filter(fn: (r) => exists r.active_energy_import_total_Wh and r.active_energy_import_total_Wh >= 0.0)
+    |> map(fn: (r) => ({_time: time(v: int(v: r._time) - 1000000), _value: float(v: r.active_energy_import_total_Wh)}))
+    |> group()
+    |> aggregateWindow(every: 1d, fn: sum, createEmpty: false, timeSrc: "_start")
+    |> group()
+    |> map(fn: (r) => ({r with result: "daily_energy_Wh"}))
+    |> yield(name: "daily_energy_Wh")

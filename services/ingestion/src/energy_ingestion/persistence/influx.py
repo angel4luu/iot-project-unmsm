@@ -1,7 +1,9 @@
 """Idempotent InfluxDB writes of measurement windows (T022).
 
 One point per window, timestamped at `window.end` (the canonical observation
-time) with millisecond precision. Tags are only `node_id`, `circuit_id`,
+time) with millisecond precision, never at arrival time (T070): a late or
+out-of-order window lands at its own place in the series, and queries order on
+`_time` and then `boot_id`/`sequence`. Tags are only `node_id`, `circuit_id`,
 `quality`, and `calibration_revision`; UUIDs stay fields. Writing the same window
 twice replaces the same point, so a retried write is harmless.
 """
@@ -9,6 +11,7 @@ twice replaces the same point, so a retried write is harmless.
 from __future__ import annotations
 
 import os
+from datetime import timedelta
 from pathlib import Path
 from typing import Protocol
 
@@ -20,6 +23,12 @@ from energy_ingestion.contracts.models import Measurement
 MEASUREMENT = "electrical_measurement"  # plan: Storage and retention
 RAW_BUCKET = "energy_raw"
 OPERATIONS_BUCKET = "operations"
+# Raw bucket retention (infrastructure: 720 h). InfluxDB refuses points older than
+# that, so such a window can never be stored: the pipeline rejects it terminally
+# (`outside_retention`) instead of failing the write and stalling redelivery. One
+# hour of margin covers the time between this check and the write.
+RAW_RETENTION = timedelta(hours=720)
+MAX_STORABLE_AGE = RAW_RETENTION - timedelta(hours=1)
 TAG_KEYS = frozenset({"node_id", "circuit_id", "quality", "calibration_revision"})
 NO_CALIBRATION = "none"
 

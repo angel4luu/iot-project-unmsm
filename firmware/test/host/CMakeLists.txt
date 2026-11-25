@@ -64,7 +64,7 @@ target_compile_definitions(host_support PRIVATE
 enable_testing()
 foreach(t test_clock test_provisioning test_fixtures test_board test_metering
           test_quality test_energy test_calibration test_acquisition test_serialize
-          test_queue test_ui_state)
+          test_queue test_queue_drain test_ui_state)
   add_executable(${t} ${t}.c)
   target_link_libraries(${t} PRIVATE host_support)
   add_test(NAME ${t} COMMAND ${t})

@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from energy_ingestion.contracts.topics import topic_for
 
@@ -47,6 +48,7 @@ SCENARIOS = (
     "duplicate",
     "out_of_order",
     "clock_holdover",
+    "history",
 )
 WINDOW_S = 5
 STATUS_EVERY_S = 30
@@ -149,9 +151,24 @@ class SimulatedNode:
         w_start = self.start + timedelta(seconds=t_s)
         w_end = w_start + timedelta(seconds=WINDOW_S)
         source, sync_age = self._clock(t_s, total_s)
-        broken = self.scenario == "invalid" and index % 4 == 3
-        power = self._power_level(t_s) * (1 + self.rng.gauss(0, 0.005))
+        contract_broken = self.scenario == "invalid" and index % 4 == 3
+        invalid = contract_broken
+        local = w_start.astimezone(ZoneInfo("America/Lima"))
+        history_peak = (
+            self.scenario == "history"
+            and local.date().isoformat() == "2026-11-19"
+            and local.hour == 18
+        )
+        on = self._history_is_on(local) if self.scenario == "history" else True
+        if self.scenario == "history" and index % 200 == self.seed % 200:
+            invalid = True
+        nominal_power = 24.0 if history_peak else 20.4
+        power = (
+            (nominal_power if on else 0.0) if self.scenario == "history" else self._power_level(t_s)
+        ) * (1 + self.rng.gauss(0, 0.005))
         voltage = 12.6 * (1 + self.rng.gauss(0, 0.003))
+        if history_peak:
+            voltage = 14.0 * (1 + self.rng.gauss(0, 0.003))
         current = power / voltage  # resistive bulb: power factor 1
         flags: list[str] = []
         state = "valid"
@@ -159,11 +176,18 @@ class SimulatedNode:
             state, flags = "invalid", ["sensor_disconnected"]
         elif source == "unsynchronized":
             state, flags = "degraded", ["clock_unsynchronized"]
+        elif self.scenario == "history" and invalid:
+            state, flags = "invalid", ["sensor_disconnected"]
         values: dict[str, float | None]
         if state == "invalid":
             values = dict.fromkeys(("v", "i", "p", "e"))
         else:
-            self.energy_wh += power * WINDOW_S / 3600
+            first_counter_reading = self.scenario == "history" and index in {
+                0,
+                int(total_s // WINDOW_S) // 2,
+            }
+            if not first_counter_reading:
+                self.energy_wh += power * WINDOW_S / 3600
             values = {
                 "v": round(voltage, 3),
                 "i": round(current, 4),
@@ -199,11 +223,32 @@ class SimulatedNode:
             "uptime_ms": int((t_s + WINDOW_S) * 1000),
         }
         self.sequence += 1
-        if broken:  # deliberate contract defects: missing unit and an unknown field
+        if contract_broken:  # deliberate contract defects: missing unit and an unknown field
             del doc["measurements"]["voltage_rms"]["unit"]
             doc["unexpected"] = True
         assert math.isfinite(power)
-        return doc, not broken
+        return doc, not contract_broken
+
+    @staticmethod
+    def _history_is_on(local: datetime) -> bool:
+        """Different Lima-local daily schedules, with a single full peak hour."""
+        if local.date().isoformat() == "2026-11-19" and local.hour == 18:
+            return True
+        weekday = local.weekday()
+        schedules = {
+            0: ((6, 35), (7, 50), (17, 15), (21, 5)),
+            1: ((6, 50), (8, 10), (16, 45), (20, 40)),
+            2: ((7, 5), (8, 20), (17, 10), (21, 20)),
+            3: ((6, 40), (8, 0), (16, 30), (20, 50)),
+            4: ((7, 0), (8, 25), (17, 20), (22, 0)),
+            5: ((8, 15), (10, 5), (18, 0), (22, 30)),
+            6: ((9, 0), (10, 20), (17, 30), (20, 15)),
+        }
+        spans = schedules[weekday]
+        minute = local.hour * 60 + local.minute
+        return spans[0][0] * 60 + spans[0][1] <= minute < spans[1][0] * 60 + spans[1][1] or (
+            spans[2][0] * 60 + spans[2][1] <= minute < spans[3][0] * 60 + spans[3][1]
+        )
 
     def status(self, at: datetime, state: str = "online", pending: int = 0) -> dict[str, Any]:
         source, _ = self._clock((at - self.start).total_seconds(), 1e12)
@@ -238,6 +283,20 @@ class SimulatedNode:
         outage = range(n // 3, 2 * n // 3) if self.scenario == "outage" else range(0)
         queued: list[Message] = []
         pending_swap: Message | None = None
+        if self.scenario == "history":
+            now = datetime.now(UTC)
+            yield Message(status_topic, _dumps(self.status(now)), True, now, "node-status")
+            midpoint = n // 2
+            for i in range(n):
+                at = self.start + timedelta(seconds=(i + 1) * WINDOW_S)
+                if i == midpoint:
+                    self.boot_id = str(uuid.UUID(int=self.rng.getrandbits(128), version=4))
+                    self.counter_id = str(uuid.UUID(int=self.rng.getrandbits(128), version=4))
+                    self.energy_wh = 0.0
+                    self.sequence = 0
+                doc, ok = self.window(i, total_s)
+                yield Message(meas_topic, _dumps(doc), False, at, "measurement", ok)
+            return
         for i in range(n):
             at = self.start + timedelta(seconds=(i + 1) * WINDOW_S)
             if (i * WINDOW_S) % STATUS_EVERY_S == 0 and i not in outage:
@@ -296,19 +355,61 @@ def _client(args: argparse.Namespace, node: SimulatedNode) -> Any:
 def run_broker(args: argparse.Namespace, node: SimulatedNode) -> int:
     client = _client(args, node)
     acks: list[bytes] = []
-    client.on_message = lambda _c, _u, msg: acks.append(msg.payload)
+    import threading
+
+    ack_condition = threading.Condition()
+
+    def on_message(_client: Any, _userdata: Any, msg: Any) -> None:
+        with ack_condition:
+            acks.append(msg.payload)
+            ack_condition.notify_all()
+
+    client.on_message = on_message
     client.connect(args.host, args.port, keepalive=30)
     client.subscribe(topic_for(node.node_id, "acks/measurements"), qos=1)
     client.loop_start()
     sent = 0
     t0 = time.monotonic()
     try:
+        if args.backfill:
+            client.publish(
+                topic_for(node.node_id, "status"),
+                json.dumps(node.status(datetime.now(UTC))),
+                qos=1,
+                retain=True,
+            ).wait_for_publish(10)
+        in_flight: set[str] = set()
         for msg in node.messages(args.duration):
             delay = (msg.at - node.start).total_seconds() - (time.monotonic() - t0)
-            if delay > 0:
+            if not args.backfill and delay > 0:
                 time.sleep(delay)
+            if args.backfill and msg.kind == "node-status":
+                continue
+            message_id = (
+                json.loads(msg.payload).get("message_id") if msg.kind == "measurement" else None
+            )
+            while args.backfill and message_id is not None and len(in_flight) >= 100:
+                with ack_condition:
+                    acknowledged = {json.loads(a).get("message_id") for a in acks}
+                    if not in_flight.intersection(acknowledged):
+                        ack_condition.wait(timeout=30)
+                        acknowledged = {json.loads(a).get("message_id") for a in acks}
+                if not (in_flight & acknowledged):
+                    raise TimeoutError("no application ACK received while backfilling")
+                in_flight -= acknowledged
             client.publish(msg.topic, msg.payload, qos=1, retain=msg.retain).wait_for_publish(10)
             sent += 1
+            if message_id is not None:
+                in_flight.add(message_id)
+        if args.backfill:
+            deadline = time.monotonic() + 60
+            while in_flight and time.monotonic() < deadline:
+                with ack_condition:
+                    ack_condition.wait(timeout=1)
+                    acknowledged = {json.loads(a).get("message_id") for a in acks}
+                in_flight -= acknowledged
+            if in_flight:
+                raise TimeoutError(f"{len(in_flight)} measurement application ACKs remain")
     finally:
         client.publish(
             topic_for(node.node_id, "status"),
@@ -330,6 +431,17 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="energy-simulate", description=__doc__.split("\n")[0])
     p.add_argument("--scenario", choices=SCENARIOS, default="normal")
     p.add_argument("--duration", type=parse_duration, default=parse_duration("10m"))
+    p.add_argument(
+        "--start",
+        type=lambda value: datetime.fromisoformat(value.replace("Z", "+00:00")),
+        default=None,
+        help="ISO 8601 UTC run start",
+    )
+    p.add_argument(
+        "--backfill",
+        action="store_true",
+        help="publish historical windows as fast as application ACKs allow",
+    )
     p.add_argument("--node-id", default="sim-001")
     p.add_argument("--circuit-id", default="sim-load-001")
     p.add_argument("--limit-w", type=float, default=22.0, help="threshold the scenarios cross")
@@ -346,7 +458,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--key", type=Path, default=SECRETS / "simulator.key")
     p.add_argument("--dry-run", action="store_true", help="print payloads; no broker")
     args = p.parse_args(argv)
-    start = datetime.now(UTC).replace(microsecond=0)
+    start = args.start or datetime.now(UTC).replace(microsecond=0)
+    if start.tzinfo is None or start.utcoffset() != timedelta(0):
+        p.error("--start must be an ISO 8601 UTC timestamp")
     if args.seed is None:  # same seed = same message IDs: a rerun would be an identity conflict
         args.seed = secrets.randbits(32)
     node = SimulatedNode(
@@ -354,6 +468,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.dry_run:
         for msg in node.messages(args.duration):
+            if args.scenario == "history" and msg.kind == "node-status":
+                continue  # the measurement payload stream remains byte-for-byte reproducible
             line = {"topic": msg.topic, "retain": msg.retain, "payload": json.loads(msg.payload)}
             sys.stdout.write(json.dumps(line) + "\n")
         return 0

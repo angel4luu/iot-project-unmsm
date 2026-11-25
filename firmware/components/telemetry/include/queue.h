@@ -69,6 +69,29 @@ uint32_t queue_pending(const telemetry_queue_t *q);
 // Age of the oldest queued record from its uptime stamp, in seconds (0 when empty).
 int64_t queue_oldest_age_s(const telemetry_queue_t *q, uint64_t now_uptime_ms);
 
+// ---- drain (T069; plan: oldest first, >= 2 records/s, <= 10 in flight) -------------
+
+typedef enum {
+    QUEUE_SEND_OK = 0,     // handed to the transport; now waits for the ACK
+    QUEUE_SEND_FAILED,     // transport down: stop and resend everything later
+    QUEUE_SEND_UNSENDABLE, // cannot be serialized: to diagnostics, never retried
+} queue_send_result_t;
+
+typedef struct {
+    void (*lock)(void *ctx);   // may be NULL (single-threaded host tests)
+    void (*unlock)(void *ctx); // released around every send, so producers never wait
+    queue_send_result_t (*send)(void *ctx, const measurement_record_t *rec);
+    void *ctx;
+} queue_drain_ops_t;
+
+// One pump step: returns in-flight records whose ACK is older than `ack_timeout_us`
+// to the queue, then sends the oldest sendable records until QUEUE_MAX_IN_FLIGHT are
+// unacknowledged. Called every ~100 ms, so the drain rate is bounded by the ACK
+// round trip (10 per round trip; >= 2 records/s while it is <= 5 s), not by a timer.
+// Returns the number of records sent.
+uint32_t queue_drain(telemetry_queue_t *q, int64_t now_us, int64_t ack_timeout_us,
+                     const queue_drain_ops_t *ops);
+
 // Parses the server's measurement ACK (contracts/measurement-ack.schema.json):
 // message_id, status, and reason_code (empty when null). False on anything else.
 bool queue_parse_ack(const char *json, size_t len, char message_id[REC_UUID_LEN + 1],

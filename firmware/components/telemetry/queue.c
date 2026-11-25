@@ -121,6 +121,50 @@ int64_t queue_oldest_age_s(const telemetry_queue_t *q, uint64_t now_uptime_ms) {
     return 0;
 }
 
+// ---- drain -------------------------------------------------------------------------
+
+uint32_t queue_drain(telemetry_queue_t *q, int64_t now_us, int64_t ack_timeout_us,
+                     const queue_drain_ops_t *ops) {
+    uint32_t sent = 0;
+    for (;;) {
+        if (ops->lock != NULL) {
+            ops->lock(ops->ctx);
+        }
+        queue_requeue_stale(q, now_us, ack_timeout_us);
+        const measurement_record_t *next = queue_next(q, now_us);
+        // Copy out, so the send runs without the lock while producers keep pushing.
+        measurement_record_t rec;
+        if (next != NULL) {
+            rec = *next;
+        }
+        if (ops->unlock != NULL) {
+            ops->unlock(ops->ctx);
+        }
+        if (next == NULL) {
+            return sent;
+        }
+        const queue_send_result_t r = ops->send(ops->ctx, &rec);
+        if (r == QUEUE_SEND_OK) {
+            sent++;
+            continue;
+        }
+        if (ops->lock != NULL) {
+            ops->lock(ops->ctx);
+        }
+        if (r == QUEUE_SEND_UNSENDABLE) {
+            queue_ack(q, rec.message_id, ACK_REJECTED, "serialize_failed");
+        } else {
+            queue_requeue_all(q);
+        }
+        if (ops->unlock != NULL) {
+            ops->unlock(ops->ctx);
+        }
+        if (r == QUEUE_SEND_FAILED) {
+            return sent;
+        }
+    }
+}
+
 // ---- ACK parsing -------------------------------------------------------------------
 
 // Finds `"key":` in a compact or spaced JSON object and returns the value start.

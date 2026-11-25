@@ -133,33 +133,32 @@ static int publish(const char *topic, const char *payload, size_t len, bool reta
     return esp_mqtt_client_publish(s_client, topic, payload, (int)len, 1, retain ? 1 : 0);
 }
 
+static void drain_lock(void *ctx) {
+    (void)ctx;
+    lock();
+}
+
+static void drain_unlock(void *ctx) {
+    (void)ctx;
+    unlock();
+}
+
+static queue_send_result_t drain_send(void *ctx, const measurement_record_t *rec) {
+    (void)ctx;
+    const size_t n = serialize_measurement(s_cfg.id, rec, s_payload, sizeof s_payload);
+    if (n == 0) {
+        return QUEUE_SEND_UNSENDABLE;
+    }
+    return publish(s_topic_meas, s_payload, n, false, true) < 0 ? QUEUE_SEND_FAILED : QUEUE_SEND_OK;
+}
+
 void telemetry_mqtt_pump(int64_t now_us) {
     if (!telemetry_mqtt_connected()) {
         return;
     }
-    for (;;) {
-        lock();
-        queue_requeue_stale(s_cfg.queue, now_us, TELEMETRY_ACK_TIMEOUT_US);
-        const measurement_record_t *rec = queue_next(s_cfg.queue, now_us);
-        size_t n = 0;
-        if (rec != NULL) {
-            n = serialize_measurement(s_cfg.id, rec, s_payload, sizeof s_payload);
-            if (n == 0) {
-                // Unserializable record: drop it to diagnostics instead of looping.
-                queue_ack(s_cfg.queue, rec->message_id, ACK_REJECTED, "serialize_failed");
-            }
-        }
-        unlock();
-        if (rec == NULL) {
-            return;
-        }
-        if (n > 0 && publish(s_topic_meas, s_payload, n, false, true) < 0) {
-            lock();
-            queue_requeue_all(s_cfg.queue);
-            unlock();
-            return;
-        }
-    }
+    static const queue_drain_ops_t ops = {
+        .lock = drain_lock, .unlock = drain_unlock, .send = drain_send, .ctx = NULL};
+    queue_drain(s_cfg.queue, now_us, TELEMETRY_ACK_TIMEOUT_US, &ops);
 }
 
 bool telemetry_mqtt_publish_status(const char *json, size_t len) {

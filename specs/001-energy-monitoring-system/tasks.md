@@ -191,18 +191,18 @@ and queryable in order within 5 min (SC-003).
 
 ### Tests for User Story 2
 
-- [ ] T066 [P] [US2] Golden-query tests for hourly/daily/weekly energy from Wh counter differences ("never by summing cumulative totals"), counter resets via `counter_id`, exclusion of invalid windows, and `America/Lima` day boundaries, in `tests/integration/test_history_queries.py`
-- [ ] T067 [P] [US2] Firmware unit tests for queue drain (oldest first, ≥2 records/s, ≤10 in flight, new observations still enqueued) in `firmware/test/host/test_queue_drain.c`
-- [ ] T068 [US2] Recovery test: disconnect the publisher 10 min, assert ≥99% of retained records stored and chronologically queryable within 5 min, plus exact duplicates, conflicting IDs, out-of-order arrival, ingestion restart, storage unavailability, clock holdover, and full queue, in `tests/recovery/test_outage.py`; wire `make test-recovery OUTAGE=10m`
+- [X] T066 [P] [US2] Golden-query tests for hourly/daily/weekly energy from Wh counter differences ("never by summing cumulative totals"), counter resets via `counter_id`, exclusion of invalid windows, and `America/Lima` day boundaries, in `tests/integration/test_history_queries.py`
+- [X] T067 [P] [US2] Firmware unit tests for queue drain (oldest first, ≥2 records/s, ≤10 in flight, new observations still enqueued) in `firmware/test/host/test_queue_drain.c`
+- [X] T068 [US2] Recovery test: disconnect the publisher 10 min, assert ≥99% of retained records stored and chronologically queryable within 5 min, plus exact duplicates, conflicting IDs, out-of-order arrival, ingestion restart, storage unavailability, clock holdover, and full queue, in `tests/recovery/test_outage.py`; wire `make test-recovery OUTAGE=10m`
 
 ### Implementation for User Story 2
 
-- [ ] T069 [US2] Implement the firmware drain policy in `firmware/components/telemetry/queue.c`
-- [ ] T070 [US2] Implement observation-time ordering (sort on `window_end`, then `boot_id`/`sequence`; never arrival order) and late-arrival handling in `services/ingestion/src/energy_ingestion/persistence/influx.py`
-- [ ] T071 [P] [US2] Write hourly/daily/weekly energy and peak-hour (h*) Flux queries in `dashboards/queries/{hourly,daily,weekly,peak_hour}.flux`
-- [ ] T072 [US2] Add panel 5 (hourly bars, daily/weekly totals, peak-hour marker) to `dashboards/energy-overview.json`
-- [ ] T073 [P] [US2] Implement the daily Parquet export with manifest (exact query, UTC interval, schema/calibration/firmware revisions, quality exclusions, controlled-load labels, file hashes, code commit, environment-lock hash) in `experiments/export/export_daily.py`
-- [ ] T074 [US2] Produce the seven-day dataset for SC-005/E5 with the simulator (decided 2026-11-18, plan B) and record its manifest in `experiments/manifests/seven-day.json`
+- [X] T069 [US2] Implement the firmware drain policy in `firmware/components/telemetry/queue.c`
+- [X] T070 [US2] Implement observation-time ordering (sort on `window_end`, then `boot_id`/`sequence`; never arrival order) and late-arrival handling in `services/ingestion/src/energy_ingestion/persistence/influx.py`
+- [X] T071 [P] [US2] Write hourly/daily/weekly energy and peak-hour (h*) Flux queries in `dashboards/queries/{hourly,daily,weekly,peak_hour}.flux`
+- [X] T072 [US2] Add panel 5 (hourly bars, daily/weekly totals, peak-hour marker) to `dashboards/energy-overview.json`
+- [X] T073 [P] [US2] Implement the daily Parquet export with manifest (exact query, UTC interval, schema/calibration/firmware revisions, quality exclusions, controlled-load labels, file hashes, code commit, environment-lock hash) in `experiments/export/export_daily.py`
+- [X] T074 [US2] Produce the seven-day dataset for SC-005/E5 with the simulator (decided 2026-11-18, plan B) and record its manifest in `experiments/manifests/seven-day.json`
 - [ ] T105 [US2] [HW] E4 outage run on the real node: a script blocks port 8883 for 10 min and logs cut and restore times; 3 runs plus 1 run with a node reboot during the outage (a marked gap is expected, not recovery); manifests in `experiments/manifests/outage-YYYYMMDD-runN.json` (SC-003 on hardware; plan › Experiment runs)
 - [ ] T075 [US2] Timed operator check (first-time user finds the peak hour in < 2 min, SC-005) recorded in `tests/acceptance/us2_operator_check.md`
 

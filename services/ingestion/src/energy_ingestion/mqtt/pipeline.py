@@ -41,6 +41,7 @@ from energy_ingestion.logging import get_logger, log_event
 from energy_ingestion.persistence import ledger
 from energy_ingestion.persistence.db import CalibrationArtifact, IngestionLedger, transaction
 from energy_ingestion.persistence.influx import (
+    MAX_STORABLE_AGE,
     NOT_VALIDATED,
     OPERATIONS_BUCKET,
     RAW_BUCKET,
@@ -163,6 +164,9 @@ class IngestPipeline:
             self._seen(node_id, m.window.end, received_at)
             return self._ack(ident, "duplicate", None, stored_at, "duplicate", count=True)
 
+        if received_at - m.window.end > MAX_STORABLE_AGE:
+            return self._outside_retention(node_id, ident, sha, received_at)
+
         # NEW or RESUME: idempotent write first, then `stored`, then the ACK.
         point = measurement_point(
             m,
@@ -180,6 +184,22 @@ class IngestPipeline:
         self._seen(node_id, m.window.end, received_at)
         self.metrics.latency(_ms(self.clock() - received_at))
         return self._ack(ident, "accepted", None, stored_at, "accepted", count=True)
+
+    def _outside_retention(
+        self, node_id: str, ident: ledger.MessageIdentity, sha: str, received_at: datetime
+    ) -> Outcome:
+        """Late arrival older than the raw retention: terminal, so the node stops retrying.
+
+        Typical cause: a window stamped before the first SNTP sync (`unsynchronized`
+        clock, uptime-based time), which is diagnostic only and never valid evidence.
+        """
+        code = "outside_retention"
+        with transaction(self.sessions) as s:
+            ledger.record_rejection(
+                s, ident, sha, received_at, code, "window end older than the raw retention"
+            )
+        self._event(node_id, "rejected", code, ident.message_id, received_at)
+        return self._ack(ident, "rejected", code, None, "rejected", count=True)
 
     def _reject(
         self,
