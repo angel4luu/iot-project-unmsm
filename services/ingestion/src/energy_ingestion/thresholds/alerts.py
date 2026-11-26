@@ -39,7 +39,7 @@ from sqlalchemy import event as sa_event
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from energy_ingestion.contracts.models import NodeEvent
+from energy_ingestion.contracts.models import NodeEvent, wire_time
 from energy_ingestion.logging import get_logger, log_event
 from energy_ingestion.persistence.db import (
     Alert,
@@ -60,6 +60,7 @@ VALUE_TOLERANCE = 0.0005  # W; the node sends three decimals
 WINDOW_TOLERANCE_W = 0.01  # rounding of the 5 s mean against the limit
 SPAN_SLACK = timedelta(milliseconds=500)  # block vs window boundary jitter
 _POINTS_KEY = "alert_points"
+_EVENT_TIME_KEY = "event_observed_at"
 
 
 @dataclass(frozen=True)
@@ -91,7 +92,13 @@ def _notification_state(session: Session, alert_id: str) -> str:
     return box.state if box is not None else "none"
 
 
-def transition_point(alert: Alert, t: AlertTransition, notification_state: str) -> Point:
+def transition_point(
+    alert: Alert,
+    t: AlertTransition,
+    notification_state: str,
+    event_observed_at: datetime | None = None,
+) -> Point:
+    """One panel 7 point; `event_observed_at` is the node's event time (latency evidence)."""
     point = (
         Point(TRANSITION_MEASUREMENT)
         .tag("node_id", alert.node_id)
@@ -109,6 +116,8 @@ def transition_point(alert: Alert, t: AlertTransition, notification_state: str) 
         point.field("observed_value", float(alert.observed_value))
     if alert.threshold_value is not None:
         point.field("threshold_value", float(alert.threshold_value))
+    if event_observed_at is not None:
+        point.field("event_observed_at", wire_time(event_observed_at))
     return point
 
 
@@ -152,8 +161,9 @@ def _transition(
     alert.status = to_status
     session.add(t)
     session.flush()
+    observed = session.info.get(_EVENT_TIME_KEY) if actor.startswith("node:") else None
     session.info.setdefault(_POINTS_KEY, []).append(
-        transition_point(alert, t, _notification_state(session, alert.alert_id))
+        transition_point(alert, t, _notification_state(session, alert.alert_id), observed)
     )
     return t
 
@@ -309,6 +319,16 @@ def handle_event(
     session: Session, ev: NodeEvent, now: datetime, recent: Sequence[RecentWindow] = ()
 ) -> EventResult:
     """Apply one validated node event; idempotent on `event_id`."""
+    session.info[_EVENT_TIME_KEY] = ev.observed_at
+    try:
+        return _handle_event(session, ev, now, recent)
+    finally:
+        session.info.pop(_EVENT_TIME_KEY, None)
+
+
+def _handle_event(
+    session: Session, ev: NodeEvent, now: datetime, recent: Sequence[RecentWindow]
+) -> EventResult:
     event_id = str(ev.event_id)
     existing = session.scalar(select(Alert).where(Alert.event_id == event_id))
     if existing is not None:

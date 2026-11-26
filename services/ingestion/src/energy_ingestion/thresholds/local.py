@@ -12,7 +12,9 @@ the same rules, checked against the same table as the firmware host test
     clearing --power >= clear_below_W----------------> firing
 
 A non-valid block (None) never confirms or clears; a change of block quality is a
-separate `measurement_quality_changed` event. The local warning (red LED and
+separate `measurement_quality_changed` event. Overload exception (FR-012): a block
+degraded only by a current above the calibrated range (`over_range_high`), with
+power above the limit, counts as above the limit; it never clears. The local warning (red LED and
 buzzer) is on only in firing and clearing.
 """
 
@@ -62,6 +64,7 @@ class LocalThreshold:
         duration_ms: int = 1000,
         quality: str = "valid",
         reason: str = "sensor_disconnected",
+        over_range_high: bool = False,
     ) -> list[LocalEvent]:
         """One 1 s block; `power_w` None (or quality not valid) is a non-valid block."""
         events: list[LocalEvent] = []
@@ -81,7 +84,14 @@ class LocalThreshold:
                 )
             )
             self.last_quality = q
-        if not valid:
+        overload = (
+            not valid
+            and over_range_high
+            and quality == "degraded"
+            and power_w is not None
+            and power_w > self.limit_w
+        )
+        if not valid and not overload:
             if self.state is State.PENDING:
                 self.state, self.elapsed_ms = State.NORMAL, 0
             return events
@@ -96,7 +106,7 @@ class LocalThreshold:
                 self.elapsed_ms += duration_ms
                 if self.elapsed_ms >= self.confirm_ms:
                     self.state, self.elapsed_ms = State.FIRING, 0
-                    events.append(self._event("threshold_entered", p))
+                    events.append(self._event("threshold_entered", p, q))
             return events
         if self.state is State.FIRING and p < self.clear_below_w:
             self.state, self.elapsed_ms = State.CLEARING, 0
@@ -107,15 +117,15 @@ class LocalThreshold:
                 self.elapsed_ms += duration_ms
                 if self.elapsed_ms >= self.clear_ms:
                     self.state, self.elapsed_ms = State.NORMAL, 0
-                    events.append(self._event("threshold_cleared", p))
+                    events.append(self._event("threshold_cleared", p, q))
         return events
 
-    def _event(self, event_type: str, p: float) -> LocalEvent:
+    def _event(self, event_type: str, p: float, quality: str) -> LocalEvent:
         entered = event_type == "threshold_entered"
         return LocalEvent(
             event_type,
             self.severity if entered else "info",
-            "valid",
+            quality,  # `degraded` when an over-range block confirmed it
             round(p, 3),
             self.limit_w if entered else self.clear_below_w,
             self.warning_active,

@@ -62,7 +62,7 @@ static void threshold_event(threshold_t *t, const thr_block_t *b, thr_events_t *
     event_record_t *e = add_event(t, out, type);
     const bool entered = type == EVENT_THRESHOLD_ENTERED;
     e->severity = entered ? t->cfg.severity : SEVERITY_INFO;
-    e->quality = QUALITY_VALID;
+    e->quality = b->quality; // `degraded` when an over-range block confirmed it
     e->has_measured = true;
     e->measured_value = b->power_w;
     e->has_threshold = true;
@@ -86,7 +86,10 @@ void threshold_step(threshold_t *t, const thr_block_t *b, thr_events_t *out) {
         quality_event(t, &qb, out);
         t->last_quality = q;
     }
-    if (!valid) {
+    // FR-012 overload exception: above the limit, so it can only confirm or sustain.
+    const bool overload = !valid && b->over_range_high && b->quality == QUALITY_DEGRADED &&
+                          isfinite(b->power_w) && b->power_w > t->cfg.limit_w;
+    if (!valid && !overload) {
         // Never confirms and never clears: pending gives up, firing/clearing pause.
         if (t->state == THR_PENDING) {
             t->state = THR_NORMAL;
@@ -94,7 +97,9 @@ void threshold_step(threshold_t *t, const thr_block_t *b, thr_events_t *out) {
         }
         return;
     }
-    t->last_valid_w = b->power_w;
+    if (valid) {
+        t->last_valid_w = b->power_w;
+    }
     const double p = b->power_w;
     switch (t->state) {
     case THR_NORMAL:
@@ -170,5 +175,6 @@ thr_block_t threshold_block_from(bool finished, const metering_block_result_t *b
     b.quality = q.state;
     b.power_w = br->active_power_w;
     b.reason = q.state == QUALITY_VALID ? NULL : quality_reason(q.flags);
+    b.over_range_high = q.flags == QF_OUT_OF_RANGE && br->i_rms_a > QUALITY_LIMITS_PLAN_B.i_max_a;
     return b;
 }

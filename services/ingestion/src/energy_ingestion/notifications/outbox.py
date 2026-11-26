@@ -1,7 +1,16 @@
-"""Transactional notification delivery and the generic webhook adapter (T079/T085).
+"""Transactional notification delivery and the webhook adapter (T079/T085, T109).
 
 The alert transaction owns outbox-row creation. This worker only claims existing
 rows and delivers them; it never creates a second delivery for an alert.
+
+Two formats share the same transport, retries, and outbox (decision 6, 2026-11-25):
+
+- `generic`: the alert JSON, with a runtime bearer token from the secret file;
+- `ntfy`: ntfy's JSON publish (POST to the server root) with a Spanish title and
+  message, priority, and tags. On the free ntfy.sh tier a topic cannot be reserved,
+  so the topic name is the only protection: it is read from the same secret file,
+  is chosen by the team (ntfy's own name rules), and is never logged. Accepted risk: the
+  message carries only node id, circuit id, and not-validated values.
 """
 
 from __future__ import annotations
@@ -34,6 +43,8 @@ MAX_BACKOFF_S = 300.0
 MAX_ATTEMPTS = 8  # One initial delivery plus at most seven retries.
 LEASE_TIMEOUT_S = 60.0
 MAX_BATCH = 100
+FORMATS = ("generic", "ntfy")
+NTFY_TOPIC = re.compile(r"^[A-Za-z0-9_-]{1,64}$")  # ntfy topic name rules
 _SAFE_ERROR = re.compile(r"^(?:timeout|tls_error|network_error|delivery_error|http_[0-9]{3})$")
 
 
@@ -72,6 +83,46 @@ def alert_payload(alert: Alert) -> dict[str, Any]:
     }
 
 
+_NTFY_TITLE = {
+    "active_power_threshold": "potencia sobre el límite",
+    "measurement_quality": "problema de calidad de medición",
+    "node_offline": "nodo sin conexión",
+    "pipeline_health": "falla en la cadena de monitoreo",
+}
+_NTFY_QUALITY = {"valid": "válida", "degraded": "degradada", "invalid": "inválida"}
+
+
+def _es_number(value: float) -> str:
+    return f"{value:.1f}".replace(".", ",")
+
+
+def ntfy_payload(payload: dict[str, Any], topic: str) -> dict[str, Any]:
+    """ntfy JSON publish body for one alert payload (`alert_payload`), in Spanish."""
+    critical = payload["severity"] == "critical"
+    what = _NTFY_TITLE.get(payload["kind"], payload["kind"])
+    lines = [f"Nodo {payload['node_id']}, circuito {payload['circuit_id'] or '-'}."]
+    unit = payload["unit"] or ""
+    observed, threshold = payload["observed_value"], payload["threshold_value"]
+    if observed is not None and threshold is not None:
+        lines.append(
+            f"Medido {_es_number(observed)} {unit}; límite {_es_number(threshold)} {unit}."
+        )
+    if payload["quality"]:
+        lines.append(f"Calidad: {_NTFY_QUALITY.get(payload['quality'], payload['quality'])}.")
+    opened = payload["opened_at"].replace("T", " ").replace("Z", " UTC")
+    lines += [f"Abierta: {opened}.", "Valores no validados.", f"ID: {payload['alert_id']}"]
+    tags = ["rotating_light" if critical else "warning"]
+    if payload["kind"] == "active_power_threshold":
+        tags.append("zap")
+    return {
+        "topic": topic,
+        "title": f"{'Alerta crítica' if critical else 'Alerta'}: {what}",
+        "message": "\n".join(lines),
+        "priority": 5 if critical else 4,
+        "tags": tags,
+    }
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     """Do not forward the runtime bearer token to a redirect target."""
 
@@ -82,16 +133,19 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class WebhookSender:
-    """POST alert JSON with a runtime bearer token and alert-level idempotency."""
+    """POST alert JSON with alert-level idempotency (`generic` bearer token or `ntfy`)."""
 
     def __init__(
         self,
         url: str,
         token_file: Path,
         *,
+        fmt: str = "generic",
         timeout_s: float = 5.0,
         opener: Any | None = None,
     ) -> None:
+        if fmt not in FORMATS:
+            raise ValueError(f"notification format must be one of {', '.join(FORMATS)}")
         parsed = urlsplit(url)
         if parsed.scheme != "https" and not (
             parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1"}
@@ -107,6 +161,12 @@ class WebhookSender:
             raise ValueError("notification token file is unavailable") from exc
         if not token:
             raise ValueError("notification token file is empty")
+        if fmt == "ntfy":
+            if parsed.path not in ("", "/") or parsed.query:
+                raise ValueError("ntfy URL must be the server root (the topic is a secret)")
+            if not NTFY_TOPIC.fullmatch(token):
+                raise ValueError("ntfy topic must be 1-64 characters of A-Z, a-z, 0-9, _ or -")
+        self._fmt = fmt
         self._url = url
         self._token = token
         self._timeout_s = timeout_s
@@ -121,17 +181,20 @@ class WebhookSender:
         token_file = env.get("NOTIFICATION_TOKEN_FILE", "").strip()
         if not token_file:
             raise ValueError("NOTIFICATION_TOKEN_FILE is required when the webhook URL is set")
-        return cls(url, Path(token_file))
+        fmt = env.get("NOTIFICATION_FORMAT", "").strip() or "generic"
+        return cls(url, Path(token_file), fmt=fmt)
 
     def __call__(self, payload: dict[str, Any], alert_id: str) -> None:
+        headers = {"Content-Type": "application/json", "Idempotency-Key": alert_id}
+        if self._fmt == "ntfy":
+            body = ntfy_payload(payload, self._token)  # topic in the body, not the URL
+        else:
+            body = payload
+            headers["Authorization"] = f"Bearer {self._token}"
         request = urllib.request.Request(  # noqa: S310 - schemes and host validated above
             self._url,
-            data=json.dumps(payload, separators=(",", ":"), allow_nan=False).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {self._token}",
-                "Content-Type": "application/json",
-                "Idempotency-Key": alert_id,
-            },
+            data=json.dumps(body, separators=(",", ":"), allow_nan=False).encode("utf-8"),
+            headers=headers,
             method="POST",
         )
         try:

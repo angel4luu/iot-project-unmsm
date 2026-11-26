@@ -16,6 +16,12 @@
 // `measurement_quality_changed` event. The clock is not part of block validity, so
 // the local warning works without SNTP and without the server (SC-004).
 //
+// Overload exception (FR-012, clarified 2026-11-25): a block that is degraded only
+// because its current is above the calibrated range (`over_range_high`), with power
+// above the limit, counts as above the limit. It can confirm and sustain `firing`,
+// never clear; its quality event is still raised, and `threshold_entered` then
+// carries quality `degraded`.
+//
 // The red LED and the buzzer are on only in `firing` and `clearing` (when the
 // configuration enables the local warning). There is no relay and no cutoff
 // (FR-016). Without an accepted configuration nothing is evaluated.
@@ -52,6 +58,7 @@ typedef struct {
     double power_w;
     uint32_t duration_ms; // monotonic block length (about 1,000)
     const char *reason;   // schema flag name when not valid (static string)
+    bool over_range_high; // degraded only by a current above the calibrated range
 } thr_block_t;
 
 #define THR_MAX_EVENTS 2

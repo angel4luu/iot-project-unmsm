@@ -553,7 +553,12 @@ physical order. Unsynchronized observations remain diagnostic and cannot be
   forwarding or UPnP.
 - Outbound notifications use HTTPS, a runtime-only token, stable `alert_id` for
   idempotency, bounded retries, and redacted error logs. Provider failure never
-  blocks local warning or measurement storage.
+  blocks local warning or measurement storage. Provider (decision 6, 2026-11-25):
+  ntfy JSON publish (`NOTIFICATION_FORMAT=ntfy`, Spanish title, priority, tags). The
+  free ntfy.sh tier cannot reserve a topic, so the runtime secret is the topic name
+  (chosen by the team) instead of a bearer token; accepted risk for the lab
+  prototype, since messages carry only ids and not-validated values
+  (`guides/operations/ntfy.md`).
 - Local release gates (no CI service; run with `make` before merging and before
   each hardware session) include secret scanning, dependency and container-image
   scanning, certificate/ACL negative tests, and an external LAN port scan.
@@ -606,7 +611,12 @@ Firmware evaluates only valid 1-second blocks:
 is ten seconds; clear threshold defaults to 95% of the limit and must remain below
 the limit; clear duration prevents flapping. LED/buzzer is active during firing
 and clearing. Invalid data pauses electrical confirmation and raises a distinct
-quality event—it is not interpreted as zero or safe.
+quality event—it is not interpreted as zero or safe. One exception keeps an overload
+from going unwarned (FR-012, clarified 2026-11-25): a block whose only quality flag
+is `out_of_range` because its current is above the calibrated maximum, and whose
+power is above the limit, counts as above the limit. It can confirm and sustain
+`firing` but never counts toward clearing; it still raises its quality event, and
+the resulting event and alert carry quality `degraded`.
 
 Ingestion turns immutable node events into an audited server alert:
 `open -> acknowledged -> resolved`; open may resolve without acknowledgment.

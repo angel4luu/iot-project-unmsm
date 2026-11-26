@@ -406,6 +406,8 @@ def test_each_transition_writes_an_alert_transition_point(env: Env) -> None:
     assert 'from_status=""' in opened
     assert 'from_status="open"' in resolved
     assert "observed_value=18.5" in opened
+    assert 'event_observed_at="2026-11-25T15:00:20.000Z"' in opened  # node time, for latency
+    assert 'event_observed_at="2026-11-25T15:00:40.000Z"' in resolved
     assert "threshold_value=15" in opened
 
 
@@ -441,3 +443,17 @@ def test_operations_write_failure_never_blocks_alert_handling(
         "opened"
     )
     assert only_alert(sessions, "active_power_threshold").status == "open"
+
+
+def test_over_range_breach_opens_a_degraded_threshold_alert(
+    env: Env, sessions: sessionmaker[Session]
+) -> None:
+    """FR-012 overload rule: the node confirmed on out-of-range readings."""
+    pipe, _, _ = env
+    raw = event(
+        "threshold_entered", T0 + timedelta(seconds=20), measured_value=31.0, quality="degraded"
+    )
+    assert pipe.handle(EVENTS, raw).result == "opened"
+    a = only_alert(sessions, "active_power_threshold")
+    assert (a.status, a.quality, a.observed_value) == ("open", "degraded", 31.0)
+    assert health(sessions) == []  # agrees with the stored config; not a disagreement

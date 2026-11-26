@@ -73,7 +73,7 @@ contracts-test: ## Validate schemas, fixtures, and topic/identity rules
 server-test: ## Ingestion unit tests and migration test
 	$(PYTEST) -m "not integration and not hw" $(INGEST)/tests
 
-evaluation-test: ## Evaluation scripts on fixtures with known answers (E1 plausibility)
+evaluation-test: ## Evaluation scripts on fixtures with known answers (E1 plausibility, E2 alerts)
 	$(PYTEST) -m "not integration and not hw" $(ROOT)/tests/evaluation
 
 # ---- Infrastructure (T014-T020) -------------------------------------------------
@@ -130,6 +130,22 @@ dataset-seven-day: ## Publish the fixed seven-day E5 dataset (T074; node and cal
 	  --circuit-id sim-history-load --start 2026-11-16T05:00:00Z --duration 168h --seed 740251 \
 	  --backfill --cert $(ROOT)/infrastructure/secrets/node-sim-history.crt \
 	  --key $(ROOT)/infrastructure/secrets/node-sim-history.key
+
+.PHONY: alerts-run
+alerts-run: ## E2 alert run evidence (T087): make alerts-run NODE=node-001 RUN_ID=2026-11-30-a SINCE=... UNTIL=...
+	@test -n "$(NODE)" -a -n "$(RUN_ID)" -a -n "$(SINCE)" -a -n "$(UNTIL)" \
+	  || { echo "set NODE, RUN_ID, SINCE and UNTIL (UTC, e.g. 2026-11-30T15:00:00Z)"; exit 2; }
+	$(UV) python $(ROOT)/experiments/export/alerts_run.py --node $(NODE) --since $(SINCE) \
+	  --until $(UNTIL) --out $(ROOT)/experiments/data/e2/export-$(RUN_ID).json
+	$(UV) python $(ROOT)/experiments/evaluation/alerts.py \
+	  --episodes $(ROOT)/experiments/data/e2/episodes-$(RUN_ID).csv \
+	  --export $(ROOT)/experiments/data/e2/export-$(RUN_ID).json --run-id $(RUN_ID) \
+	  --out $(ROOT)/experiments/data/e2 \
+	  --manifest $(ROOT)/experiments/manifests/alerts-$(subst -,,$(firstword $(subst T, ,$(SINCE)))).json
+
+.PHONY: ntfy-check
+ntfy-check: ## T110 real ntfy check with the operator's phone (service configured for ntfy)
+	cd $(ROOT) && PYTHONPATH=$(ROOT) $(UV) python tests/acceptance/ntfy_real_check.py
 
 test-integration: ## Broker-to-dashboard integration tests (needs infra-up)
 	$(PYTEST) -m integration $(ROOT)/tests/integration

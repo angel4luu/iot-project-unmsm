@@ -3,7 +3,9 @@
 # (services/ingestion/tests/test_threshold_mirror.py), so both follow one table.
 #
 # One case per line: name | limit_W clear_below_W confirm_ms clear_ms | blocks | states | events
-#   blocks  power of each 1 s block in W, or "x" for a block that is not valid
+#   blocks  power of each 1 s block in W, "x" for a block that is not valid, or
+#           "o<W>" for a block that is degraded only because its current is above the
+#           calibrated range (FR-012 over-range rule: above the limit, never clears)
 #   states  state after each block: N normal, P pending, F firing, C clearing
 #           (resolved is the instant clearing ends; the state is then N)
 #   events  node events emitted by each block: "-" none, E threshold_entered,
@@ -22,3 +24,7 @@ invalid_never_clears            | 15 14.25 3000 2000 | 20 20 20 x x x 20       |
 invalid_pauses_clearing         | 15 14.25 3000 2000 | 20 20 20 10 x 10        | P P F C C N       | - - E - Q QR
 one_block_confirm_and_clear     | 15 14.25 1000 1000 | 20 10 20 10             | F N F N           | E R E R
 default_confirm_ten_seconds     | 15 14.25 10000 5000 | 20 20 20 20 20 20 20 20 20 20 10 10 10 10 10 | P P P P P P P P P F C C C C N | - - - - - - - - - E - - - - R
+over_range_confirms_breach       | 15 14.25 3000 2000 | 10 o30 o30 o30 o30     | N P P F F         | - Q - E -
+over_range_keeps_firing          | 15 14.25 3000 2000 | 20 20 20 o30 o30 20    | P P F F F F       | - - E Q - Q
+over_range_never_clears          | 15 14.25 3000 2000 | 20 20 20 10 o10 o10 10 | P P F C C C N     | - - E - Q - QR
+over_range_below_limit_no_proof  | 15 14.25 3000 2000 | 20 o12 20 20 20        | P N P P F         | - Q Q - E

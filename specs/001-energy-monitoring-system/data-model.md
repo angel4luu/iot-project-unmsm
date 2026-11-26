@@ -198,7 +198,10 @@ clearing --value >= clear_below_W--> firing
 ```
 
 Invalid data never confirms or clears an electrical condition; it creates a
-separate data-quality/health event. LED/buzzer is active only in `firing` or
+separate data-quality/health event. Exception (FR-012): a `degraded` block whose
+only flag is `out_of_range` with current above the calibrated maximum, and whose
+power is above the limit, counts as "value > limit" (it may confirm or keep
+`firing`, never clear); the event then carries quality `degraded`. LED/buzzer is active only in `firing` or
 `clearing`. There is no relay or cutoff transition.
 
 ### Alert

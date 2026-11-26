@@ -14,13 +14,17 @@ published by `energyctl threshold publish` first. The simulated node evaluates e
 - remote alert <= 10 s: from the node event's time to the webhook POST received by a
   local fake receiver (alert opened, outbox row delivered);
 - with the ingestion service stopped, the local warning still fires, and the alert
-  opens once the service is back (the broker kept the QoS 1 event).
+  opens once the service is back (the broker kept the QoS 1 event);
+- ntfy format (T109): one sustained episode reaches a local fake ntfy server as an
+  ntfy JSON publish (server root, topic in the body, Spanish title, no bearer token)
+  within 10 s of the node event.
 
 Delivery: the lab stack runs with `NOTIFICATION_WEBHOOK_URL` empty, so the service's
 own worker is disabled and no real endpoint is involved. The test starts the fake receiver and a
 `NotificationWorker` loop (the same class the service runs) inside the ingestion
-container, against the service's SQLite file, on 127.0.0.1. The token is a dummy test
-value written to the container's /tmp, never a real secret.
+container, against the service's SQLite file, on 127.0.0.1. The token (or ntfy topic) is
+a dummy test value written to the container's /tmp, never a real secret. Each test
+stops its worker with a stop file, so a later test's alerts are not claimed by it.
 
 Evidence JSON goes to the ignored `experiments/data/acceptance/`. Simulated values
 are not measurements and are not validated.
@@ -55,6 +59,9 @@ NODE, CIRCUIT = "sim-001", "sim-load-001"
 HOOK_PORT = 18089
 HOOK_LOG = "/tmp/us3-webhook.jsonl"
 TOKEN_FILE = "/tmp/us3-dummy-token"
+NTFY_PORT = 18090
+NTFY_LOG = "/tmp/us3-ntfy.jsonl"
+NTFY_TOPIC_FILE = "/tmp/us3-ntfy-topic"
 REGISTER = (
     *("energyctl", "node", "register", "--node-id", NODE, "--display-name", "Simulator"),
     *("--hardware-revision", "simulator", "--circuit-id", CIRCUIT),
@@ -67,6 +74,7 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
         rec = {"received_at": time.time(), "key": self.headers.get("Idempotency-Key"),
+               "path": self.path, "bearer": "Authorization" in self.headers,
                "body": json.loads(body)}
         with open(out, "a") as f:
             f.write(json.dumps(rec) + "\n")
@@ -80,15 +88,16 @@ srv.serve_forever()
 """
 
 WORKER = r"""
-import sys, time
+import os, sys, time
 from energy_ingestion.notifications.outbox import NotificationWorker, WebhookSender
 from energy_ingestion.persistence.db import make_engine, make_session_factory
 from energy_ingestion.persistence.influx import InfluxWriter
-url, token, life = sys.argv[1], sys.argv[2], float(sys.argv[3])
-sender = WebhookSender.from_env({"NOTIFICATION_WEBHOOK_URL": url, "NOTIFICATION_TOKEN_FILE": token})
+url, token, life, fmt, stop = sys.argv[1], sys.argv[2], float(sys.argv[3]), *sys.argv[4:6]
+sender = WebhookSender.from_env({"NOTIFICATION_WEBHOOK_URL": url, "NOTIFICATION_TOKEN_FILE": token,
+                                 "NOTIFICATION_FORMAT": fmt})
 worker = NotificationWorker(make_session_factory(make_engine()), sender, InfluxWriter.from_env())
 end = time.time() + life
-while time.time() < end:
+while time.time() < end and not os.path.exists(stop):
     worker.run_once()
     time.sleep(0.5)
 """
@@ -160,8 +169,21 @@ def alerts_since(since: datetime) -> list[dict[str, Any]]:
     return result
 
 
-def webhook_log() -> list[dict[str, Any]]:
-    out = container("sh", "-c", f"cat {HOOK_LOG} 2>/dev/null || true")
+def start_delivery(fmt: str, port: int, log: str, token_file: str, life: float) -> str:
+    """Start a fake receiver and a worker in the container; return the worker's stop file."""
+    configured = container("sh", "-c", 'test -n "$NOTIFICATION_WEBHOOK_URL" && echo set || true')
+    if configured.strip() == "set":
+        # The service's own worker would claim these alerts and send them for real.
+        pytest.skip("service has NOTIFICATION_WEBHOOK_URL set; clear it for acceptance runs")
+    stop = f"/tmp/us3-stop-{secrets.token_hex(4)}"
+    container("python", "-c", RECEIVER, str(port), log, str(life), detach=True)
+    url = f"http://127.0.0.1:{port}" + ("" if fmt == "ntfy" else "/hook")
+    container("python", "-c", WORKER, url, token_file, str(life), fmt, stop, detach=True)
+    return stop
+
+
+def webhook_log(log: str = HOOK_LOG) -> list[dict[str, Any]]:
+    out = container("sh", "-c", f"cat {log} 2>/dev/null || true")
     return [json.loads(line) for line in out.splitlines() if line.strip()]
 
 
@@ -237,12 +259,12 @@ def settled_alerts(since: datetime, resolved: int) -> list[dict[str, Any]]:
     return stack.wait_until(ready, timeout_s=20) or alerts_since(since)
 
 
-def delivered(alert_ids: set[str]) -> list[dict[str, Any]]:
+def delivered(alert_ids: set[str], log: str = HOOK_LOG) -> list[dict[str, Any]]:
     def ready() -> list[dict[str, Any]] | None:
-        log = webhook_log()
-        return log if alert_ids <= {h["key"] for h in log} else None
+        rows = webhook_log(log)
+        return rows if alert_ids <= {h["key"] for h in rows} else None
 
-    return stack.wait_until(ready, timeout_s=15) or webhook_log()
+    return stack.wait_until(ready, timeout_s=15) or webhook_log(log)
 
 
 def test_us3_alert_acceptance() -> None:
@@ -254,18 +276,18 @@ def test_us3_alert_acceptance() -> None:
     duration = timedelta(seconds=EPISODES * node.episode_s)
     life = duration.total_seconds() + 60
     container("sh", "-c", f"rm -f {HOOK_LOG}; printf acceptance-dummy > {TOKEN_FILE}")
-    container("python", "-c", RECEIVER, str(HOOK_PORT), HOOK_LOG, str(life), detach=True)
-    url = f"http://127.0.0.1:{HOOK_PORT}/hook"
-    container("python", "-c", WORKER, url, TOKEN_FILE, str(life), detach=True)
-
-    events = publish_realtime(node, duration)
-    by_event = {e["event_id"]: e for e in events}
-    entered_kind = episodes_of(node, events)
-    expected = episode_count(0)
-    ours = settled_alerts(start - timedelta(seconds=1), expected)
-    threshold_alerts = [a for a in ours if a["kind"] == "active_power_threshold"]
-    health = [a for a in ours if a["kind"] == "pipeline_health"]
-    hooks = delivered({a["alert_id"] for a in ours})
+    stop = start_delivery("generic", HOOK_PORT, HOOK_LOG, TOKEN_FILE, life)
+    try:
+        events = publish_realtime(node, duration)
+        by_event = {e["event_id"]: e for e in events}
+        entered_kind = episodes_of(node, events)
+        expected = episode_count(0)
+        ours = settled_alerts(start - timedelta(seconds=1), expected)
+        threshold_alerts = [a for a in ours if a["kind"] == "active_power_threshold"]
+        health = [a for a in ours if a["kind"] == "pipeline_health"]
+        hooks = delivered({a["alert_id"] for a in ours})
+    finally:
+        container("touch", stop)
     first_hook = {}
     for h in hooks:
         first_hook.setdefault(h["key"], h)
@@ -366,3 +388,40 @@ def test_us3_local_warning_with_ingestion_stopped() -> None:
     )
     assert opened, "the broker should have kept the event for the ingestion session"
     assert opened[0]["status"] == "resolved"  # the clear event was kept too
+
+
+def test_us3_ntfy_format_end_to_end() -> None:
+    """T109: one sustained episode through the real alert path to a fake ntfy server."""
+    stack.require_stack()
+    start = datetime.now(UTC).replace(microsecond=0) + timedelta(seconds=5)
+    node = new_node(start)
+    ensure_node_and_config(node)
+    duration = timedelta(seconds=node.episode_s)  # episode 0 is sustained
+    life = duration.total_seconds() + 60
+    topic = f"us3-dummy-{secrets.token_hex(8)}"  # test value, never a real topic
+    container("sh", "-c", f"rm -f {NTFY_LOG}; printf %s {topic} > {NTFY_TOPIC_FILE}")
+    stop = start_delivery("ntfy", NTFY_PORT, NTFY_LOG, NTFY_TOPIC_FILE, life)
+    try:
+        events = publish_realtime(node, duration)
+        ours = settled_alerts(start - timedelta(seconds=1), 1)
+        threshold_alerts = [a for a in ours if a["kind"] == "active_power_threshold"]
+        hooks = delivered({a["alert_id"] for a in threshold_alerts}, NTFY_LOG)
+    finally:
+        container("touch", stop)
+
+    assert len(threshold_alerts) == 1, ours
+    (alert,) = threshold_alerts
+    (hook,) = [h for h in hooks if h["key"] == alert["alert_id"]]
+    body = hook["body"]
+    assert (hook["path"], hook["bearer"]) == ("/", False)
+    assert body["topic"] == topic
+    assert body["title"] == "Alerta: potencia sobre el límite"
+    assert body["priority"] == 4
+    assert body["tags"] == ["warning", "zap"]
+    lines = body["message"].splitlines()
+    assert lines[0] == f"Nodo {NODE}, circuito {CIRCUIT}."
+    assert "Valores no validados." in lines
+    assert lines[-1] == f"ID: {alert['alert_id']}"
+    (entered,) = [e for e in events if e["event_id"] == alert["event_id"]]
+    observed = datetime.fromisoformat(entered["observed_at"]).timestamp()
+    assert hook["received_at"] - observed <= REMOTE_BOUND_S

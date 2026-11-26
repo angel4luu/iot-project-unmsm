@@ -43,6 +43,25 @@ static thr_block_t invalid(void) {
                          .reason = "sensor_disconnected"};
 }
 
+// Degraded only because the current is above the calibrated range (FR-012 rule).
+static thr_block_t over_range(double w) {
+    return (thr_block_t){.quality = QUALITY_DEGRADED,
+                         .power_w = w,
+                         .duration_ms = 1000,
+                         .reason = "out_of_range",
+                         .over_range_high = true};
+}
+
+static thr_block_t parse_block(const char *tok) {
+    if (strcmp(tok, "x") == 0) {
+        return invalid();
+    }
+    if (tok[0] == 'o') {
+        return over_range(strtod(tok + 1, NULL));
+    }
+    return valid(strtod(tok, NULL));
+}
+
 static char state_letter(thr_state_t s) {
     return "NPFC"[s];
 }
@@ -100,7 +119,7 @@ static void run_case(char *line) {
     for (int k = 0; k < nb; k++) {
         char msg[128];
         snprintf(msg, sizeof msg, "%s, block %d", name, k);
-        const thr_block_t b = strcmp(blk[k], "x") == 0 ? invalid() : valid(strtod(blk[k], NULL));
+        const thr_block_t b = parse_block(blk[k]);
         thr_events_t ev;
         threshold_step(&thr, &b, &ev);
         TEST_ASSERT_EQUAL_CHAR_MESSAGE(trim(st[k])[0], state_letter(thr.state), msg);
@@ -227,6 +246,33 @@ static void test_degraded_block_is_not_evidence(void) {
     TEST_ASSERT_EQUAL(QUALITY_DEGRADED, ev.ev[0].quality);
 }
 
+static void test_over_range_entry_is_marked_degraded(void) {
+    const thr_config_t c = config(15.0, 14.25, 1000, 1000);
+    threshold_set_config(&thr, &c);
+    thr_events_t ev;
+    step(over_range(30.0), &ev);
+    TEST_ASSERT_EQUAL(THR_FIRING, thr.state);
+    TEST_ASSERT_TRUE(threshold_warning_active(&thr));
+    TEST_ASSERT_EQUAL_UINT32(2, ev.count); // quality change, then the breach
+    TEST_ASSERT_EQUAL(EVENT_MEASUREMENT_QUALITY_CHANGED, ev.ev[0].type);
+    TEST_ASSERT_EQUAL_STRING("out_of_range", ev.ev[0].reason_code);
+    const event_record_t *e = &ev.ev[1];
+    TEST_ASSERT_EQUAL(EVENT_THRESHOLD_ENTERED, e->type);
+    TEST_ASSERT_EQUAL(QUALITY_DEGRADED, e->quality); // never presented as valid evidence
+    TEST_ASSERT_DOUBLE_WITHIN(1e-9, 30.0, e->measured_value);
+}
+
+static void test_other_degraded_blocks_are_never_over_range_evidence(void) {
+    const thr_config_t c = config(15.0, 14.25, 1000, 1000);
+    threshold_set_config(&thr, &c);
+    thr_events_t ev;
+    thr_block_t b = over_range(30.0);
+    b.over_range_high = false; // e.g. calibration missing: no exception
+    b.reason = "calibration_missing";
+    step(b, &ev);
+    TEST_ASSERT_EQUAL(THR_NORMAL, thr.state);
+}
+
 static void test_local_warning_can_be_disabled(void) {
     thr_config_t c = config(15.0, 14.25, 1000, 1000);
     c.local_warning_enabled = false;
@@ -293,6 +339,7 @@ static void test_block_evidence_follows_window_quality_rules(void) {
     thr_block_t t = threshold_block_from(true, &b, &cal, 1000);
     TEST_ASSERT_EQUAL(QUALITY_VALID, t.quality);
     TEST_ASSERT_DOUBLE_WITHIN(1e-9, 20.16, t.power_w);
+    TEST_ASSERT_FALSE(t.over_range_high);
 
     b = block(12.6, 0.01, 0.05); // bulb off: no load is valid, not out of range
     TEST_ASSERT_EQUAL(QUALITY_VALID, threshold_block_from(true, &b, &cal, 1000).quality);
@@ -312,6 +359,12 @@ static void test_block_evidence_follows_window_quality_rules(void) {
     t = threshold_block_from(true, &b, &cal, 1000);
     TEST_ASSERT_EQUAL(QUALITY_DEGRADED, t.quality);
     TEST_ASSERT_EQUAL_STRING("out_of_range", t.reason);
+    TEST_ASSERT_TRUE(t.over_range_high);
+
+    b = block(17.0, 1.6, 27.2); // voltage out of range: not the overload exception
+    t = threshold_block_from(true, &b, &cal, 1000);
+    TEST_ASSERT_EQUAL(QUALITY_DEGRADED, t.quality);
+    TEST_ASSERT_FALSE(t.over_range_high);
 
     calibration_nominal(&cal, &CAL_FRONTEND_NOMINAL); // not frozen: not accepted
     b = block(12.6, 1.6, 20.16);
@@ -328,6 +381,8 @@ int main(void) {
     RUN_TEST(test_cleared_event_reports_the_clear_threshold);
     RUN_TEST(test_invalid_data_is_a_quality_event_not_zero);
     RUN_TEST(test_degraded_block_is_not_evidence);
+    RUN_TEST(test_over_range_entry_is_marked_degraded);
+    RUN_TEST(test_other_degraded_blocks_are_never_over_range_evidence);
     RUN_TEST(test_local_warning_can_be_disabled);
     RUN_TEST(test_new_config_restarts_pending_but_keeps_firing);
     RUN_TEST(test_block_evidence_follows_window_quality_rules);

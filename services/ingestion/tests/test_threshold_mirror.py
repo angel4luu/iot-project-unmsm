@@ -34,7 +34,14 @@ def test_mirror_follows_the_shared_table(name: str, fields: list[str]) -> None:
     thr = LocalThreshold(float(cfg[0]), float(cfg[1]), int(cfg[2]), int(cfg[3]))
     assert len(blocks) == len(states) == len(events), name
     for k, (b, st, ev) in enumerate(zip(blocks, states, events, strict=True)):
-        got = thr.step(None if b == "x" else float(b))
+        if b == "x":
+            got = thr.step(None)
+        elif b.startswith("o"):
+            got = thr.step(
+                float(b[1:]), quality="degraded", reason="out_of_range", over_range_high=True
+            )
+        else:
+            got = thr.step(float(b))
         assert thr.state == State(st), (name, k)
         assert "".join(LETTER[e.event_type] for e in got) == ("" if ev == "-" else ev), (name, k)
         assert thr.warning_active == (thr.state in (State.FIRING, State.CLEARING)), (name, k)
@@ -58,3 +65,14 @@ def test_events_carry_the_evidence() -> None:
     (lost,) = thr.step(None)
     assert (lost.quality, lost.measured_value, lost.threshold_value) == ("invalid", None, None)
     assert lost.reason_code == "sensor_disconnected"
+
+
+def test_over_range_breach_is_marked_degraded() -> None:
+    thr = LocalThreshold(15.0, 14.25, 1000, 1000)
+    lost, entered = thr.step(30.0, quality="degraded", reason="out_of_range", over_range_high=True)
+    assert (lost.event_type, lost.reason_code) == ("measurement_quality_changed", "out_of_range")
+    assert (entered.event_type, entered.quality, entered.measured_value) == (
+        "threshold_entered",
+        "degraded",
+        30.0,
+    )

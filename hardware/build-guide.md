@@ -479,17 +479,80 @@ nominales y sus lecturas se rotulan como «no validadas» (constitución 2.0.0).
    la potencia de placa (por ejemplo, 16–24 W para un foco de 20 W). Registre al
    menos 5 minutos encendido y 1 minuto apagado; apagado, la corriente debe
    quedar en el límite absoluto de ruido.
-6. Prueba de alertas (E2): configure un límite de unos 15 W. Con el foco
-   encendido debe aparecer la alerta local y en el panel; al apagarlo debe
-   despejarse. El pico de arranque del filamento frío dura milisegundos y no
-   debe disparar la alerta, porque se exige confirmación sostenida. Repita con
-   el servidor detenido para comprobar el aviso local.
+6. Prueba de alertas (E2): siga la hoja «Prueba de alertas (E2)» de abajo,
+   en la misma sesión, después de la prueba de plausibilidad.
 7. Conserve extractos de la forma de onda cruda, resúmenes, *scripts*, entorno,
    coeficientes, revisiones de *firmware* y cableado, *hashes* y la tabla de
    plausibilidad. Marque los datos fuera de rango.
 
 La prueba de plausibilidad describe solo la configuración probada del prototipo
 educativo; no es una afirmación de exactitud.
+
+### Prueba de alertas (E2)
+
+Comprueba que el foco encendido dispara una sola alerta local y remota, que el
+pico de arranque del filamento frío no la dispara (se exige confirmación
+sostenida) y que el aviso local funciona con el servidor detenido. Se necesitan
+dos personas: una opera el foco y otra anota los tiempos. Duración: unos 25
+minutos.
+
+**Preparación**
+
+1. Copie `config/thresholds.example.yaml` a un archivo local, ponga el
+   `node_id` y `circuit_id` reales, un `config_version` mayor que el vigente
+   (`docker exec unmsm-energy-ingestion-1 energyctl threshold show <nodo>`) y
+   `effective_at` con la hora UTC actual. Deje límite 15 W, despeje bajo
+   14,25 W, `confirm_ms` y `clear_ms` 10000.
+2. Publíquelo:
+
+   ```
+   docker cp umbral.yaml unmsm-energy-ingestion-1:/tmp/umbral.yaml
+   docker exec unmsm-energy-ingestion-1 energyctl threshold publish /tmp/umbral.yaml --by <operador>
+   ```
+
+   El monitor serie del nodo debe mostrar `threshold config v<versión>:
+   accepted`; si muestra otro resultado o no aparece, no siga.
+3. Abra el panel de Grafana (alertas, panel 7) y una terminal para la hora UTC:
+   `date -u +%Y-%m-%dT%H:%M:%SZ`. Use solo esa hora en la hoja; la tolerancia
+   de la evaluación es de 5 s.
+4. Cree `experiments/data/e2/episodes-<RUN_ID>.csv` (por ejemplo
+   `RUN_ID=2026-11-30-a`) con esta cabecera:
+
+   ```
+   episode,kind,server,start_utc,end_utc,local_warning_seen,notes
+   ```
+
+**Episodios** (60 s cada uno, con 30 s de pausa apagado entre episodios)
+
+| # | Foco | Servidor | Qué hacer |
+|---|---|---|---|
+| 1, 3, 5, 7, 9 | encendido (`on`) | `up` | Encienda, anote inicio; a los 60 s apague, anote fin. LED rojo y zumbador a los ~10 s; la alerta aparece en el panel. |
+| 2, 4, 6, 8, 10 | apagado (`off`) | `up` | Deje el foco apagado 60 s; anote inicio y fin. No debe haber aviso local ni alerta. |
+| 11 | encendido (`on`) | `down` | Antes: `docker stop unmsm-energy-ingestion-1`. Encienda 60 s y apague. Debe verse el aviso local. Después: `docker start unmsm-energy-ingestion-1`; la alerta llega al panel al reconectarse. |
+
+En cada fila anote `local_warning_seen` (`yes` si vio el LED rojo y oyó el
+zumbador, `no` si no) y cualquier observación en `notes` (sin comas). Tras
+apagar, el aviso local se apaga cuando la potencia lleva 10 s bajo 14,25 W.
+
+**Evidencia**
+
+Con el servidor ya en marcha de nuevo, espere 1 minuto y ejecute:
+
+```
+make alerts-run NODE=<nodo> RUN_ID=<RUN_ID> SINCE=<inicio episodio 1 menos 1 min> UNTIL=<ahora>
+```
+
+El comando exporta las alertas del intervalo y las compara con la hoja:
+una alerta por episodio encendido, ninguna antes de `confirm_ms` ni en los
+episodios apagados, todas despejadas por el nodo, aviso local visto solo con el
+foco encendido, y del evento del nodo al panel (más 5 s de refresco) y a la
+notificación como máximo 10 s con el servidor en marcha. Termina con código 0 si
+todo pasa. El manifiesto queda en `experiments/manifests/alerts-AAAAMMDD.json`;
+consérvelo con la hoja y el resultado. Los valores no están validados.
+
+El tiempo del aviso local no se cronometra en el banco: el *firmware* lo
+enciende en el bloque que confirma y la pantalla se refresca cada 0,5 s
+(evidencia simulada, T080); en el banco solo se observa.
 
 ## 11. Solución de problemas
 

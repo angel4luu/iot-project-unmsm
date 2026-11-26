@@ -74,6 +74,10 @@ As a user, I want to be warned when consumption is unusually high or exceeds a c
 2. **Given** the remote service is unavailable, **When** a local threshold is exceeded, **Then** the monitoring node still presents a local warning.
 3. **Given** a confirmed local threshold violation and healthy remote services, **When** the event is transmitted, **Then** the dashboard records it and the user receives a remote threshold alert.
 
+### Session 2026-11-25
+
+- Q: What should the node do when a load jumps beyond the calibrated current range, so every reading is `degraded` (out of range) and, under the "valid data only" rule, can never confirm a threshold breach? → A: A reading whose only quality problem is a current above the calibrated range, and whose active power is above the limit, counts as above the limit: it can confirm a breach and keep the warning on, but it never counts toward clearing. It still raises its data-quality event, is never stored or shown as a valid measurement, and any alert it causes carries quality `degraded`. Every other quality problem keeps the rule that it neither confirms nor clears (FR-012).
+
 ### Edge Cases
 
 - The monitored circuit is de-energized or draws current below the measurable range.
@@ -85,6 +89,7 @@ As a user, I want to be warned when consumption is unusually high or exceeds a c
 - Duplicate, late, or out-of-order measurements arrive after reconnection.
 - Daylight-saving or timezone changes affect daily and weekly aggregation.
 - A brief startup surge crosses a threshold but should not create a sustained-consumption alert.
+- A load draws more current than the calibrated range, so its readings are out of range while it is clearly above the threshold.
 - A user configures an unsafe, nonsensical, or unsupported threshold.
 
 ## Scope and System Context
@@ -139,7 +144,7 @@ flowchart LR
 - **FR-009**: Users MUST be able to see the latest RMS voltage, RMS current, active power, accumulated active energy, node status, and time of last valid update.
 - **FR-010**: Users MUST be able to view and compare consumption over selectable hourly, daily, and weekly periods.
 - **FR-011**: Users MUST be able to configure supported warning thresholds and a confirmation duration that prevents momentary startup surges from producing false sustained-consumption alerts.
-- **FR-012**: The system MUST generate a local warning when a configured local threshold is confirmed, even when remote services are unavailable.
+- **FR-012**: The system MUST generate a local warning when a configured local threshold is confirmed, even when remote services are unavailable. A reading that is out of range only because its current is above the calibrated range, with active power above the limit, MUST count as above the limit for confirming and sustaining the warning, and MUST NOT count toward clearing it.
 - **FR-013**: The system MUST generate a remote alert for confirmed threshold violations when remote services are healthy.
 - **FR-014**: Every alert MUST state the affected node or circuit, event time, measured value, expected value or configured threshold, severity, and current status.
 - **FR-015**: The system MUST distinguish normal, warning, invalid-measurement, offline, and insufficient-data states.

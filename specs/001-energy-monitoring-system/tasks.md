@@ -236,6 +236,10 @@ locally and remotely, and the node still warns locally with the server stopped
 - [X] T084 [US3] Implement event-to-alert handling, transitions, and cross-check in `services/ingestion/src/energy_ingestion/thresholds/alerts.py`
 - [X] T085 [US3] Implement the notification outbox worker with a generic outbound HTTPS webhook adapter (runtime-only token, redacted errors; provider choice is open decision 6) in `services/ingestion/src/energy_ingestion/notifications/outbox.py`
 - [X] T086 [US3] Add panel 7 (alert table/history with evidence, severity, state, notification state, transition times) to `dashboards/energy-overview.json`
+- [X] T107 [US3] Over-range overload rule (FR-012, clarified 2026-11-25): a block that is out of range only because its current is above the calibrated maximum, with power above the limit, confirms and sustains `firing` but never clears; shared cases in `tests/fixtures/threshold/cases.txt`, firmware `threshold.c`, simulator mirror `thresholds/local.py`, server handling of `degraded` threshold events
+- [X] T108 [P] [US3] T087 support: Spanish bench sheet for the board alert run (`hardware/build-guide.md` › Prueba de alertas (E2)), exporter `experiments/export/alerts_run.py` (SQLite and InfluxDB, node event time on `alert_transition` points), evaluator `experiments/evaluation/alerts.py` writing `experiments/manifests/alerts-YYYYMMDD.json` (episodes, alerts, deliveries, file hashes, "not validated"), `make alerts-run`, tests in `tests/evaluation/test_alerts_run.py`
+- [X] T109 [P] [US3] ntfy notification format (decision 6, 2026-11-25): Spanish title, priority and tags on top of the generic webhook (`NOTIFICATION_FORMAT=ntfy`, topic as the runtime secret), setup note `guides/operations/ntfy.md`, unit tests `services/ingestion/tests/test_ntfy.py`, and an end-to-end test in `tests/acceptance/test_us3_alerts.py` (simulated node through the live stack to a local fake ntfy receiver, delivered by the service's `NotificationWorker` inside the ingestion container)
+- [X] T110 [US3] Real ntfy end-to-end check with the team's phone (operator present, `make ntfy-check`, `tests/acceptance/ntfy_real_check.py`): one sustained simulated episode reaches the phone through the running service's own worker within 10 s; recorded in `experiments/manifests/ntfy-YYYYMMDD.json` (2026-11-26: delivered in 3.9 s, received on the phone in Spanish, `ntfy-20261126.json`)
 - [ ] T087 [US3] [HW] Alert run on the 12 V loop (limit about 15 W; 10 episodes of 60 s: 5 bulb on → alert, 5 bulb off → no alert or clear; the cold-filament inrush must not alert; server stopped for the local-warning case) recorded in `experiments/manifests/alerts-YYYYMMDD.json`
 
 **Checkpoint**: All three stories work independently and together.
@@ -337,10 +341,9 @@ on its own. The article's Results section is filled only from preserved evidence
 
 ## Notes
 
-- Total: 106 tasks (T094–T095 added 2026-11-18 from the analyze report; T096–T106 added 2026-11-25 for the PC-first test strategy and the hardware E3/E4 runs, plan › Test Strategy and Experiment runs). No CI service: every gate is a local `make` target. [HW] tasks need the physical prototype; all others run on a
+- Total: 110 tasks (T094–T095 added 2026-11-18 from the analyze report; T096–T106 added 2026-11-25 for the PC-first test strategy and the hardware E3/E4 runs, plan › Test Strategy and Experiment runs; T107–T110 added 2026-11-25 after Phase 5: over-range overload rule, T087 support, ntfy notifications). No CI service: every gate is a local `make` target. [HW] tasks need the physical prototype; all others run on a
   laptop with Docker and the ESP-IDF toolchain.
-- Open decisions that affect tasks: notification
-  provider (T085), OLED pin count and RGB LED type (T028, T050), and component tolerances (README open decision 9). Run counts are fixed in plan › Experiment runs.
+- Open decisions that affect tasks: OLED pin count and RGB LED type (T028, T050), and component tolerances (README open decision 9). Run counts are fixed in plan › Experiment runs.
 - The schema flag `adc_crc_error` comes from the earlier external-ADC design and
   is never raised by the internal ADC; keep it for compatibility.
 - Commit after each task or logical group; never commit `infrastructure/secrets/`,
