@@ -41,6 +41,10 @@ add_library(firmware_logic STATIC
   "${COMPONENTS}/persistence/checkpoint.c"
   "${COMPONENTS}/telemetry/serialize.c"
   "${COMPONENTS}/telemetry/queue.c"
+  "${COMPONENTS}/telemetry/json_scan.c"
+  "${COMPONENTS}/telemetry/event_queue.c"
+  "${COMPONENTS}/threshold/threshold.c"
+  "${COMPONENTS}/threshold/config.c"
   "${COMPONENTS}/ui/ui_state.c"
 )
 target_include_directories(firmware_logic PUBLIC
@@ -50,6 +54,7 @@ target_include_directories(firmware_logic PUBLIC
   "${COMPONENTS}/quality/include"
   "${COMPONENTS}/persistence/include"
   "${COMPONENTS}/telemetry/include"
+  "${COMPONENTS}/threshold/include"
   "${COMPONENTS}/ui/include"
   "${FW_DIR}/main"
 )
@@ -64,7 +69,8 @@ target_compile_definitions(host_support PRIVATE
 enable_testing()
 foreach(t test_clock test_provisioning test_fixtures test_board test_metering
           test_quality test_energy test_calibration test_acquisition test_serialize
-          test_queue test_queue_drain test_ui_state)
+          test_queue test_queue_drain test_ui_state test_threshold test_config
+          test_event_queue)
   add_executable(${t} ${t}.c)
   target_link_libraries(${t} PRIVATE host_support)
   add_test(NAME ${t} COMMAND ${t})
@@ -72,3 +78,5 @@ endforeach()
 
 target_compile_definitions(test_serialize PRIVATE
   TELEMETRY_OUT="${REPO_DIR}/tests/fixtures/telemetry")
+target_compile_definitions(test_threshold PRIVATE
+  THRESHOLD_CASES="${REPO_DIR}/tests/fixtures/threshold/cases.txt")

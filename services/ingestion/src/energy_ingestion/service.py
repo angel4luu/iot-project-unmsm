@@ -35,6 +35,7 @@ from energy_ingestion.health.node_status import HEARTBEAT_S, NodeStatusTracker
 from energy_ingestion.logging import configure, get_logger, log_event
 from energy_ingestion.mqtt.client import CLIENT_ID, IngestClient
 from energy_ingestion.mqtt.pipeline import IngestPipeline
+from energy_ingestion.notifications.outbox import NotificationWorker, build_sender_from_env
 from energy_ingestion.persistence.db import make_engine, make_session_factory, sqlite_url
 from energy_ingestion.persistence.influx import OPERATIONS_BUCKET, InfluxWriter, PointWriter
 
@@ -71,10 +72,12 @@ class Housekeeping:
         pipeline: IngestPipeline,
         writer: PointWriter,
         beat: Callable[[], None] = ready.beat,
+        notification_worker: NotificationWorker | None = None,
     ) -> None:
         self.pipeline = pipeline
         self.writer = writer
         self.beat = beat
+        self.notification_worker = notification_worker
         self._last: dict[str, datetime] = {}
 
     def _due(self, name: str, every_s: float, now: datetime) -> bool:
@@ -94,6 +97,13 @@ class Housekeeping:
         if self._due("metrics", FLUSH_S, now):
             point = self.pipeline.metrics.flush_point(now)
             self._write("pipeline", lambda: self.writer.write(OPERATIONS_BUCKET, point))
+        worker = self.notification_worker
+        if worker is not None and self._due("notifications", 2.0, now):
+
+            def run_notifications() -> None:
+                worker.run_once()
+
+            self._write("notifications", run_notifications)
 
     def _write(self, what: str, action: Callable[[], None]) -> None:
         try:
@@ -117,7 +127,15 @@ def main() -> int:
         NodeStatusTracker(),
     )
     ingest.handler = pipeline.handle
-    housekeeping = Housekeeping(pipeline, writer)
+    try:
+        notification_sender = build_sender_from_env()
+    except ValueError as exc:
+        notification_sender = None
+        log_event(LOG, "notification_webhook_configuration_invalid", reason=str(exc))
+    notification_worker = NotificationWorker(
+        make_session_factory(engine), notification_sender, writer
+    )
+    housekeeping = Housekeeping(pipeline, writer, notification_worker=notification_worker)
     health = api.serve_in_thread(api.create_app(pipeline.metrics, pipeline.tracker, ready.check))
 
     stop = threading.Event()

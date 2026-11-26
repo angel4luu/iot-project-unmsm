@@ -2,9 +2,11 @@
 // plus the local UI and the bench calibration console.
 //
 // Tasks:
-// - measure (core 1, highest): ADC pairs into 1 s blocks, 5 s summaries, energy,
-//   quality, the RAM queue, and the 60 s energy checkpoint;
-// - telemetry: Wi-Fi/MQTT pump, retained status on connect and every 30 s;
+// - measure (core 1, highest): ADC pairs into 1 s blocks, the local threshold on
+//   each block (T082), 5 s summaries, energy, quality, the RAM queues, and the 60 s
+//   energy checkpoint;
+// - telemetry: Wi-Fi/MQTT pump, retained status on connect and every 30 s, node
+//   events, and the retained threshold config (T081, MQTT task);
 // - ui: LED, buzzer, and OLED from the latest summary every 500 ms;
 // - console: `cal ...` commands for the bench calibration procedure (T064).
 #include <math.h>
@@ -28,6 +30,7 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
+#include "event_queue.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
@@ -39,6 +42,8 @@
 #include "queue.h"
 #include "serialize.h"
 #include "telemetry_mqtt.h"
+#include "threshold.h"
+#include "threshold_config.h"
 #include "ui.h"
 #include "ui_state.h"
 
@@ -67,6 +72,8 @@ static energy_counter_t s_energy; // measure task only
 static checkpoint_state_t s_ckpt; // measure task only
 static bool s_energy_uncertain;   // first summary after an unclean restart
 static telemetry_queue_t s_queue;
+static event_queue_t s_events; // guarded by s_queue_lock
+static threshold_t s_thr;      // local threshold state machine
 static ui_input_t s_ui;
 static measurement_record_t s_last; // latest summary (for status and console)
 static bool s_have_last;
@@ -246,6 +253,37 @@ static void finish_summary(const metering_summary_t *sum, int64_t start_us, int6
     unlock();
 }
 
+// Local threshold on one 1 s block (T082): drives the red LED and buzzer through the
+// UI snapshot and queues the node events. Needs neither the network nor the clock.
+static void evaluate_threshold(bool finished, const metering_block_result_t *br,
+                               const calibration_t *cal, int64_t now_us, int64_t block_us) {
+    static uint64_t event_sequence;
+    const thr_block_t b = threshold_block_from(finished, br, cal, (uint32_t)(block_us / 1000));
+    thr_events_t ev;
+    lock();
+    threshold_step(&s_thr, &b, &ev);
+    s_ui.warning_active = threshold_warning_active(&s_thr);
+    s_ui.warning_value_w = s_thr.last_valid_w;
+    s_ui.warning_limit_w = s_thr.cfg.limit_w;
+    const clock_reading_t cr = clock_read(&s_clock, now_us);
+    const thr_state_t state = s_thr.state;
+    unlock();
+    for (uint32_t k = 0; k < ev.count; k++) {
+        event_record_t *e = &ev.ev[k];
+        uuid4(e->event_id, NULL);
+        e->sequence = event_sequence++;
+        e->observed_at_ms = cr.utc_ms;
+        xSemaphoreTake(s_queue_lock, portMAX_DELAY);
+        const bool kept = evq_push(&s_events, e);
+        xSemaphoreGive(s_queue_lock);
+        if (!kept) {
+            ESP_LOGW(TAG, "event queue full: oldest event dropped");
+        }
+        ESP_LOGI(TAG, "threshold event %d (%s), config v%u", (int)e->type,
+                 threshold_state_name(state), (unsigned)e->config_version);
+    }
+}
+
 static void measure_task(void *arg) {
     (void)arg;
     adc_port_t port;
@@ -277,12 +315,14 @@ static void measure_task(void *arg) {
             continue;
         }
         metering_block_result_t br;
-        if (metering_block_finish(&s_block, &cal, &br)) {
+        const bool finished = metering_block_finish(&s_block, &cal, &br);
+        if (finished) {
             metering_summary_add(&sum, &br, &cal);
             if (br.power_valid && !br.adc_clipped) {
                 energy_add(&s_energy, br.active_power_w, now - block_start);
             }
         }
+        evaluate_threshold(finished, &br, &cal, now, now - block_start);
         metering_block_reset(&s_block);
         block_start = now;
         if (++blocks < METERING_BLOCKS_PER_SUMMARY) {
@@ -299,6 +339,27 @@ static void measure_task(void *arg) {
         cal = s_cal; // pick up console changes at a summary boundary
         unlock();
     }
+}
+
+// ---- threshold configuration (T081) ------------------------------------------------------
+
+// Retained config from the server (MQTT task). Applied only once stored in NVS.
+static void on_threshold_config(const char *json, size_t len) {
+    thr_config_t c;
+    const thr_cfg_parse_t p =
+        threshold_config_parse(json, len, s_prov.node_id, NODE_CIRCUIT_ID, &c);
+    if (p != THR_CFG_OK) {
+        ESP_LOGW(TAG, "threshold config refused (parse %d)", (int)p);
+        return;
+    }
+    const thr_cfg_accept_t r = threshold_config_accept(&s_nvs, &c);
+    if (r == THR_CFG_ACCEPTED) {
+        lock();
+        threshold_set_config(&s_thr, &c);
+        unlock();
+    }
+    ESP_LOGI(TAG, "threshold config v%u: %s", (unsigned)c.config_version,
+             threshold_config_result_name(r));
 }
 
 // ---- telemetry ---------------------------------------------------------------------------
@@ -488,6 +549,16 @@ void app_main(void) {
              : ck == CHECKPOINT_RESUMED_UNCLEAN ? "resumed after unclean restart"
                                                 : "resumed");
     queue_init(&s_queue);
+    evq_init(&s_events);
+    threshold_init(&s_thr);
+    thr_config_t thr_cfg;
+    if (threshold_config_load(&s_nvs, &thr_cfg)) {
+        threshold_set_config(&s_thr, &thr_cfg);
+        ESP_LOGI(TAG, "threshold config v%u: limit %.3f W", (unsigned)thr_cfg.config_version,
+                 thr_cfg.limit_w);
+    } else {
+        ESP_LOGW(TAG, "no threshold config yet: no local threshold until the server sends one");
+    }
     s_ui.calibration_nominal = s_cal.kind == CAL_KIND_NOMINAL;
     s_ui.calibration_accepted = calibration_accepted(&s_cal);
 
@@ -511,7 +582,9 @@ void app_main(void) {
         .prov = &s_prov,
         .id = &s_id,
         .queue = &s_queue,
+        .events = &s_events,
         .queue_lock = s_queue_lock,
+        .on_config = on_threshold_config,
         .last_will_json = s_last_will,
     };
     if (!telemetry_mqtt_start(&tcfg)) {

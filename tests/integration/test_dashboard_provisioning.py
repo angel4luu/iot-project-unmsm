@@ -81,8 +81,7 @@ def test_dashboard_is_provisioned_read_only(dashboard: dict[str, Any]) -> None:
     assert dash["editable"] is False
     assert meta.get("provisioned") is True
     ids = {p["id"] for p in dash["panels"]}
-    assert ids >= {1, 2, 3, 4, 5, 6, 8}  # panel 5: history (US2)
-    assert 7 not in ids  # alert table arrives with user story 3
+    assert ids >= {1, 2, 3, 4, 5, 6, 7, 8}  # 5: history (US2), 7: alerts (US3)
 
 
 def test_rows_do_not_hide_panels(dashboard: dict[str, Any]) -> None:

@@ -1,17 +1,25 @@
 """T099: `energyctl` node and calibration registration, and the 25 W threshold bound."""
 
 import json
+import sys
+import types
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.exc import DatabaseError
 from sqlalchemy.orm import Session, sessionmaker
 
 from energy_ingestion.cli.energyctl import main
-from energy_ingestion.persistence.db import CalibrationArtifact, MonitoringNode
+from energy_ingestion.persistence.db import (
+    Alert,
+    CalibrationArtifact,
+    MonitoringNode,
+    ThresholdConfiguration,
+)
 from tests.conftest import REPO
 
 pytestmark = pytest.mark.unit
@@ -241,3 +249,175 @@ def test_unreadable_files_are_usage_errors(
     bad.write_text("[1, 2", encoding="utf-8")
     assert main(["threshold", "validate", str(bad)]) == 2
     assert "invalid YAML" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("engine")
+def test_threshold_publish_stores_latest_config_and_publishes_retained_payload(
+    capsys: pytest.CaptureFixture[str],
+    db_url: str,
+    tmp_path: Path,
+    sessions: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    register_node(capsys, db_url)
+    path = write_yaml(tmp_path, threshold())
+    sent: list[tuple[str, bytes]] = []
+    from energy_ingestion.cli import energyctl
+
+    monkeypatch.setattr(
+        energyctl,
+        "publish_threshold_config",
+        lambda node, payload: sent.append((node, payload)),
+    )
+
+    code = main(["--db", db_url, "threshold", "publish", str(path), "--by", "operator A"])
+
+    out = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert out["stored"] is True
+    assert out["published"] is True
+    assert out["created_by"] == "operator A"
+    assert sent[0][0] == "node-001"
+    payload = json.loads(sent[0][1])
+    assert payload["config_version"] == 1
+    assert payload["active_power_limit_W"] == 15.0
+    assert payload["clear_below_W"] == 12.0
+    with sessions() as session:
+        row = session.get(ThresholdConfiguration, ("node-001", 1))
+        assert row is not None
+        assert row.created_by == "operator A"
+        assert row.local_warning_enabled is True
+
+
+@pytest.mark.usefixtures("engine")
+def test_threshold_publish_requires_strictly_increasing_version(
+    capsys: pytest.CaptureFixture[str],
+    db_url: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    register_node(capsys, db_url)
+    published: list[int] = []
+    from energy_ingestion.cli import energyctl
+
+    monkeypatch.setattr(
+        energyctl,
+        "publish_threshold_config",
+        lambda _node, payload: published.append(json.loads(payload)["config_version"]),
+    )
+    v1 = write_yaml(tmp_path, threshold())
+    assert main(["--db", db_url, "threshold", "publish", str(v1), "--by", "op"]) == 0
+    capsys.readouterr()
+    duplicate = write_yaml(tmp_path, threshold(config_version=1), "duplicate.yaml")
+    assert main(["--db", db_url, "threshold", "publish", str(duplicate), "--by", "op"]) == 2
+    assert "greater than stored version" in capsys.readouterr().err
+    v2 = write_yaml(tmp_path, threshold(config_version=2), "v2.yaml")
+    assert main(["--db", db_url, "threshold", "publish", str(v2), "--by", "op"]) == 0
+    assert published == [1, 2]
+
+
+@pytest.mark.usefixtures("engine")
+def test_threshold_show_returns_latest_stored_version(
+    capsys: pytest.CaptureFixture[str],
+    db_url: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    register_node(capsys, db_url)
+    from energy_ingestion.cli import energyctl
+
+    monkeypatch.setattr(energyctl, "publish_threshold_config", lambda _node, _payload: None)
+    for version in (1, 2):
+        path = write_yaml(tmp_path, threshold(config_version=version), f"v{version}.yaml")
+        assert main(["--db", db_url, "threshold", "publish", str(path), "--by", "operator"]) == 0
+        capsys.readouterr()
+
+    assert main(["--db", db_url, "threshold", "show", "node-001"]) == 0
+    shown = json.loads(capsys.readouterr().out)
+    assert shown["config_version"] == 2
+    assert shown["active_power_limit_W"] == "15.000"
+
+
+def install_alerts_stub(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = types.ModuleType("energy_ingestion.thresholds.alerts")
+
+    def list_alerts(session: Session, status: str | None = None) -> list[Alert]:
+        query = select(Alert).order_by(Alert.opened_at)
+        if status is not None:
+            query = query.where(Alert.status == status)
+        return list(session.scalars(query))
+
+    def acknowledge(session: Session, alert_id: str, actor: str, now: datetime) -> Alert:
+        alert = session.get(Alert, alert_id)
+        if alert is None:
+            raise KeyError(alert_id)
+        if alert.status == "resolved":
+            raise ValueError(alert_id)
+        alert.status = "acknowledged"
+        alert.acknowledged_at = now
+        return alert
+
+    module.list_alerts = list_alerts  # type: ignore[attr-defined]
+    module.acknowledge = acknowledge  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "energy_ingestion.thresholds.alerts", module)
+
+
+@pytest.mark.usefixtures("engine")
+def test_alert_list_filters_status_through_alerts_module(
+    capsys: pytest.CaptureFixture[str],
+    db_url: str,
+    sessions: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    register_node(capsys, db_url)
+    install_alerts_stub(monkeypatch)
+    with sessions.begin() as session:
+        for index, status in enumerate(("open", "resolved")):
+            session.add(
+                Alert(
+                    alert_id=f"e7c3e07a-4cc9-45c4-a13a-00000000000{index}",
+                    event_id=f"7df2d150-b153-49a1-8663-00000000000{index}",
+                    node_id="node-001",
+                    circuit_id="lab-load-001",
+                    kind="active_power_threshold",
+                    severity="warning",
+                    status=status,
+                    opened_at=datetime(2026, 11, 25, tzinfo=UTC),
+                )
+            )
+
+    assert main(["--db", db_url, "alert", "list", "--status", "open"]) == 0
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert len(rows) == 1
+    assert rows[0]["status"] == "open"
+
+
+@pytest.mark.usefixtures("engine")
+def test_alert_ack_calls_alert_module_contract(
+    capsys: pytest.CaptureFixture[str],
+    db_url: str,
+    sessions: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    register_node(capsys, db_url)
+    install_alerts_stub(monkeypatch)
+    alert_id = "e7c3e07a-4cc9-45c4-a13a-000000000001"
+    with sessions.begin() as session:
+        session.add(
+            Alert(
+                alert_id=alert_id,
+                event_id="7df2d150-b153-49a1-8663-000000000001",
+                node_id="node-001",
+                circuit_id="lab-load-001",
+                kind="active_power_threshold",
+                severity="warning",
+                status="open",
+                opened_at=datetime(2026, 11, 25, tzinfo=UTC),
+            )
+        )
+
+    assert main(["--db", db_url, "alert", "ack", alert_id, "--by", "operator A"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "acknowledged"
+    with sessions() as session:
+        assert session.get(Alert, alert_id).status == "acknowledged"  # type: ignore[union-attr]

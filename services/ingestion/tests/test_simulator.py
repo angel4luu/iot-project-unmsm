@@ -154,3 +154,77 @@ def test_cli_dry_run_prints_json_lines() -> None:
         assert main(["--scenario", "normal", "--duration", "30s", "--dry-run"]) == 0
     lines = [json.loads(x) for x in buf.getvalue().splitlines()]
     assert len([x for x in lines if x["topic"].endswith("/measurements")]) == 6
+
+
+# ---- node events (user story 3) ------------------------------------------------------
+
+
+def events(msgs: list[Message]) -> list[dict[str, object]]:
+    return [json.loads(m.payload) for m in msgs if m.kind == "node-event"]
+
+
+def kinds(msgs: list[Message]) -> list[object]:
+    return [e["event_type"] for e in events(msgs)]
+
+
+def test_surge_and_normal_send_no_threshold_event() -> None:
+    assert kinds(run("surge")) == []
+    assert kinds(run("normal")) == []
+
+
+def test_sustained_enters_and_clears_every_cycle() -> None:
+    msgs = run("sustained")
+    assert kinds(msgs) == ["threshold_entered", "threshold_cleared"] * 5  # 10 min / 2 min
+    entered = events(msgs)[0]
+    assert entered["threshold_value"] == 22.0
+    assert entered["measured_value"] > 22.0  # type: ignore[operator]
+    assert entered["local_warning_active"] is True
+    # Confirmation after 10 s above: the burst starts at 60 s, so the event is at 70 s.
+    assert entered["observed_at"] == "2026-11-25T12:01:10.000Z"
+
+
+def test_invalid_windows_raise_quality_events_not_zero() -> None:
+    evs = events(run("invalid"))
+    assert evs
+    assert {e["event_type"] for e in evs} == {"measurement_quality_changed"}
+    lost = [e for e in evs if e["quality"] == "invalid"]
+    assert lost
+    assert all(e["measured_value"] is None and e["unit"] == "none" for e in lost)
+
+
+def test_events_are_sent_in_time_order_with_increasing_sequence() -> None:
+    msgs = run("sustained")
+    times = [m.at for m in msgs]
+    assert times == sorted(times)
+    seqs = [e["sequence"] for e in events(msgs)]
+    assert seqs == list(range(len(seqs)))
+
+
+def test_events_never_change_the_measurement_payloads() -> None:
+    node = SimulatedNode("sustained", START)
+    with_events = [m.payload for m in node.messages(TEN_MIN) if m.kind == "measurement"]
+    again = SimulatedNode("sustained", START)
+    assert with_events == [m.payload for m in again.messages(TEN_MIN) if m.kind == "measurement"]
+
+
+def test_alerts_scenario_episodes() -> None:
+    node = SimulatedNode("alerts", START, confirm_ms=2000, clear_ms=1000)
+    duration = timedelta(seconds=60 * node.episode_s)
+    msgs = list(node.messages(duration))
+    entered = [e for e in events(msgs) if e["event_type"] == "threshold_entered"]
+    cleared = [e for e in events(msgs) if e["event_type"] == "threshold_cleared"]
+    assert len(entered) == len(cleared) == 20  # only the sustained episodes
+    for e in entered:
+        at = datetime.fromisoformat(str(e["observed_at"]))
+        sec = int((at - START).total_seconds()) - 1  # the block that confirmed
+        assert node.episode(sec)[1] == "sustained"
+    log = node.local_log
+    assert any(warn for _, _, warn in log)
+    assert all(warn == (state in ("F", "C")) for _, state, warn in log)
+
+
+def test_threshold_config_matches_the_contract() -> None:
+    node = SimulatedNode("alerts", START, confirm_ms=2000, clear_ms=1000, config_version=4)
+    doc = node.threshold_config(START)
+    validate_payload("threshold-config", json.dumps(doc).encode())
+    assert (doc["config_version"], doc["clear_below_W"]) == (4, 20.9)

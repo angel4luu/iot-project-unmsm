@@ -110,6 +110,7 @@ services:
       TZ: ${TZ:-UTC}
       NOTIFY_BASE_URL: ${NOTIFY_BASE_URL:-https://notify.example.invalid}
       NOTIFICATION_TOKEN_FILE: /run/secrets/notification-token
+      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}  # empty: notifications disabled
     volumes:
       - ingestion-data:/data
       - ingestion-secret-files:/run/secrets:ro

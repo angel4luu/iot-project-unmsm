@@ -19,7 +19,9 @@ static atomic_bool s_connected;
 static atomic_bool s_connected_edge;
 static char s_uri[PROV_HOST_MAX + 32];
 static char s_topic_meas[TOPIC_MAX], s_topic_status[TOPIC_MAX], s_topic_acks[TOPIC_MAX];
+static char s_topic_events[TOPIC_MAX], s_topic_config[TOPIC_MAX];
 static char s_payload[SERIALIZE_MEASUREMENT_MAX];
+static char s_event_payload[SERIALIZE_EVENT_MAX];
 
 static void lock(void) {
     xSemaphoreTake(s_cfg.queue_lock, portMAX_DELAY);
@@ -44,6 +46,11 @@ static void on_ack(const char *data, int len) {
     }
 }
 
+static bool topic_is(esp_mqtt_event_handle_t e, const char *topic) {
+    return e->topic_len == (int)strlen(topic) &&
+           strncmp(e->topic, topic, (size_t)e->topic_len) == 0;
+}
+
 static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data) {
     (void)arg;
     (void)base;
@@ -51,10 +58,14 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data) {
     switch ((esp_mqtt_event_id_t)id) {
     case MQTT_EVENT_CONNECTED:
         esp_mqtt_client_subscribe(s_client, s_topic_acks, 1);
+        esp_mqtt_client_subscribe(s_client, s_topic_config, 1); // retained: delivered at once
         atomic_store(&s_connected, true);
         atomic_store(&s_connected_edge, true);
         lock();
         queue_requeue_all(s_cfg.queue); // resend what had no ACK yet (dedup on server)
+        if (s_cfg.events != NULL) {
+            evq_requeue_all(s_cfg.events); // events without PUBACK (dedup on event_id)
+        }
         unlock();
         ESP_LOGI(TAG, "connected (session present: %d)", e->session_present);
         break;
@@ -62,12 +73,22 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data) {
         atomic_store(&s_connected, false);
         ESP_LOGW(TAG, "disconnected; queueing");
         break;
+    case MQTT_EVENT_PUBLISHED:
+        if (s_cfg.events != NULL) {
+            lock();
+            evq_puback(s_cfg.events, e->msg_id);
+            unlock();
+        }
+        break;
     case MQTT_EVENT_DATA:
-        // ACKs are small; a fragmented message is not an ACK of ours.
-        if (e->current_data_offset == 0 && e->data_len == e->total_data_len &&
-            e->topic_len == (int)strlen(s_topic_acks) &&
-            strncmp(e->topic, s_topic_acks, (size_t)e->topic_len) == 0) {
+        // ACKs and the config are small; a fragmented message is neither.
+        if (e->current_data_offset != 0 || e->data_len != e->total_data_len) {
+            break;
+        }
+        if (topic_is(e, s_topic_acks)) {
             on_ack(e->data, e->data_len);
+        } else if (topic_is(e, s_topic_config) && s_cfg.on_config != NULL && e->data_len > 0) {
+            s_cfg.on_config(e->data, (size_t)e->data_len);
         }
         break;
     case MQTT_EVENT_ERROR:
@@ -84,6 +105,8 @@ bool telemetry_mqtt_start(const telemetry_mqtt_cfg_t *cfg) {
     snprintf(s_topic_meas, sizeof s_topic_meas, TOPIC_PREFIX "%s/measurements", node);
     snprintf(s_topic_status, sizeof s_topic_status, TOPIC_PREFIX "%s/status", node);
     snprintf(s_topic_acks, sizeof s_topic_acks, TOPIC_PREFIX "%s/acks/measurements", node);
+    snprintf(s_topic_events, sizeof s_topic_events, TOPIC_PREFIX "%s/events", node);
+    snprintf(s_topic_config, sizeof s_topic_config, TOPIC_PREFIX "%s/config", node);
     snprintf(s_uri, sizeof s_uri, "mqtts://%s:%s", cfg->prov->mqtt_host, cfg->prov->mqtt_port);
 
     esp_mqtt_client_config_t mc = {
@@ -152,12 +175,47 @@ static queue_send_result_t drain_send(void *ctx, const measurement_record_t *rec
     return publish(s_topic_meas, s_payload, n, false, true) < 0 ? QUEUE_SEND_FAILED : QUEUE_SEND_OK;
 }
 
+// Sends every event not yet in flight. The lock is never held across a publish: the
+// MQTT task takes it in its PUBLISHED handler while holding the client lock.
+static void pump_events(int64_t now_us) {
+    if (s_cfg.events == NULL) {
+        return;
+    }
+    for (;;) {
+        event_record_t ev;
+        char reason[EVQ_REASON_MAX + 1];
+        lock();
+        evq_requeue_stale(s_cfg.events, now_us, TELEMETRY_ACK_TIMEOUT_US);
+        const int idx = evq_next(s_cfg.events, now_us, &ev, reason);
+        unlock();
+        if (idx < 0) {
+            return;
+        }
+        const size_t n = serialize_event(s_cfg.id, &ev, s_event_payload, sizeof s_event_payload);
+        if (n == 0) {
+            lock();
+            evq_discard(s_cfg.events, idx);
+            unlock();
+            ESP_LOGE(TAG, "event does not serialize; dropped");
+            continue;
+        }
+        const int msg_id = publish(s_topic_events, s_event_payload, n, false, true);
+        lock();
+        evq_sent(s_cfg.events, idx, msg_id);
+        unlock();
+        if (msg_id < 0) {
+            return; // transport down: resend later
+        }
+    }
+}
+
 void telemetry_mqtt_pump(int64_t now_us) {
     if (!telemetry_mqtt_connected()) {
         return;
     }
     static const queue_drain_ops_t ops = {
         .lock = drain_lock, .unlock = drain_unlock, .send = drain_send, .ctx = NULL};
+    pump_events(now_us); // first: an alert event never waits behind a measurement backlog
     queue_drain(s_cfg.queue, now_us, TELEMETRY_ACK_TIMEOUT_US, &ops);
 }
 

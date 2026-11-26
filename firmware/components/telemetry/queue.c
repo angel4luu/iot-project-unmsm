@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+#include "json_scan.h"
+
 static queue_slot_t *slot(telemetry_queue_t *q, uint32_t k) {
     return &q->slots[(q->head + k) % QUEUE_CAPACITY];
 }
@@ -167,67 +169,13 @@ uint32_t queue_drain(telemetry_queue_t *q, int64_t now_us, int64_t ack_timeout_u
 
 // ---- ACK parsing -------------------------------------------------------------------
 
-// Finds `"key":` in a compact or spaced JSON object and returns the value start.
-static const char *value_of(const char *json, size_t len, const char *key) {
-    const size_t klen = strlen(key);
-    for (size_t i = 0; i + klen + 2 < len; i++) {
-        if (json[i] == '"' && memcmp(json + i + 1, key, klen) == 0 && json[i + 1 + klen] == '"') {
-            size_t j = i + klen + 2;
-            while (j < len && (json[j] == ' ' || json[j] == '\t')) {
-                j++;
-            }
-            if (j < len && json[j] == ':') {
-                j++;
-                while (j < len && (json[j] == ' ' || json[j] == '\t')) {
-                    j++;
-                }
-                return j < len ? json + j : NULL;
-            }
-        }
-    }
-    return NULL;
-}
-
-// Copies a JSON string value (no escapes allowed); false if absent or too long.
-static bool string_of(const char *json, size_t len, const char *key, char *out, size_t cap,
-                      bool *is_null) {
-    const char *v = value_of(json, len, key);
-    const char *end = json + len;
-    if (is_null != NULL) {
-        *is_null = false;
-    }
-    if (v == NULL) {
-        return false;
-    }
-    if (is_null != NULL && end - v >= 4 && memcmp(v, "null", 4) == 0) {
-        *is_null = true;
-        out[0] = '\0';
-        return true;
-    }
-    if (*v != '"') {
-        return false;
-    }
-    size_t n = 0;
-    for (const char *p = v + 1; p < end; p++) {
-        if (*p == '"') {
-            out[n] = '\0';
-            return true;
-        }
-        if (*p == '\\' || n + 1 >= cap) {
-            return false;
-        }
-        out[n++] = *p;
-    }
-    return false;
-}
-
 bool queue_parse_ack(const char *json, size_t len, char message_id[REC_UUID_LEN + 1],
                      ack_status_t *status, char reason[QUEUE_REASON_MAX + 1]) {
     char st[16];
     bool reason_null = false;
-    if (!string_of(json, len, "message_id", message_id, REC_UUID_LEN + 1, NULL) ||
+    if (!json_string_of(json, len, "message_id", message_id, REC_UUID_LEN + 1, NULL) ||
         strlen(message_id) != REC_UUID_LEN ||
-        !string_of(json, len, "status", st, sizeof st, NULL)) {
+        !json_string_of(json, len, "status", st, sizeof st, NULL)) {
         return false;
     }
     if (strcmp(st, "accepted") == 0) {
@@ -239,7 +187,7 @@ bool queue_parse_ack(const char *json, size_t len, char message_id[REC_UUID_LEN 
     } else {
         return false;
     }
-    if (!string_of(json, len, "reason_code", reason, QUEUE_REASON_MAX + 1, &reason_null)) {
+    if (!json_string_of(json, len, "reason_code", reason, QUEUE_REASON_MAX + 1, &reason_null)) {
         reason[0] = '\0';
     }
     return true;

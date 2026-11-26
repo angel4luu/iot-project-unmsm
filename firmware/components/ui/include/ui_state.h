@@ -51,7 +51,7 @@ typedef struct {
     clock_source_t clock;
     bool link_up; // Wi-Fi and MQTT connected
     uint32_t queued;
-    bool warning_active; // threshold pending/firing/clearing (user story 3)
+    bool warning_active; // threshold firing or clearing, never pending (user story 3)
     double warning_value_w, warning_limit_w;
 } ui_input_t;
 

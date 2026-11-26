@@ -1,0 +1,24 @@
+# Local threshold state machine cases (T076), shared by the firmware host test
+# (firmware/test/host/test_threshold.c) and the simulator's Python mirror
+# (services/ingestion/tests/test_threshold_mirror.py), so both follow one table.
+#
+# One case per line: name | limit_W clear_below_W confirm_ms clear_ms | blocks | states | events
+#   blocks  power of each 1 s block in W, or "x" for a block that is not valid
+#   states  state after each block: N normal, P pending, F firing, C clearing
+#           (resolved is the instant clearing ends; the state is then N)
+#   events  node events emitted by each block: "-" none, E threshold_entered,
+#           R threshold_cleared, Q measurement_quality_changed (QR = both, in that order)
+# The local warning (red LED and buzzer) is on exactly when the state is F or C.
+
+below_limit_stays_normal        | 15 14.25 3000 2000 | 10 14 15 15 10          | N N N N N         | - - - - -
+brief_surge_returns_to_normal   | 15 14.25 3000 2000 | 10 20 20 10 10          | N P P N N         | - - - - -
+sustained_fires_after_confirm   | 15 14.25 3000 2000 | 10 20 20 20 20          | N P P F F         | - - - E -
+firing_clears_after_clear_ms    | 15 14.25 3000 2000 | 20 20 20 10 10 10       | P P F C N N       | - - E - R -
+clearing_returns_to_firing      | 15 14.25 3000 2000 | 20 20 20 10 15 10 10    | P P F C F C N     | - - E - - - R
+between_clear_and_limit_fires   | 15 14.25 3000 2000 | 20 20 20 14.5 14.25 20  | P P F F F F       | - - E - - -
+invalid_in_pending_to_normal    | 15 14.25 3000 2000 | 20 20 x 20 20 20        | P P N P P F       | - - Q Q - E
+invalid_never_confirms          | 15 14.25 3000 2000 | 20 x x x x 20           | P N N N N P       | - Q - - - Q
+invalid_never_clears            | 15 14.25 3000 2000 | 20 20 20 x x x 20       | P P F F F F F     | - - E Q - - Q
+invalid_pauses_clearing         | 15 14.25 3000 2000 | 20 20 20 10 x 10        | P P F C C N       | - - E - Q QR
+one_block_confirm_and_clear     | 15 14.25 1000 1000 | 20 10 20 10             | F N F N           | E R E R
+default_confirm_ten_seconds     | 15 14.25 10000 5000 | 20 20 20 20 20 20 20 20 20 20 10 10 10 10 10 | P P P P P P P P P F C C C C N | - - - - - - - - - E - - - - R

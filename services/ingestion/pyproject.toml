@@ -64,6 +64,7 @@ module = [
     "energy_ingestion.health.metrics",
     "energy_ingestion.health.node_status",
     "energy_ingestion.mqtt.pipeline",
+    "energy_ingestion.thresholds.alerts",
 ]
 disallow_untyped_calls = false
 warn_return_any = false

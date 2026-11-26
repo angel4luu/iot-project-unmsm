@@ -4,8 +4,10 @@
 // retained `offline` status as last will. Measurements go out QoS 1 with a 24 h
 // message expiry, oldest first, at most 10 in flight (queue.h); the record is
 // removed only when the server's application ACK says accepted or duplicate.
-// Status is retained and published on connect and every 30 s. All payloads are
-// built by serialize.c.
+// Status is retained and published on connect and every 30 s. Node events (threshold
+// and quality changes, event_queue.h) go out QoS 1 with the same expiry and leave
+// their queue on the broker's PUBACK. The retained threshold config is subscribed
+// on connect and handed to `on_config`. All payloads are built by serialize.c.
 //
 // The broker certificate is verified against the provisioned CA with the expected
 // name "mosquitto" (its SAN), so the node may reach the broker by LAN address.
@@ -15,6 +17,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "event_queue.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "provisioning.h"
@@ -32,7 +35,10 @@ typedef struct {
     const prov_config_t *prov;
     const node_identity_t *id;
     telemetry_queue_t *queue;
+    event_queue_t *events; // guarded by queue_lock too
     SemaphoreHandle_t queue_lock;
+    // Retained config payload (MQTT task context; not NUL-terminated). May be NULL.
+    void (*on_config)(const char *json, size_t len);
     const char *last_will_json; // serialized offline status (retained)
 } telemetry_mqtt_cfg_t;
 

@@ -222,20 +222,20 @@ locally and remotely, and the node still warns locally with the server stopped
 
 ### Tests for User Story 3
 
-- [ ] T076 [P] [US3] Firmware unit tests for the local state machine (`normal --value > limit--> pending`, `pending --confirmed for confirm_ms--> firing`, `pending --value <= limit or invalid--> normal`, `firing --value < clear_below_W--> clearing`, `clearing --below for clear_ms--> resolved --> normal`, `clearing --value >= clear_below_W--> firing`; invalid data never confirms or clears) in `firmware/test/host/test_threshold.c`
-- [ ] T077 [P] [US3] Firmware unit tests for config handling (bounds `active_power_limit_W` "`>0` and `<=25`", `confirm_ms` "1,000–300,000; default 10,000", `clear_below_W` "`>=0` and `< active_power_limit_W`", rollback rejection) in `firmware/test/host/test_config.c`
-- [ ] T078 [P] [US3] Ingestion tests for alert lifecycle (`open -> acknowledged -> resolved`, open may resolve directly, acknowledgment never clears the physical condition, append-only `AlertTransition`) and event/config/measurement cross-check raising a health alert on disagreement, in `services/ingestion/tests/test_alerts.py`
-- [ ] T079 [P] [US3] Outbox tests (states `pending`, `sending`, `delivered`, `failed_terminal`; exponential backoff with jitter; idempotency on `alert_id`; provider failure never blocks storage) in `services/ingestion/tests/test_outbox.py`
-- [ ] T080 [US3] Simulated alert acceptance (60 episodes: 20 sustained, 20 brief surges shorter than `confirm_ms`, 20 below the limit; surge vs sustained, local ≤2 s, remote ≤10 s, server-down local warning) in `tests/acceptance/test_us3_alerts.py`
+- [X] T076 [P] [US3] Firmware unit tests for the local state machine (`normal --value > limit--> pending`, `pending --confirmed for confirm_ms--> firing`, `pending --value <= limit or invalid--> normal`, `firing --value < clear_below_W--> clearing`, `clearing --below for clear_ms--> resolved --> normal`, `clearing --value >= clear_below_W--> firing`; invalid data never confirms or clears) in `firmware/test/host/test_threshold.c`
+- [X] T077 [P] [US3] Firmware unit tests for config handling (bounds `active_power_limit_W` "`>0` and `<=25`", `confirm_ms` "1,000–300,000; default 10,000", `clear_below_W` "`>=0` and `< active_power_limit_W`", rollback rejection) in `firmware/test/host/test_config.c`
+- [X] T078 [P] [US3] Ingestion tests for alert lifecycle (`open -> acknowledged -> resolved`, open may resolve directly, acknowledgment never clears the physical condition, append-only `AlertTransition`) and event/config/measurement cross-check raising a health alert on disagreement, in `services/ingestion/tests/test_alerts.py`
+- [X] T079 [P] [US3] Outbox tests (states `pending`, `sending`, `delivered`, `failed_terminal`; exponential backoff with jitter; idempotency on `alert_id`; provider failure never blocks storage) in `services/ingestion/tests/test_outbox.py`
+- [X] T080 [US3] Simulated alert acceptance (60 episodes: 20 sustained, 20 brief surges shorter than `confirm_ms`, 20 below the limit; surge vs sustained, local ≤2 s, remote ≤10 s, server-down local warning) in `tests/acceptance/test_us3_alerts.py`
 
 ### Implementation for User Story 3
 
-- [ ] T081 [US3] Implement retained config reception, NVS storage of the last accepted version, and rollback rejection in `firmware/components/threshold/config.c`
-- [ ] T082 [US3] Implement the 1 s threshold state machine, node events (`threshold_entered`, `threshold_cleared`, `measurement_quality_changed`), and buzzer/red LED only in `firing`/`clearing` (no relay, FR-016) in `firmware/components/threshold/threshold.c`
-- [ ] T083 [P] [US3] Implement `energyctl` (validate versioned YAML, store and audit, publish retained config; reject limits above 25 W) in `services/ingestion/src/energy_ingestion/cli/energyctl.py` with `config/thresholds.example.yaml`
-- [ ] T084 [US3] Implement event-to-alert handling, transitions, and cross-check in `services/ingestion/src/energy_ingestion/thresholds/alerts.py`
-- [ ] T085 [US3] Implement the notification outbox worker with a generic outbound HTTPS webhook adapter (runtime-only token, redacted errors; provider choice is open decision 6) in `services/ingestion/src/energy_ingestion/notifications/outbox.py`
-- [ ] T086 [US3] Add panel 7 (alert table/history with evidence, severity, state, notification state, transition times) to `dashboards/energy-overview.json`
+- [X] T081 [US3] Implement retained config reception, NVS storage of the last accepted version, and rollback rejection in `firmware/components/threshold/config.c`
+- [X] T082 [US3] Implement the 1 s threshold state machine, node events (`threshold_entered`, `threshold_cleared`, `measurement_quality_changed`), and buzzer/red LED only in `firing`/`clearing` (no relay, FR-016) in `firmware/components/threshold/threshold.c`
+- [X] T083 [P] [US3] Implement `energyctl` (validate versioned YAML, store and audit, publish retained config; reject limits above 25 W) in `services/ingestion/src/energy_ingestion/cli/energyctl.py` with `config/thresholds.example.yaml`
+- [X] T084 [US3] Implement event-to-alert handling, transitions, and cross-check in `services/ingestion/src/energy_ingestion/thresholds/alerts.py`
+- [X] T085 [US3] Implement the notification outbox worker with a generic outbound HTTPS webhook adapter (runtime-only token, redacted errors; provider choice is open decision 6) in `services/ingestion/src/energy_ingestion/notifications/outbox.py`
+- [X] T086 [US3] Add panel 7 (alert table/history with evidence, severity, state, notification state, transition times) to `dashboards/energy-overview.json`
 - [ ] T087 [US3] [HW] Alert run on the 12 V loop (limit about 15 W; 10 episodes of 60 s: 5 bulb on → alert, 5 bulb off → no alert or clear; the cold-filament inrush must not alert; server stopped for the local-warning case) recorded in `experiments/manifests/alerts-YYYYMMDD.json`
 
 **Checkpoint**: All three stories work independently and together.

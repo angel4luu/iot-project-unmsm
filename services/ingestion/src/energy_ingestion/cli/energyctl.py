@@ -18,8 +18,13 @@ Calibration rows are immutable once accepted (database triggers).
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
+import logging
+import os
 import re
+import secrets
+import ssl
 import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -27,21 +32,25 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+import paho.mqtt.client as mqtt
 import yaml
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
+from energy_ingestion.contracts.topics import topic_for
 from energy_ingestion.contracts.validate import ContractError, validate_payload
 from energy_ingestion.persistence.db import (
     CalibrationArtifact,
     Circuit,
     MonitoringNode,
+    ThresholdConfiguration,
     make_engine,
     make_session_factory,
     sqlite_url,
     transaction,
 )
+from energy_ingestion.persistence.influx import InfluxWriter
 
 MVP_MAX_LIMIT_W = Decimal(25)  # plan: 20 W bulb on a 2 A adapter; wire bound is larger
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
@@ -268,6 +277,191 @@ def threshold_validate(path: Path) -> dict[str, Any]:
     return {"valid": str(path), "node_id": doc["node_id"], "limit_W": float(limit)}
 
 
+def publish_threshold_config(node_id: str, payload: bytes) -> None:
+    """Publish retained config as the authenticated ingestion service identity."""
+    try:
+        ca_file = os.environ["MQTT_CA_FILE"]
+        cert_file = os.environ["MQTT_CERT_FILE"]
+        key_file = os.environ["MQTT_KEY_FILE"]
+    except KeyError as exc:
+        raise UsageError(f"missing MQTT client configuration: {exc.args[0]}") from exc
+    client = mqtt.Client(
+        callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+        client_id=f"energyctl-{node_id}-{secrets.token_hex(4)}",
+        protocol=mqtt.MQTTv5,
+    )
+    host = os.environ.get("MQTT_HOST", "mosquitto")
+    try:
+        port = int(os.environ.get("MQTT_PORT", "8883"))
+        ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_file)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+        ctx.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        client.tls_set_context(ctx)
+        client.connect(host, port, keepalive=30)
+        client.loop_start()
+        info = client.publish(topic_for(node_id, "config"), payload, qos=1, retain=True)
+        info.wait_for_publish(timeout=10)
+        if not info.is_published():
+            raise TimeoutError("broker did not acknowledge retained threshold config")
+    except Exception as exc:
+        raise UsageError(f"threshold config publish failed: {type(exc).__name__}") from exc
+    finally:
+        try:
+            client.disconnect()
+            client.loop_stop()
+        except Exception as exc:
+            logging.getLogger(__name__).warning(
+                "threshold MQTT client cleanup failed: %s", type(exc).__name__
+            )
+
+
+def threshold_publish(
+    sessions: sessionmaker[Session],
+    path: Path,
+    created_by: str,
+    publisher: Any | None = None,
+) -> dict[str, Any]:
+    """Validate, persist, and publish one strictly newer threshold revision."""
+    if not created_by.strip():
+        raise UsageError("--by: the operating user is required")
+    threshold_validate(path)
+    doc = _load_yaml(path)
+    effective_at = doc["effective_at"]
+    if isinstance(effective_at, datetime):
+        effective_at = (
+            effective_at.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        )
+    doc["effective_at"] = str(effective_at)
+    wire_payload = json.dumps(doc, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    limit = _decimal("active_power_limit_W", doc["active_power_limit_W"])
+    clear = _decimal("clear_below_W", doc["clear_below_W"])
+    node_id = str(doc["node_id"])
+    circuit_id = str(doc["circuit_id"])
+    config_version = int(doc["config_version"])
+    effective = datetime.fromisoformat(doc["effective_at"].replace("Z", "+00:00"))
+
+    with transaction(sessions) as session:
+        if session.get(MonitoringNode, node_id) is None:
+            raise UsageError(f"node {node_id} is not registered")
+        circuit = session.get(Circuit, circuit_id)
+        if circuit is None or circuit.node_id != node_id:
+            raise UsageError(f"circuit {circuit_id} is not registered to node {node_id}")
+        latest = session.scalar(
+            select(func.max(ThresholdConfiguration.config_version)).where(
+                ThresholdConfiguration.node_id == node_id
+            )
+        )
+        if latest is not None and config_version <= latest:
+            raise UsageError(
+                f"config_version {config_version} must be greater than stored version {latest}"
+            )
+        session.add(
+            ThresholdConfiguration(
+                node_id=node_id,
+                config_version=config_version,
+                circuit_id=circuit_id,
+                active_power_limit_w=limit,
+                confirm_ms=int(doc["confirm_ms"]),
+                clear_below_w=clear,
+                clear_ms=int(doc["clear_ms"]),
+                severity=str(doc["severity"]),
+                local_warning_enabled=bool(doc["local_warning_enabled"]),
+                effective_at=effective,
+                created_by=created_by.strip(),
+            )
+        )
+        session.flush()
+        (publisher or publish_threshold_config)(node_id, wire_payload)
+
+    return {
+        "node_id": node_id,
+        "config_version": config_version,
+        "created_by": created_by.strip(),
+        "stored": True,
+        "published": True,
+    }
+
+
+def threshold_show(sessions: sessionmaker[Session], node_id: str) -> dict[str, Any]:
+    with sessions() as session:
+        row = session.scalar(
+            select(ThresholdConfiguration)
+            .where(ThresholdConfiguration.node_id == node_id)
+            .order_by(ThresholdConfiguration.config_version.desc())
+            .limit(1)
+        )
+        if row is None:
+            raise UsageError(f"no threshold configuration stored for node {node_id}")
+        return {
+            "node_id": row.node_id,
+            "config_version": row.config_version,
+            "circuit_id": row.circuit_id,
+            "active_power_limit_W": row.active_power_limit_w,
+            "confirm_ms": row.confirm_ms,
+            "clear_below_W": row.clear_below_w,
+            "clear_ms": row.clear_ms,
+            "severity": row.severity,
+            "local_warning_enabled": row.local_warning_enabled,
+            "effective_at": row.effective_at,
+            "created_by": row.created_by,
+        }
+
+
+def _alert_document(alert: Any) -> dict[str, Any]:
+    return {
+        "alert_id": alert.alert_id,
+        "event_id": alert.event_id,
+        "node_id": alert.node_id,
+        "circuit_id": alert.circuit_id,
+        "kind": alert.kind,
+        "severity": alert.severity,
+        "status": alert.status,
+        "opened_at": alert.opened_at,
+        "acknowledged_at": alert.acknowledged_at,
+        "resolved_at": alert.resolved_at,
+        "observed_value": alert.observed_value,
+        "threshold_value": alert.threshold_value,
+        "unit": alert.unit,
+        "quality": alert.quality,
+    }
+
+
+def alert_list(sessions: sessionmaker[Session], status: str | None) -> list[dict[str, Any]]:
+    try:
+        from energy_ingestion.thresholds import alerts
+    except ImportError as exc:
+        raise UsageError("alert lifecycle is not available") from exc
+    with sessions() as session:
+        return [_alert_document(row) for row in alerts.list_alerts(session, status)]
+
+
+def alert_ack(
+    sessions: sessionmaker[Session],
+    alert_id: str,
+    actor: str,
+    writer: InfluxWriter | None = None,
+) -> dict[str, Any]:
+    if not actor.strip():
+        raise UsageError("--by: the operating user is required")
+    try:
+        from energy_ingestion.thresholds import alerts
+    except ImportError as exc:
+        raise UsageError("alert lifecycle is not available") from exc
+    try:
+        with transaction(sessions) as session:
+            now = datetime.now(UTC)
+            if writer is None:
+                row = alerts.acknowledge(session, alert_id, actor.strip(), now)
+            else:
+                row = alerts.acknowledge(session, alert_id, actor.strip(), now, writer=writer)
+            result = _alert_document(row)
+    except KeyError as exc:
+        raise UsageError(f"alert {alert_id} not found") from exc
+    except ValueError as exc:
+        raise UsageError(str(exc)) from exc
+    return result
+
+
 # ---- entry point -----------------------------------------------------------------
 
 
@@ -300,12 +494,60 @@ def build_parser() -> argparse.ArgumentParser:
     )
     val = thr.add_parser("validate", help="check a threshold YAML file (limit at most 25 W)")
     val.add_argument("file", type=Path)
+    pub = thr.add_parser("publish", help="store and publish a retained threshold config")
+    pub.add_argument("file", type=Path)
+    pub.add_argument("--by", required=True, help="operating user")
+    show = thr.add_parser("show", help="show the latest stored threshold config")
+    show.add_argument("node")
+
+    alert = sub.add_parser("alert", help="alert lifecycle")
+    alert_sub = alert.add_subparsers(dest="cmd", required=True)
+    alert_list_parser = alert_sub.add_parser("list", help="list alerts")
+    alert_list_parser.add_argument("--status", choices=("open", "acknowledged", "resolved"))
+    ack = alert_sub.add_parser("ack", help="acknowledge an alert")
+    ack.add_argument("alert_id")
+    ack.add_argument("--by", default=getpass.getuser(), help="operating user")
     return p
 
 
 def run(args: argparse.Namespace) -> Any:
     if (args.group, args.cmd) == ("threshold", "validate"):
         return threshold_validate(args.file)
+    if args.group == "alert":
+        engine = make_engine(args.db or sqlite_url())
+        sessions = make_session_factory(engine)
+        try:
+            if args.cmd == "list":
+                return alert_list(sessions, args.status)
+            try:
+                writer = InfluxWriter.from_env()
+            except (KeyError, OSError) as exc:
+                logging.getLogger(__name__).warning(
+                    "alert acknowledgment operations writer unavailable: %s",
+                    type(exc).__name__,
+                )
+                writer = None
+            try:
+                return alert_ack(sessions, args.alert_id, args.by, writer)
+            finally:
+                if writer is not None:
+                    writer.close()
+        finally:
+            engine.dispose()
+    if args.group == "threshold" and args.cmd == "publish":
+        engine = make_engine(args.db or sqlite_url())
+        sessions = make_session_factory(engine)
+        try:
+            return threshold_publish(sessions, args.file, args.by)
+        finally:
+            engine.dispose()
+    if args.group == "threshold" and args.cmd == "show":
+        engine = make_engine(args.db or sqlite_url())
+        sessions = make_session_factory(engine)
+        try:
+            return threshold_show(sessions, args.node)
+        finally:
+            engine.dispose()
     engine = make_engine(args.db or sqlite_url())
     sessions = make_session_factory(engine)
     try:

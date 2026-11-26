@@ -542,13 +542,61 @@
       ]
     },
     {
+      "id": 7,
+      "type": "table",
+      "title": "Alert history — evidence, state, and webhook delivery",
+      "description": "Transitions and latest notification state. Measurement-derived values remain NOT VALIDATED.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-energy"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "NO ALERTS"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-energy"
+          },
+          "query": "// Panel 7 — alert evidence, state transitions, and latest webhook delivery state.\nimport \"join\"\n\ntransitions = from(bucket: \"operations\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"alert_transition\" and r.node_id == \"${node}\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"alert_id\", \"from_status\", \"actor\", \"reason\", \"observed_value\", \"threshold_value\", \"notification_state\"]))\n    |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n    |> rename(columns: {to_status: \"status\"})\n    |> keep(columns: [\"_time\", \"node_id\", \"kind\", \"severity\", \"status\", \"alert_id\", \"from_status\", \"actor\", \"reason\", \"observed_value\", \"threshold_value\", \"notification_state\"])\n    |> group(columns: [\"alert_id\"])\n\nnotifications = from(bucket: \"operations\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"alert_notification\" and r.node_id == \"${node}\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"alert_id\", \"attempt_count\", \"last_error_code\"]))\n    |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n    |> rename(columns: {state: \"latest_notification_state\", attempt_count: \"latest_attempt_count\", last_error_code: \"latest_error_code\"})\n    |> keep(columns: [\"_time\", \"alert_id\", \"latest_notification_state\", \"latest_attempt_count\", \"latest_error_code\"])\n    |> group(columns: [\"alert_id\"])\n    |> sort(columns: [\"_time\"])\n    |> last()\n\njoin.left(\n    left: transitions,\n    right: notifications,\n    on: (l, r) => l.alert_id == r.alert_id,\n    as: (l, r) => ({l with notification_state: if exists r.latest_notification_state then r.latest_notification_state else l.notification_state, latest_attempt_count: r.latest_attempt_count, latest_error_code: r.latest_error_code}),\n)\n    |> group()\n    |> sort(columns: [\"_time\"], desc: true)\n    |> yield(name: \"alert_history\")",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 6,
       "type": "row",
       "title": "Measurement quality",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 34,
+        "y": 43,
         "w": 24,
         "h": 1
       },
@@ -564,7 +612,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 44,
         "w": 8,
         "h": 8
       },
@@ -610,7 +658,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 35,
+        "y": 44,
         "w": 8,
         "h": 8
       },
@@ -657,7 +705,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 35,
+        "y": 44,
         "w": 8,
         "h": 8
       },
@@ -699,7 +747,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 43,
+        "y": 52,
         "w": 24,
         "h": 1
       },
@@ -715,7 +763,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 53,
         "w": 12,
         "h": 9
       },
@@ -794,7 +842,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 44,
+        "y": 53,
         "w": 6,
         "h": 9
       },
@@ -842,7 +890,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 44,
+        "y": 53,
         "w": 6,
         "h": 9
       },
@@ -889,7 +937,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 53,
+        "y": 62,
         "w": 12,
         "h": 5
       },

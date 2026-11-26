@@ -17,6 +17,11 @@ storage effect (plan, Telemetry, Delivery, and Clock Design):
 The application ACK is published only from `stored` or `rejected`. If InfluxDB
 fails, the exception propagates, no ACK is sent, and the MQTT layer withholds
 the PUBACK so the broker redelivers.
+
+Node events (user story 3) become alerts in `thresholds/alerts.py`, in one SQLite
+transaction with their outbox row; a redelivered event is idempotent on its
+`event_id`, and an SQLite failure propagates so the broker redelivers it. The last
+valid windows of each node are kept in memory for the event cross-check.
 """
 
 from __future__ import annotations
@@ -24,6 +29,7 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections import deque
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -32,7 +38,7 @@ from typing import Any, Protocol
 from influxdb_client import Point, WritePrecision
 from sqlalchemy.orm import Session, sessionmaker
 
-from energy_ingestion.contracts.models import Measurement
+from energy_ingestion.contracts.models import Measurement, NodeEvent
 from energy_ingestion.contracts.topics import check_identity, parse_topic, topic_for
 from energy_ingestion.contracts.validate import ContractError, validate_payload
 from energy_ingestion.health.metrics import PipelineMetrics
@@ -49,9 +55,11 @@ from energy_ingestion.persistence.influx import (
     PointWriter,
     measurement_point,
 )
+from energy_ingestion.thresholds import alerts
 
 LOG = get_logger("pipeline")
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+RECENT_WINDOWS = 120  # 10 min of 5 s windows per node, for the event cross-check
 SCHEMA_FOR_CHANNEL = {
     "measurements": "measurement",
     "events": "node-event",
@@ -118,6 +126,7 @@ class IngestPipeline:
         self.metrics = metrics or PipelineMetrics()
         self.tracker = tracker or NodeStatusTracker()
         self.clock = clock
+        self.recent: dict[str, deque[alerts.RecentWindow]] = {}
 
     # ---- entry point ----------------------------------------------------------------
 
@@ -182,8 +191,16 @@ class IngestPipeline:
             ledger.mark_stored(fresh, stored_at)
             stored_at = fresh.stored_at
         self._seen(node_id, m.window.end, received_at)
+        self._remember(m)
         self.metrics.latency(_ms(self.clock() - received_at))
         return self._ack(ident, "accepted", None, stored_at, "accepted", count=True)
+
+    def _remember(self, m: Measurement) -> None:
+        power = m.measurements.active_power.value
+        if m.quality.state != "valid" or power is None:
+            return
+        window = alerts.RecentWindow(m.window.start, m.window.end, float(power))
+        self.recent.setdefault(m.node_id, deque(maxlen=RECENT_WINDOWS)).append(window)
 
     def _outside_retention(
         self, node_id: str, ident: ledger.MessageIdentity, sha: str, received_at: datetime
@@ -274,8 +291,24 @@ class IngestPipeline:
             for t in self.tracker.on_status(doc, received_at):
                 log_event(LOG, "node_state_changed", node_id=t.node_id, result=t.new, reason=t.old)
             self.write_status(received_at)
-        # Events become alerts in user story 3 (T071+); here they are validated only.
-        return Outcome("valid")
+            return Outcome("valid")
+        return self._node_event(NodeEvent.model_validate(doc), received_at)
+
+    def _node_event(self, ev: NodeEvent, received_at: datetime) -> Outcome:
+        recent = tuple(self.recent.get(ev.node_id, ()))
+        with transaction(self.sessions) as s:
+            result = alerts.handle_event(s, ev, received_at, recent)
+            points = alerts.take_points(s)
+        alerts.write_points(self.writer, points)  # after commit; failures are logged
+        log_event(
+            LOG,
+            "node_event",
+            node_id=ev.node_id,
+            message_id=str(ev.event_id),
+            result=result.result,
+            reason=ev.event_type,
+        )
+        return Outcome(result.result, ev.event_type)
 
     # ---- operations points ----------------------------------------------------------
 
