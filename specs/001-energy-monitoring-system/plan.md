@@ -415,7 +415,7 @@ instead of a relay bench.
   | GPIO8 | OLED SDA (I²C) | Module has its own pull-ups |
   | GPIO9 | OLED SCL (I²C) | |
   | GPIO16 | Buzzer driver (1 kΩ to 2N2222 base) | Active 5 V buzzer between 5 V and collector |
-  | GPIO17 / GPIO18 / GPIO21 | RGB LED red / green / blue | 470 Ω in series each; common cathode to GND |
+  | GPIO17 / GPIO18 / GPIO15 | RGB LED red / green / blue | 470 Ω in series each; common cathode to GND. Blue moved from GPIO21 to GPIO15 on 2026-11-26: with the board on one 830-point breadboard only the left header has free holes |
   | 3V3 | Bias divider, OLED VCC | |
   | 5V | ACS712 VCC (module has its own decoupling), buzzer | From the USB-C supply |
   | GND | Common ground of all low-voltage parts | |

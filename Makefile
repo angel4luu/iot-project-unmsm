@@ -118,6 +118,15 @@ infra-down: ## Stop the Compose stack (volumes are kept)
 simulate: ## Run the node simulator: make simulate SCENARIO=normal DURATION=10m
 	$(UV) python -m energy_ingestion.cli.simulate --scenario $(SCENARIO) --duration $(DURATION) $(SIM_ARGS)
 
+.PHONY: simulate-e2e
+simulate-e2e: ## Walkthrough node sim-e2e (guides/operations/e2e-walkthrough.md): make simulate-e2e SCENARIO=normal DURATION=2m
+	@test -s $(ROOT)/infrastructure/secrets/node-sim-e2e.crt || { echo 'run: make dev-certs CERT_NODES=sim-e2e'; exit 1; }
+	@echo "Sending $(SCENARIO) as sim-e2e for $(DURATION); it prints a summary only at the end."
+	$(UV) python -m energy_ingestion.cli.simulate --scenario $(SCENARIO) --duration $(DURATION) \
+	  --node-id sim-e2e --circuit-id sim-e2e-load \
+	  --cert $(ROOT)/infrastructure/secrets/node-sim-e2e.crt \
+	  --key $(ROOT)/infrastructure/secrets/node-sim-e2e.key $(SIM_ARGS)
+
 ACCEPTANCE_DURATION_S ?= 3600
 
 acceptance-simulated: ## Simulated acceptance run, US1 (SC-002, SC-006); 1 h by default (needs infra-up)
@@ -177,7 +186,8 @@ BRINGUP_APPS := stage1_board stage2_peripherals stage34_adc_logger
 .PHONY: firmware-build-bringup
 firmware-build-bringup: ## Compile-check the build guide stage 1-4 bring-up apps
 	source $(IDF_EXPORT) >/dev/null && for app in $(BRINGUP_APPS); do \
-	  idf.py -C $(FIRMWARE)/bringup/$$app build >/dev/null && echo "$$app: built"; done
+	  idf.py -C $(FIRMWARE)/bringup/$$app build >/dev/null && echo "$$app: built" \
+	    || { echo "$$app: BUILD FAILED (run idf.py -C $(FIRMWARE)/bringup/$$app build)"; exit 1; }; done
 
 firmware-flash-test-fixtures: ## On-target tests and fixture replay (board needed)
 	$(call planned,T101 [HW])

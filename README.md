@@ -15,19 +15,46 @@ about it.
 |---|---|
 | System specification (the source of truth) | [specs/001-energy-monitoring-system/](specs/001-energy-monitoring-system/) |
 | Prototype build guide, in Spanish (wiring, checks, safety) | [hardware/build-guide.md](hardware/build-guide.md) |
+| Bench integration, step by step (M1–M9, full kit) | [hardware/integration-roadmap.md](hardware/integration-roadmap.md) |
+| Bench integration without the OLED and the 12 V adapter (the guide we follow now; derived from the one above) | [hardware/integration-roadmap-no-oled-no-adapter.md](hardware/integration-roadmap-no-oled-no-adapter.md) |
+| Bench results, one dated entry per session (source for the article) | [experiments/bench-log.md](experiments/bench-log.md) |
+| Guided end-to-end walkthrough with the simulated node | [guides/operations/e2e-walkthrough.md](guides/operations/e2e-walkthrough.md) |
 | Article (LaTeX) and its tracker | [article/](article/) · [article/README.md](article/README.md) |
 | Rules for AI assistants | [CLAUDE.md](CLAUDE.md), [AGENTS.md](AGENTS.md) |
 
 Build the article: `make -C article` → `article/build/main.pdf`
 
+## Continue the bench work (for teammates)
+
+We are at **M5-lite** of the reduced-kit guide
+[integration-roadmap-no-oled-no-adapter.md](hardware/integration-roadmap-no-oled-no-adapter.md)
+(we don't have the OLED or the 12 V AC adapter yet). That guide follows the full
+[integration-roadmap.md](hardware/integration-roadmap.md) and says which steps to skip
+and how to add the missing parts later (add-ons A, B, C). Every session's results,
+including failures, are in [experiments/bench-log.md](experiments/bench-log.md); add a
+new entry there each time you work at the bench.
+
+| Milestone | State (2026-11-27) |
+|---|---|
+| M1 board alone | ✅ |
+| M2-lite LED, buzzer | ✅ LED works · ⏸ buzzer seems broken, replacement to buy (add-on C) |
+| M3-lite voltage channel | 🔄 circuit correct; reading only stable when the board is pressed down |
+| M4 current channel | 🔄 fails: the current sensor's signal doesn't reach the board (check its power and wiring, see bench log E-005) |
+| M5-lite full device software | 🔄 runs as expected (no screen, no server yet); current reading wrong until M4 passes |
+| M6-lite device ↔ server, hybrid rehearsal, add-ons, final test | ⬜ |
+
+Before testing again: re-seat the ESP32 on the breadboard (its power pins at the USB
+end make contact only when pressed), and fix M4. The PC and the board must be on the
+same phone hotspot for M6.
+
 ## Status at a glance
 
 | Track | Where we are | Next |
 |---|---|---|
-| System | Simulated version works end to end (a fake node's readings are checked, stored once, acknowledged, and shown on the dashboard with STALE/OFFLINE/NO DATA and a "not validated" label). The ESP32 software is now complete and builds: it measures volts, amps, watts and watt-hours, marks each reading valid/degraded/invalid, keeps unsent readings while offline, sends them over the encrypted link, and drives the screen, LED and buzzer; all of this passes its tests on the PC. The script that checks the bulb readings against the bulb's label is ready. History views work on a simulated week: energy per hour, day and week, and the busiest hour shown on the dashboard. Alerts work in simulation: a sustained excess turns on the red LED and buzzer and sends a remote alert; brief surges do not. Alerts reach a phone through ntfy in Spanish (checked on a real phone) | Wire the board and run the stage 1–4 test apps; then the 12 V loop check (adapter unplugged) and nominal calibration |
+| System | Real board on the breadboard: board, LED and full device software run; voltage channel wired; current channel being debugged; no screen or 12 V adapter yet, so we follow a reduced-kit guide (see "Continue the bench work"). Simulated version works end to end (a fake node's readings are checked, stored once, acknowledged, and shown on the dashboard with STALE/OFFLINE/NO DATA and a "not validated" label). The ESP32 software is now complete and builds: it measures volts, amps, watts and watt-hours, marks each reading valid/degraded/invalid, keeps unsent readings while offline, sends them over the encrypted link, and drives the screen, LED and buzzer; all of this passes its tests on the PC. The script that checks the bulb readings against the bulb's label is ready. History views work on a simulated week: energy per hour, day and week, and the busiest hour shown on the dashboard. Alerts work in simulation: a sustained excess turns on the red LED and buzzer and sends a remote alert; brief surges do not. Alerts reach a phone through ntfy in Spanish (checked on a real phone) | Fix the current channel (M4), re-seat the board, finish M5-lite, then connect the board to the server (M6-lite); buy the adapter, OLED and a new buzzer |
 | Article | Introduction done; Methodology adapted to the 12 V loop, revised after the reviewer's comments, and Fig. 1 redrawn as a component and deployment diagram (6 pages; the 5-page target is relaxed until we pick a venue) | Results, once the experiments run |
 
-*Last updated: 2026-11-25*
+*Last updated: 2026-11-27*
 
 ## Roadmap
 
@@ -41,6 +68,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | Simulated version | Server, database and dashboard working with fake data | ✅ Nov 25 (1-hour simulated run passed) |
 | Device software | Measuring and calculating on the ESP32 | ✅ Nov 25 on the PC (tests and build pass; still to try on the board) |
 | History views | Hourly, daily and weekly energy, busiest hour, daily data export (Phase 4) | 🔄 Nov 25: views, export, seven-day test data and the 10-minute outage test done; a timed check with a first-time user (sheet ready) and the outage run on the real board still to do |
+| Bench integration | Board, LED, voltage and current channels, full device software on the breadboard (M1–M5, reduced kit) | 🔄 Nov 27: M1 done, LED done, M3–M5 in progress; screen, adapter and buzzer missing |
 | Loop check and calibration | Team checks the 12 V bulb loop (adapter unplugged); nominal calibration and plausibility check against the bulb's label (no reference meter) | ⬜ |
 | Full system tests | Real device end to end, network-outage recovery, security | ⬜ |
 | Alerts | Local LED/buzzer and remote notifications | ✅ Nov 25 in simulation (60-episode run passed); ntfy phone alerts checked on a real phone (3.9 s); the bulb run on the real board (T087, bench sheet and scoring script ready) still to do |
@@ -74,6 +102,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 | 6 | ~~Which service sends remote alerts~~ Decided 2026-11-25: ntfy on the free ntfy.sh service. Its free tier cannot lock a topic, so the secret topic name (chosen by the team) is the only protection; the team accepted that for the lab (messages hold no private data). Adapter done; checked on a real phone (3.9 s) | — |
 | 10 | Screen model: SSD1306 or SH1106 (the second needs a one-line setting change); check the module when the board is wired | Screen on the board |
 | 12 | ~~Overload above the calibrated range (over 2.0 A) never sounds the buzzer~~ Decided 2026-11-25: a reading that is only "too high for the range" counts as above the limit (never toward clearing); spec, firmware and server updated (T107) | — |
+| 13 | Buy the 12 V AC adapter, the OLED and a replacement buzzer (the first buzzer stayed silent; to retest once the board is re-seated) | Calibration and bulb tests (adapter); screen (OLED); buzzer results |
 | 11 | Circuit name is fixed in the device software as `lab-load-001`; fine for one bulb loop, needs a setup field if we ever monitor more than one circuit | Nothing for the demo |
 
 ## Key decisions made
@@ -89,6 +118,7 @@ Build the article: `make -C article` → `article/build/main.pdf`
 
 | Date | Update |
 |---|---|
+| 2026-11-27 | Bench work started on the real board. M1: board, USB and Wi-Fi on the phone hotspot pass. LED works after fixing its placement; the buzzer stays silent and is set aside until a new one arrives. Voltage channel wired; it reads the expected rest value only while the board is pressed down, so the board must be re-seated. Current sensor wired but its signal doesn't reach the board yet. The full device software runs on the board without screen or server, as planned. New guides: full bench roadmap (M1–M9), a reduced-kit version for working without the OLED and adapter (with steps to add them later), a guided end-to-end walkthrough, and the bench log with every session's results. Blue LED pin moved to GPIO15 (spec, firmware, build guide and article figure updated). Dashboard and node-setup fixes found while testing |
 | 2026-11-25 | Alerts follow-up (T107–T110): an overload beyond the sensor's range now counts as above the limit and keeps the alarm on (spec, device and server changed, tested on the PC). For the real-board alert test (T087) there is now a Spanish bench sheet (5 bulb-on, 5 bulb-off, 1 with the server stopped) and a script that scores the run and saves the evidence with one command (`make alerts-run`). Remote alerts can now go to phones through ntfy, with Spanish title and text; tested end to end with a fake ntfy server (alert reached it within 10 s). The free ntfy service cannot lock a topic, so the secret topic name protects it (accepted, see decision 6). Real-phone check (T110): a simulated alert reached the phone in Spanish 3.9 s after the device event (target 10 s). The first try failed only because the server was still running an old build; rebuilt and passed |
 | 2026-11-25 | Three decisions after the alerts phase: remote alerts will go through ntfy (Telegram as fallback); an overload beyond the sensor's calibrated range will also sound the local alarm (spec change to come); the alert test on the real board (T087) runs in the same bench session as the loop check and calibration, with the 15 W example limit |
 | 2026-11-25 | Alerts, Phase 5 (11 tasks; notification sender, `energyctl` commands and dashboard panel 7 by Codex, reviewed): the ESP32 checks the power every second; only a value above the limit for the whole confirmation time (default 10 s) turns on the red LED and buzzer, and they stay on until the power has been back under 95 % of the limit for the clearing time. Bad readings never count as zero and never switch the alert off; they raise a separate "measurement quality" alert. The limit is set with `energyctl` (at most 25 W), stored on the device, and an older setting can never replace a newer one. The server turns device events into alerts (open → acknowledged → resolved, every step recorded), checks them against the stored limit and the recent readings, and sends each new alert once to a web address, retrying if it fails. Simulated run of 60 episodes: all 20 sustained excesses alerted and cleared, none of the 20 brief surges or 20 below-limit runs did; local warning within 0.5 s, remote alert within 3.5 s (targets 2 s and 10 s); with the server stopped the local warning still worked and the alert arrived once the server was back. Still open: which notification service to use (decision 6), and the bulb run on the real board |

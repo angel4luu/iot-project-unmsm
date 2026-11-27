@@ -104,3 +104,16 @@ def test_send_reports_refusal_without_values() -> None:
     with pytest.raises(RuntimeError, match="invalid_value wifi_pass") as exc:
         prov.send(link, ["set wifi_pass 7365637265742d70617373"])
     assert "7365637265742d70617373" not in str(exc.value)
+
+
+def test_sync_clears_a_partial_line_before_the_session() -> None:
+    """Keys left by a serial monitor end in an error reply, then `abort` answers ok."""
+    link = FakeLink([b"PROV err unknown_command\n", b"PROV ok\n"])
+    prov.sync(link)
+    assert link.sent == [b"\nabort\n"]
+
+
+def test_sync_times_out_when_the_node_is_silent() -> None:
+    link = FakeLink([b""] * 1000)
+    with pytest.raises(TimeoutError, match="waiting for provisioning"):
+        prov.sync(link, timeout_s=0.0)

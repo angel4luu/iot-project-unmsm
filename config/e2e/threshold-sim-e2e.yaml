@@ -1,0 +1,14 @@
+# Walkthrough node `sim-e2e` (guides/operations/e2e-walkthrough.md, case 5).
+# Matches the simulator defaults: limit 22 W, clear below 95 % (20.9 W),
+# confirm 10 s, clear 5 s. Simulated values, NOT VALIDATED.
+schema_version: "1.0.0"
+config_version: 1
+node_id: sim-e2e
+circuit_id: sim-e2e-load
+effective_at: "2026-11-26T00:00:00.000Z"
+active_power_limit_W: 22.0
+confirm_ms: 10000
+clear_below_W: 20.9
+clear_ms: 5000
+severity: warning
+local_warning_enabled: true

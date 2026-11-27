@@ -24,7 +24,7 @@
 \foreach \y/\t in {6.6/3V3, 6.0/5V, 5.4/GND, 3.8/GPIO4 (ADC1), -1.7/GPIO5 (ADC1)}
   \node[pin, anchor=west] at (\BL,\y) {\t};
 % right pins
-\foreach \y/\t in {6.6/GPIO8 (SDA), 6.0/GPIO9 (SCL), 2.0/GPIO16, 1.0/GPIO17, 0.2/GPIO18, -0.6/GPIO21}
+\foreach \y/\t in {6.6/GPIO8 (SDA), 6.0/GPIO9 (SCL), 2.0/GPIO16, 1.0/GPIO17, 0.2/GPIO18, -0.6/GPIO15}
   \node[pin, anchor=east] at (\BR,\y) {\t};
 % supply pins as net symbols
 \draw (\BL,6.6) -- (7.2,6.6) node[vcc] {}; \node[lbl, anchor=east] at (7.15,6.85) {3,3 V};

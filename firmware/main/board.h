@@ -23,7 +23,9 @@
 // RGB status LED, common cathode, 470 Ohm in series with each anode.
 #define BOARD_PIN_LED_RED 17
 #define BOARD_PIN_LED_GREEN 18
-#define BOARD_PIN_LED_BLUE 21
+// Blue is on GPIO15 (left header) so a breadboard-mounted N16R8 board, whose right
+// header has no free hole, can reach it (bench, 2026-11-26).
+#define BOARD_PIN_LED_BLUE 15
 
 #define BOARD_PIN_FORBIDDEN(p)                                                                     \
     ((p) == 0 || (p) == 3 || (p) == 45 || (p) == 46 || (p) == 19 || (p) == 20 ||                   \

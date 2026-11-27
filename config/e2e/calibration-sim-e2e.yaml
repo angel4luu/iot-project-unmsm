@@ -1,0 +1,14 @@
+# Walkthrough node `sim-e2e` (guides/operations/e2e-walkthrough.md, case 2).
+# Simulator values: the revision name is the one the simulator puts in every window.
+calibration_revision: sim-e2e-nominal-r1
+node_id: sim-e2e
+hardware_revision: simulator
+firmware_commit: "0000000000000000000000000000000000000000"
+calibration_kind: nominal
+current_sensor_variant: 20A
+voltage_gain: 22.276596
+current_gain: 14.700000
+phase_correction_samples: 0.5
+zero_noise_current_a: 0.050
+procedure_version: nominal-calibration-v1
+dataset_manifest_sha256: "0000000000000000000000000000000000000000000000000000000000000000"

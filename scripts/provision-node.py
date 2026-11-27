@@ -133,6 +133,22 @@ def send(link: Link, lines: list[str], timeout_s: float = 10.0) -> None:
             raise RuntimeError(f"node refused {redacted(line)}: {reply.removeprefix('PROV ')}")
 
 
+def sync(link: Link, timeout_s: float = 10.0) -> None:
+    """Clear whatever is left in the node's input line before the real commands.
+
+    Keys typed in a serial monitor without Enter stay in the node's line buffer and
+    would corrupt the first `set` (found at the bench, 2026-11-26: `err
+    unknown_command`). A newline ends that partial line, whose error reply is
+    ignored; `abort` then starts an empty session and must answer `PROV ok`.
+    """
+    link.write(b"\nabort\n")
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() <= deadline:
+        if link.readline().decode("utf-8", "replace").strip() == "PROV ok":
+            return
+    raise TimeoutError("node did not answer; is it waiting for provisioning?")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--node-id", required=True)
@@ -151,6 +167,7 @@ def main(argv: list[str] | None = None) -> int:
     import serial  # only needed with a real port
 
     with serial.Serial(args.port, args.baud, timeout=1) as link:
+        sync(link)
         send(link, lines)
     print(f"{args.node_id}: provisioned (encrypted NVS)")
     return 0

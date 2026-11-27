@@ -583,7 +583,7 @@
             "type": "influxdb",
             "uid": "influxdb-energy"
           },
-          "query": "// Panel 7 — alert evidence, state transitions, and latest webhook delivery state.\nimport \"join\"\n\ntransitions = from(bucket: \"operations\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"alert_transition\" and r.node_id == \"${node}\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"alert_id\", \"from_status\", \"actor\", \"reason\", \"observed_value\", \"threshold_value\", \"notification_state\"]))\n    |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n    |> rename(columns: {to_status: \"status\"})\n    |> keep(columns: [\"_time\", \"node_id\", \"kind\", \"severity\", \"status\", \"alert_id\", \"from_status\", \"actor\", \"reason\", \"observed_value\", \"threshold_value\", \"notification_state\"])\n    |> group(columns: [\"alert_id\"])\n\nnotifications = from(bucket: \"operations\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"alert_notification\" and r.node_id == \"${node}\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"alert_id\", \"attempt_count\", \"last_error_code\"]))\n    |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n    |> rename(columns: {state: \"latest_notification_state\", attempt_count: \"latest_attempt_count\", last_error_code: \"latest_error_code\"})\n    |> keep(columns: [\"_time\", \"alert_id\", \"latest_notification_state\", \"latest_attempt_count\", \"latest_error_code\"])\n    |> group(columns: [\"alert_id\"])\n    |> sort(columns: [\"_time\"])\n    |> last()\n\njoin.left(\n    left: transitions,\n    right: notifications,\n    on: (l, r) => l.alert_id == r.alert_id,\n    as: (l, r) => ({l with notification_state: if exists r.latest_notification_state then r.latest_notification_state else l.notification_state, latest_attempt_count: r.latest_attempt_count, latest_error_code: r.latest_error_code}),\n)\n    |> group()\n    |> sort(columns: [\"_time\"], desc: true)\n    |> yield(name: \"alert_history\")",
+          "query": "// Panel 7 — alert evidence, state transitions, and latest webhook delivery state.\nimport \"join\"\nimport \"internal/debug\"\n\ntransitions = from(bucket: \"operations\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"alert_transition\" and r.node_id == \"${node}\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"alert_id\", \"from_status\", \"actor\", \"reason\", \"observed_value\", \"threshold_value\", \"notification_state\"]))\n    |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n    // health and quality alerts carry no values: give every row the same columns\n    |> map(fn: (r) => ({r with\n        observed_value: if exists r.observed_value then r.observed_value else debug.null(type: \"float\"),\n        threshold_value: if exists r.threshold_value then r.threshold_value else debug.null(type: \"float\"),\n    }))\n    |> rename(columns: {to_status: \"status\"})\n    |> keep(columns: [\"_time\", \"node_id\", \"kind\", \"severity\", \"status\", \"alert_id\", \"from_status\", \"actor\", \"reason\", \"observed_value\", \"threshold_value\", \"notification_state\"])\n    |> group(columns: [\"alert_id\"])\n\nnotifications = from(bucket: \"operations\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"alert_notification\" and r.node_id == \"${node}\")\n    |> filter(fn: (r) => contains(value: r._field, set: [\"alert_id\", \"attempt_count\", \"last_error_code\"]))\n    |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n    // `last_error_code` is written only on failures: add it where it is missing\n    |> map(fn: (r) => ({r with last_error_code: if exists r.last_error_code then r.last_error_code else \"\"}))\n    |> rename(columns: {state: \"latest_notification_state\", attempt_count: \"latest_attempt_count\", last_error_code: \"latest_error_code\"})\n    |> keep(columns: [\"_time\", \"alert_id\", \"latest_notification_state\", \"latest_attempt_count\", \"latest_error_code\"])\n    |> group(columns: [\"alert_id\"])\n    |> sort(columns: [\"_time\"])\n    |> tail(n: 1)  // latest delivery state per alert (`last()` needs a _value column)\n\njoin.left(\n    left: transitions,\n    right: notifications,\n    on: (l, r) => l.alert_id == r.alert_id,\n    as: (l, r) => ({l with notification_state: if exists r.latest_notification_state then r.latest_notification_state else l.notification_state, latest_attempt_count: r.latest_attempt_count, latest_error_code: r.latest_error_code}),\n)\n    |> group()\n    |> sort(columns: [\"_time\"], desc: true)\n    |> yield(name: \"alert_history\")\n",
           "rawQuery": true,
           "refId": "A"
         }
@@ -697,7 +697,7 @@
     },
     {
       "id": 63,
-      "type": "timeseries",
+      "type": "state-timeline",
       "title": "Clock source and calibration revision",
       "datasource": {
         "type": "influxdb",
@@ -712,20 +712,41 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "drawStyle": "staircase",
-            "lineWidth": 2,
-            "showPoints": "never"
+            "fillOpacity": 70,
+            "lineWidth": 0
           },
-          "mappings": []
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "sntp": {
+                  "color": "green",
+                  "index": 0
+                },
+                "holdover": {
+                  "color": "yellow",
+                  "index": 1
+                },
+                "unsynchronized": {
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
       "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "alignValue": "center",
+        "rowHeight": 0.8,
         "legend": {
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
-          "mode": "multi"
+          "mode": "single"
         }
       },
       "targets": [
@@ -994,7 +1015,7 @@
           "type": "influxdb",
           "uid": "influxdb-energy"
         },
-        "definition": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"operations\", measurement: \"node_status\", tag: \"node_id\")",
+        "definition": "import \"influxdata/influxdb/schema\"\nschema.measurementTagValues(bucket: \"operations\", measurement: \"node_status\", tag: \"node_id\")",
         "hide": 0,
         "includeAll": false,
         "label": "Node",
@@ -1006,7 +1027,7 @@
             "value": "node-001"
           }
         ],
-        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"operations\", measurement: \"node_status\", tag: \"node_id\")",
+        "query": "import \"influxdata/influxdb/schema\"\nschema.measurementTagValues(bucket: \"operations\", measurement: \"node_status\", tag: \"node_id\")",
         "refresh": 1,
         "regex": "",
         "type": "query"

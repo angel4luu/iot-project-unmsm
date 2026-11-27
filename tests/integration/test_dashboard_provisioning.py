@@ -21,6 +21,7 @@ from energy_ingestion.cli.simulate import SimulatedNode
 pytestmark = pytest.mark.integration
 DASH_UID = "energy-overview"
 DS_UID = "influxdb-energy"
+TRUNCATED = "A query returned too many datapoints"  # raw panels over 30 days
 
 
 @pytest.fixture(scope="module")
@@ -99,6 +100,79 @@ def test_history_panels_use_the_query_files(dashboard: dict[str, Any]) -> None:
     for panel_id, name in ((5, "hourly"), (51, "daily"), (52, "weekly"), (53, "peak_hour")):
         expected = (queries / f"{name}.flux").read_text(encoding="utf-8").strip()
         assert panel_query(dashboard["dashboard"], panel_id).strip() == expected, name
+
+
+def test_node_variable_lists_reporting_nodes(dashboard: dict[str, Any]) -> None:
+    """The `node` dropdown query runs and lists nodes that sent a status (found in the
+    2026-11-26 walkthrough: a wrong Flux argument left the dropdown empty)."""
+    (var,) = [v for v in dashboard["dashboard"]["templating"]["list"] if v["name"] == "node"]
+    body = {
+        "from": "now-30d",
+        "to": "now",
+        "queries": [
+            {
+                "refId": "A",
+                "datasource": {"type": "influxdb", "uid": DS_UID},
+                "query": var["query"],
+            }
+        ],
+    }
+    result = stack.grafana("/api/ds/query", body)["results"]["A"]
+    assert "error" not in result, result.get("error")
+    values = [v for frame in result["frames"] for v in frame["data"]["values"][-1]]
+    assert values, "node dropdown would be empty"
+
+
+def all_panels(panels: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out = []
+    for p in panels:
+        out.append(p)
+        out.extend(all_panels(p.get("panels", [])))
+    return out
+
+
+def test_every_panel_query_runs_for_every_node(dashboard: dict[str, Any]) -> None:
+    """No panel hides a query error behind "No data" (found in the 2026-11-26
+    walkthrough: panel 7 failed whenever a delivery had no error code, and on alerts
+    without values). Runs each panel's Flux through Grafana over 30 days."""
+    nodes = [
+        v
+        for frame in grafana_query(
+            next(v for v in dashboard["dashboard"]["templating"]["list"] if v["name"] == "node")[
+                "query"
+            ],
+            "now-30d",
+        )["frames"]
+        for v in frame["data"]["values"][-1]
+    ]
+    failures = []
+    for panel in all_panels(dashboard["dashboard"]["panels"]):
+        for target in panel.get("targets", []):
+            for node in nodes:
+                result = grafana_query(target["query"].replace("${node}", node), "now-30d")
+                error = result.get("error", "")
+                if error and not error.startswith(TRUNCATED):  # size warning, not a failure
+                    failures.append((panel["id"], node, error[:120]))
+    assert failures == []
+
+
+def grafana_query(query: str, start: str) -> dict[str, Any]:
+    body = {
+        "from": start,
+        "to": "now",
+        "queries": [
+            {"refId": "A", "datasource": {"type": "influxdb", "uid": DS_UID}, "query": query}
+        ],
+    }
+    try:
+        result: dict[str, Any] = stack.grafana("/api/ds/query", body)["results"]["A"]
+    except stack.GrafanaError as exc:  # Grafana answers 400 when a query fails
+        try:
+            failed: dict[str, Any] = json.loads(exc.body)["results"]["A"]
+        except ValueError, KeyError:
+            return {"error": str(exc), "frames": []}
+        return failed
+    return result
 
 
 def test_node_that_never_sent_shows_no_data(dashboard: dict[str, Any]) -> None:

@@ -97,7 +97,7 @@ that every story needs. **No user story work starts before this phase is done.**
 
 ### Firmware and board foundations (hardware track)
 
-- [X] T026 [P] Define the board pin map from plan.md › Front end and pin allocation in `firmware/main/board.h` (GPIO4 ADC1_CH3 voltage, GPIO5 ADC1_CH4 current, GPIO8/9 OLED I²C, GPIO16 buzzer, GPIO17/18/21 RGB; never GPIO0/3/45/46, 19/20, 35–37)
+- [X] T026 [P] Define the board pin map from plan.md › Front end and pin allocation in `firmware/main/board.h` (GPIO4 ADC1_CH3 voltage, GPIO5 ADC1_CH4 current, GPIO8/9 OLED I²C, GPIO16 buzzer, GPIO17/18/15 RGB (blue was GPIO21 until 2026-11-26); never GPIO0/3/45/46, 19/20, 35–37)
 - [ ] T027 [P] [HW] Bring-up app for build guide stage 1 (board alone: boot, Wi-Fi join, RGB cycles red/green/blue) in `firmware/bringup/stage1_board/main/main.c`
 - [ ] T028 [P] [HW] Bring-up app for build guide stage 2 (OLED test text, buzzer 200 ms beep via 2N2222, RGB per colour) in `firmware/bringup/stage2_peripherals/main/main.c`
 - [ ] T029 [P] [HW] Bring-up app for build guide stages 3–4 (raw ADC logger: alternating GPIO4/GPIO5 continuous mode at 8,000 conversions/s; prints mean/min/max in mV over USB; reports Vb ≈ 1.65 V with the adapter unplugged and the ACS712 offset ≈ 1.70 V with no current; can dump a raw capture) in `firmware/bringup/stage34_adc_logger/main/main.c`

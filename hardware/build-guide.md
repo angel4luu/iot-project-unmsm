@@ -78,7 +78,7 @@ equipo ya lo tiene; confirme la cantidad antes de la compra.
 | 8 | Conexión del foco (solo si no hay pinzas) | Regleta de bornes; se usan 2 bornes cortados de la tira | `regleta de bornes 12 polos` | 1 | Comprar solo si falta la fila 7 |
 | 9 | Montaje de baja tensión | Protoboard de 830 puntos | `protoboard 830 puntos` | 1 | Kit |
 | 10 | Conexiones en el protoboard | Cables jumper macho-macho | `cables jumper macho-macho` | unos 20 | Kit |
-| 11 | Conexión del ACS712 y del OLED | Cables jumper macho-hembra (VCC, OUT, GND del ACS712; 4 del OLED si no se inserta en el protoboard) | `cables jumper macho-hembra` | 3–7 | Kit (confirmar) |
+| 11 | Conexión del ACS712 | Cables jumper macho-hembra (VCC, OUT, GND del ACS712) | `cables jumper macho-hembra` | 3 | Kit (confirmar) |
 | 12 | R1, divisor de tensión | Resistencia 100 kΩ, 1/4 W, 1 % o 5 % | `resistencia 100k 1/4W` | 1 | Comprar |
 | 13 | R2 (divisor de tensión) y R3 (divisor de corriente) | Resistencia 4,7 kΩ, 1/4 W | `resistencia 4.7k 1/4W` | 2 | Comprar |
 | 14 | Polarización Vb (2) y R4 (divisor de corriente) | Resistencia 10 kΩ, 1/4 W | `resistencia 10k 1/4W` | 3 | Comprar |
@@ -288,13 +288,13 @@ legible.
 **Aprobado si:** el zumbador suena cuando se le ordena, permanece apagado en otro
 caso y el GPIO solo está conectado a través de la resistencia de base.
 
-### LED RGB: GPIO17 / GPIO18 / GPIO21
+### LED RGB: GPIO17 / GPIO18 / GPIO15
 
 1. Confirme que el LED es de cátodo común (asumido). En el de cátodo común, la
    pata más larga es el cátodo y va a GND. Si al probar no enciende ningún color,
    puede ser de ánodo común: deténgase y anótelo (cambia el cableado y el
    *firmware*).
-2. Conecte rojo a GPIO17, verde a GPIO18 y azul a GPIO21, cada uno con su propia
+2. Conecte rojo a GPIO17, verde a GPIO18 y azul a GPIO15, cada uno con su propia
    resistencia en serie de 470 Ω.
 3. Pruebe cada color por separado y luego las indicaciones normal, advertencia,
    medición inválida, sin conexión y datos insuficientes del mapa de estados
@@ -562,7 +562,7 @@ enciende en el bloque que confirma y la pantalla se refresca cada 0,5 s
 | El Wi-Fi no se conecta | Credenciales locales o configuración de la red Wi-Fi local | Verifique el aprovisionamiento localmente; nunca copie secretos en registros ni en esta guía |
 | El OLED no muestra nada | Módulo SPI, SDA/SCL invertidos, alimentación o dirección/configuración | Confirme el supuesto de I²C de 4 pines; revise GPIO8/9, 3V3, GND y la configuración del *firmware* |
 | El zumbador no suena o no se apaga | Orden de pines del transistor, resistencia de base o cableado | Apague; verifique el orden de pines del 2N2222, GPIO16–1 kΩ–base, emisor a GND y el camino zumbador/colector |
-| Falta un color del RGB | Tipo de LED u orden de pines, o falta la resistencia en serie | Confirme el supuesto de cátodo común y el mapa GPIO17/18/21; verifique cada resistencia de 470 Ω |
+| Falta un color del RGB | Tipo de LED u orden de pines, o falta la resistencia en serie | Confirme el supuesto de cátodo común y el mapa GPIO17/18/15; verifique cada resistencia de 470 Ω |
 | Vb no está cerca de 1,65 V | Error en el divisor de polarización, la tierra o el condensador de 10 µF | Con el adaptador desenchufado, lea Vb y revise el divisor de dos 10 kΩ |
 | La señal en GPIO4 se recorta | El divisor o la salida del adaptador difieren del valor nominal | Deténgase; anote la forma de onda y el adaptador; cambie solo mediante un cambio documentado del esquema |
 | No hay oscilación en GPIO4 | Adaptador desenchufado, jumper suelto en la bornera o el protoboard, o error en R1/R2/Vb | Confirme que el adaptador es de salida CA, ajuste los tornillos del jack, reinserte los jumpers y revise el esquema |
@@ -578,19 +578,21 @@ enciende en el bloque que confirma y la pantalla se refresca cada 0,5 s
 - Se asume que el OLED es un módulo SSD1306 I²C de 4 pines. Confirme el módulo
   real; una pantalla SPI de 7 pines cambia la asignación de pines.
 - Se asume que el LED RGB es de cátodo común. Confirme su tipo y orden de pines
-  antes de conectar GPIO17/18/21.
+  antes de conectar GPIO17/18/15.
 - No hay multímetro de referencia (constitución 2.0.0). Si más adelante el
   equipo consigue uno True RMS, puede añadirse una calibración `reference` sin
   cambiar el circuito.
 - Adaptador y foco por comprar. Verifique la certificación, la salida CA, la
   protección térmica y que la corriente nominal sea de 2 A o más.
-- Confirme en el kit: 2 cables con pinzas cocodrilo, 3–7 jumpers macho-hembra,
+- Confirme en el kit: 2 cables con pinzas cocodrilo, 3 jumpers macho-hembra,
   3 resistencias de 470 Ω y 1 de 1 kΩ. Compre solo lo que falte (la regleta
   reemplaza a las pinzas).
-- El ESP32-S3 DevKitC-1 es ancho y en un protoboard de 830 puntos puede dejar
-  libre una sola fila de agujeros por lado (o ninguna). Si no quedan agujeros
-  libres para un pin que se necesita, conecte ese pin con un jumper
-  macho-hembra directo al pin de la placa.
+- El ESP32-S3 N16R8 va directo en el protoboard, en las columnas 1–22: su
+  cabezal izquierdo (3V3 … 5V, GND) en la fila i deja libre la fila j (arriba)
+  para los jumpers; el derecho queda en la fila a (abajo), sin agujeros libres, y
+  no se usa. Por
+  eso el azul del LED RGB está en GPIO15 (antes GPIO21). Plano de agujeros:
+  `hardware/integration-roadmap.md`, sección 4.
 - Los pines del ADC, la atenuación y los parámetros exactos de calibración del
   *firmware* se confirman en el banco.
 - La calibración nominal y la tabla de plausibilidad deben completarse antes de

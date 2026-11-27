@@ -207,6 +207,14 @@ class _PinnedHTTPS(http.client.HTTPSConnection):
         self.sock = self._ctx.wrap_socket(sock, server_hostname=self.host)
 
 
+class GrafanaError(RuntimeError):
+    """An HTTP error from Grafana; `body` keeps its JSON answer (e.g. a query error)."""
+
+    def __init__(self, message: str, body: bytes) -> None:
+        super().__init__(message)
+        self.body = body
+
+
 def grafana(path: str, body: dict[str, Any] | None = None) -> Any:
     e = env()
     password = (SECRETS / "grafana-admin-password").read_text(encoding="utf-8").strip()
@@ -233,7 +241,7 @@ def grafana(path: str, body: dict[str, Any] | None = None) -> Any:
         resp = conn.getresponse()
         data = resp.read()
         if resp.status >= 400:
-            raise RuntimeError(f"grafana {path}: HTTP {resp.status}")
+            raise GrafanaError(f"grafana {path}: HTTP {resp.status}", data)
         return json.loads(data)
     finally:
         conn.close()
